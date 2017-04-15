@@ -1,0 +1,439 @@
+.TH FATTOOL 1 "Sep 15, 2016"
+.SH NAME
+fattool \- several operations on a FAT12/16/32 filesystem
+.SH SYNOPSIS
+.TP 8
+.B fattool 
+[\fI-f num\fP] [\fI-l\fP] [\fI-i\fP] [\fI-s\fP] [\fI-n\fP]
+.br
+[\fI-m\fP] [\fI-c\fP] [\fI-o offset\fP] [\fI-e simerr.txt\fP]
+.br
+\fIfilesystem command args\fP
+.SH DESCRIPTION
+Perform a number of low-level operations on a FAT filesystem: print some data
+about them, fix some errors, move clusters, etc.
+.SH OPTIONS
+.TP
+\fB-f\fP \fInum\fP
+use the specified file allocation table for both reading and writing; usually,
+\fInum\fP can only be either 0 or 1; the default is to read from the first
+table that can be read and to write to all (this behavior cannot be specified
+with -f)
+.TP
+\fB-l\fP
+begin by reading the whole first FAT, and exit if that fails; without this
+option, the program may start making some changes and then have to stop in the
+middle because a sector in the file allocation table cannot be read
+.TP
+\fB-i\fP
+make file lookup case-insensitive; this allows for example to refer to a file
+with a short name only like EXAMPLE.TXT by the name example.txt
+.TP
+\fB-s\fP
+use shortnames instead of long names; this affects both lookups and file
+creations; beware that `~' may be special to the shell, so use quotes around
+short names, like:
+
+.nf
+	\fIfattool /dev/sda1 gettime '/ADIR/SOMENA~1.TXT'\fP
+.fi
+
+.TP
+\fB-n\fP
+use file names passed to the program without checking their validity and
+converting them; this allows creating and accessing files with invalid names,
+and enables the use of \fICLUSTER:num\fP and \fIcluster:num\fP (se \fIFILE
+NAMES\fP, below)
+.TP
+\fB-m\fP
+show memory usage after closing the filesystem; this is intended for testing
+memory leaks; it could also be done before closing the filesystem, but it would
+not tell much since FAT sectors are never deleted from cache
+.TP
+\fB-c\fP
+dump the cluster cache at the end of the operation; this is only useful during
+testing to check whether clusters are correctly deallocated
+.TP
+\fB-o\fP \fIoffset\fP
+the filesystem is assumed to start at this offset in the device
+.TP
+\fB-e\fP \fIsimerr.txt\fP
+read simulated errors from file; see \fISIMULATED ERRORS\fP, below
+.SH COMMANDS
+.TP
+\fBsummary\fP
+print a summary of the filesystem data, such as the number of clusters, etc.
+.TP
+\fBfree\fP/\fBused\fP/\fBclusters\fP
+print a map of the clusters that tells which are free and which are used
+.TP
+\fBview\fP [\fIpath\fP [\fIall\fP]]
+recusively show the content of a file or directory, by default '/' (see \fIFILE
+NAMES\fP, below); for directories, each entry is shown on a line; for files,
+its sequence of cluster numbers is printed; argument "\fIall\fP" makes long
+name parts to be printed, and if also \fI-s\fP is given then also the deleted
+directory entries are shown
+.TP
+\fBcalls\fP [\fIall\fP]
+print the arguments of the calls \fIfatreferenceexecute()\fP performs on the
+filesystem; this is mainly for helping in development; with argument
+"\fIall\fP", also deleted entries and long filename parts are shown
+.TP
+\fBfixdot\fP
+fix the dot and dotdot files, so that \fI.\fP points to the current directory
+and \fI..\fP to its parent
+.TP
+\fBcompact\fP
+move used clusters at the beginning of the filesystem, in place of the free
+ones; this is not defragmenting, which also makes the cluster to each file
+consecutive
+.TP
+\fBdefragment\fP
+order all clusters in the filesystem so that the root directory is in the first
+clusters in order, followed by its first entry, etc.; is the same as \fIfattool
+linear / recur 2\fP; this operation is \fBdangerous\fP: if the program at some
+point cannot allocate enough memory, the filesystem is left with some clusters
+moved but the file allocation tables not updated; running \fBfatbackup\fP
+before is of no use
+.TP
+\fBlast\fP [\fIn\fP]
+set the last known free cluster indicator on a FAT32 to \fIn\fP; makes the
+following search for free clusters start at cluster \fIn\fP, by default the
+first cluster in the filesystem; this is a no-op on FAT12 and FAT16
+.TP
+\fBrecompute\fP
+count the free clusters in the filesystem; also save this number if the
+filesystem is FAT32
+.TP
+\fBheader\fP
+restore the first two entries in all file allocation tables; this allows to run
+\fBdosfsck\fP(8) on a filesystem that has the boot sector as its only undamaged
+part
+.TP
+\fBzero\fP
+reset the filesystem to its original state; all content is lost
+
+this function deallocates all clusters except the first of the root directory,
+which is reset to 2 if the filesystem is a FAT32 and re-initalized (filled with
+zeros); it is useful to avoid reformatting a filesystem that is badly corrupted
+.TP
+\fBunused\fP
+mark as unused all unused clusters that are erroneously marked used
+.TP
+\fBdelete\fP \fIfile\fP
+remove a file or directory (see FILE NAMES, below) without reclaiming its
+clusters; useful if the file or directory is corrupted: its directory
+entry is marked deleted and nothing else is done; the clusters of files deleted
+this way can be later reclaimed by \fIfattool filesystem unused\fP or
+reattached to some other file via \fIfattool filesystem setfirst ...\fP or
+\fIfattool filesystem setnext ...\fP
+.TP
+\fBlink\fP \fItarget new\fP
+create an hard link; the target is an existing file or directory (see
+FILE NAMES, below); the new file file will be created with the same attributes
+and first cluster of the first, so that it looks like a copy of the first
+
+the resulting filesystem is incorrect and does not work for every driver;
+furthermore, the size of the new file is correct upon creation but is not
+updated if the source is changed; if the target is a directory and the new file
+is in different directory, its dotdot file is incorrect
+
+deleting any of the two files with anythigh other than "\fIfattol filesystem
+delete\fP" makes the resulting filesystem incorrect
+
+this command can be used to recreate the . and .. entries in directories (the
+warning about the resulting filesystem not being correct can then be ignored),
+like for example:
+
+.nf
+	fattool filename link AAA/CCC AAA/CCC/.
+	fattool filename link AAA AAA/CCC/..
+.fi
+
+.TP
+\fBposition\fP (\fIn\fP|\fIsector:s\fP|\fIfile:name\fP) \
+[\fIfile\fP|\fIbvi\fP|\fIrecur\fP]
+print the position of cluster \fIn\fP in the filesystem; with argument
+\fIfile\fP, also print the name of the file this cluster belongs to (if any)
+and its chain of clusters; with argument \fIbvi\fP, call \fBbvi\fP(1) to edit
+the cluster
+
+if the first argument is given in the form \fIsector:s\fP, the cluster is the
+one containing sector \fIs\fP, if any; otherwise, print whether the sector is
+reserved or in which file allocation table
+
+the form \fIfile:name\fP is for printing the position of all clusters in the
+file; if the file is a directory and the second argument is \fIrecur\fP, also
+the position of all clusters in all subdirectories and files are printed
+.TP
+\fBread\fP \fIn\fP
+dump the content of cluster \fIn\fP
+.TP
+\fBhex\fP \fIn\fP
+dump the content of cluster \fIn\fP in hex form
+.TP
+\fBwrite\fP \fIn\fP [\fIpart\fP] [\fIread\fP]
+write stdin to cluster \fIn\fP;
+without any other option, do not write unless enough
+data to fill a complete cluster is read;
+option "\fIpart\fP" allows writing a partial
+cluster, with the rest filled with random data;
+option "\fIread\fP" is similar, but
+the cluster is first read and then its initial part overwritten with data
+coming from stdin
+.TP
+\fBgetnext\fP \fIn\fP
+print the number of the cluster that follows \fIn\fP; may also be EOF, UNUSED
+or BAD
+.TP
+\fBsetnext\fP \fIn m\fP
+set the cluster that follows \fIn\fP to be \fIm\fP; other than a cluster
+number, \fIm\fP may be EOF, UNUSED, BAD
+.TP
+\fBgetfirst\fP \fIfile\fP
+show the first cluster of a file
+(see FILE NAMES, below)
+.TP
+\fBsetfirst\fP \fIfile n\fP
+set the first cluster of a file to be \fIn\fP
+(see FILE NAMES, below)
+.TP
+\fBsparse\fP [\fInoread\fP]
+fill all unused clusters with zero; this is useful for preparing a filesystem
+image for sparsification (e.g., \fIcp --sparse=always image newimage\fP); it is
+not a security wipe because a. clusters are not repeatedly filled with random
+bytes and b. unused directory entries are not cleared; normally, clusters that
+are already zero are not overwritten, but \fInoread\fP makes clusters not to be
+read but just zeroed; this may speed up execution if many clusters are not zero
+.TP
+\fBlinear\fP \fIfile\fP [\fIrecur\fP] \
+[\fIcheck\fP|\fItest\fP|\fIstart\fP|\fImin\fP|\fIfree|n\fP]
+makes the clusters of file consecutive
+(see FILE NAMES, below);
+option \fIrecur\fP only matters for directories,
+making consecutive the clusters of all files and subdirectories;
+options \fItest\fP and \fIcheck\fP are equivalent: the operation is not
+performed, but the number of clusters that would be moved is calculated (if
+zero, the file or directory is already linear);
+the other options specify where clusters are moved:
+.RS
+.TP
+\fIstart\fP
+starting from where the file originally starts
+.TP
+\fImin\fP
+chosen to minimize the number of cluster movements
+.TP
+\fIfree\fP
+the area free of bad clusters with the maximal number of unused clusters; in
+most but not all cases, this minimizes the movements of the clusters of the
+other files
+.TP
+\fIn\fP
+the new starting cluster of the file will be \fIn\fP
+.RE
+.IP
+in all cases, the operation fails if the some of the resulting clusters are
+bad or outside the filesystem
+
+the default is to try "\fIstart\fP", and if that fails try "\fIfree\fP"
+.TP
+\fBbad\fP \fIn\fP [\fIm\fP]
+mark cluster \fIn\fP as bad, or all clusters between \fIn\fP and \fIm\fP if
+\fIm\fP is given; if some of them are currently allocated a warning is
+displayed; if the operation is performed anyway, the resulting filesystem is
+incorrect; the "\fIhole\fP" operation instead attempts to move the clusters in
+the area out to free locations
+.TP
+\fBhole\fP (\fIn m\fP|\fIsize l\fP)
+create an hole of clusters marked bad; the content of the filesystem is not
+changed: clusters previously in this area are moved outside, and the operation
+fails if the number of free clusters is insufficient; the area can be specified
+in two forms:
+.RS
+.TP
+\fIn m\fP
+the area is between cluster \fIn\fP and cluster \fIm\fP
+.TP
+\fIsize l\fP
+the program looks for the area of size \fIl\fP that contains a minimal number
+of allocated clusters
+.RE
+.IP
+\ 
+.TP
+\fBcutbad\fP
+cut the chains of clusters at the ones marked bad (the bad cluster itself is
+cut out from the chain); if a bad cluster is found in a chain a whole-volume
+search for unused clusters is then performed to reclaim the clusters that
+originally followed the bad one in the chain
+.TP
+\fBreadfile\fP \fIfile\fP [\fIchain\fP]
+print the content of file to stdout (see \fIFILE NAMES\fP, below);
+if "chain" is given, the entire cluster chain is printed, including the data
+that is over the file size; this allows printing a directory as if it were a
+regular file; this is done anyway if \fIfile\fP is in the form
+\fIcluster:num\fP
+.TP
+\fBwritefile\fP \fIfile\fP
+copy stdin to file
+.TP
+\fBdeletefile\fP \fIfile\fP
+delete the given file
+(see \fIFILE NAMES\fP, below)
+.TP
+\fBoverwrite\fP \fIfile\fP [\fIimmediate\fP|\fItest\fP]
+write stdin to an existing file; no cluster is deleted or appended to the
+chain; clusters that already identical to their new content are not written;
+this command is intended for re-writing a file whose content is corrupted; the
+argument \fIimmediate\fP makes writing to happen immediately, but the default
+is actually write the clusters only at the end; argument \fItest\fP makes the
+program run doing everything but writing
+.TP
+\fBgetsize\fP \fIfile\fP
+print the size of an existing file
+.TP
+\fBsetsize\fP \fIfile num\fP
+make the file to be large \fInum\fP bytes; the resulting filesystem is
+incorrect if the new size it too small or too large for the chain of clusters
+of the file
+.TP
+\fBdirectoryclean\fP [\fItest\fP]
+delete the directory clusters that only contain deleted entries; also zero all
+entries following the last that is actually used; this also clean directory
+entries that over an "end-of-directory" entry, which may cause problems to some
+implementations (e.g., msdos.ko); with option \fItest\fP, only print what would
+be done without actually changing anything
+.TP
+\fBcountclusters\fP \fIfile\fP [\fIrecur\fP]
+count the clusters a file takes; can be called on a directory, in which case it
+only counts the clusters taken by the directory itself; the additional
+parameter "\fIrecur\fP" makes the count include all files and subdirectories
+.TP
+\fBfilldeleted\fP \fIdirectory\fP
+fill the unused entries in a directory with deleted files entries; this is part
+of creating cyclic directories
+.TP
+\fBgettime\fP \fIfile\fP [\fIwrite\fP|\fIcreate\fP|\fIread\fP]
+get the date and time of a file; depending on the second argument, the date and
+time of the last write (default), the date and time of creation or the
+date of the last read (the time of last read is not recorded in the filesystem)
+.TP
+\fBsettime\fP \fIfile\fP (\fIwrite\fP|\fIcreate\fP|\fIread\fP) \
+(\fIdate\fP|\fInow\fP)
+set the date and time of a file; depending on the second argument, the date and
+time of the last write, the date and time of the last read or the date of the
+last read; date and time are parsed by \fIstrptime(3)\fP with format
+"\fI%Y-%m-%d %H:%M\fP"; time is required even when setting the date of the last
+read, where the time is not recorded in the filesystem; the current time/date
+is used if the last argument is "\fInow\fP"
+.TP
+\fBinverse\fP
+check whether an inverse FAT for this filesystem can be created; this is not
+possible if some directory clusters cannot be read due to IO errors, or memory
+is insufficient for holding the entire inverse FAT and all directory clusters
+.TP
+\fBdirty\fP [[\fIUNCLEAN\fP][,][\fIIOERROR\fP]|\fINONE\fP]
+show, set or clean the dirty bits in the filesystem
+.TP
+\fBdotcase\fP
+clean the case byte in the directory entries of the dot (.) and dotdot (..)
+files; \fImtools(1)\fP may set these to something different than zero, causing
+\fIdosfsck(8)\fP not to recognize them and to signal their names as erroneous
+.TP
+\fBdir\fP [\fIdirectory\fP [\fIstart\fP|\fIall\fP|\fIover\fP]]
+list the entries in the given directory; if \fIstart\fP is also given, the
+start point of each long file name is also printed; with option \fB-s\fP, long
+part names are printed individually, deleted entries are also printed with
+\fIall\fP and entries over the end of the directory with \fIover\fP
+.TP
+\fBvalid\fP \fIpath\fP
+check whether \fIpath\fP is a valid path (the filesystem argument is irrelevant
+to this operation)
+.TP
+\fBdirfind\fP [\fInum\fP]
+try to detect which clusters are used for directories; the intended usage is to
+attempt recovering files from a damaged filesystem: after finding the clusters
+that may be used for directories, these can be printed by
+.I fattool -n filesystem dir cluster:...
+and the files in them copied out by
+.I fattool -n filesystem readfile cluster:.../filename\fP;
+this operation uses an heuristic score of clusters, so
+it may return both false positives and false negatives; if a number is also
+given, the score of that cluster is printed (this is inteded for testing the
+heuristic)
+.TP
+\fBboot\fP [\fIsectorsize\fP [\fIsectors\fP]]
+Try to locate the boot sector. This is useful for images of partitioned devices
+and on partitioned devices where the master boot record is lost but the
+filesystem may still be there. The defaults for the size of sectors and the
+number of sectors tried are 512 and 10000, respectively. An estimate for each
+sector is printed, and the first of the best candidates is also printed at the
+end. If this number is for example 63, the filesystem may be then operated
+using \fIfattool -o $((63 * 512)) ...\fP, and may be mounted via
+\fBlosetup\fP(8):
+
+.nf
+	modprobe loop
+	losetup -o $((63 * 512)) /dev/loop0 devicename
+	mount /dev/loop0 somedirectory
+.fi
+
+.TP
+\fBformat\fB (\fIsectors\fP|\fI""\fP) (\fIsectorspercluster\fP|\fI""\fP) \
+(\fImaxentries\fP|\fI""\fP)
+Create a filesystem or evaluate whether it can be created and how. The first
+parameter \fIsectors\fP is the number of sectors in the filesystem; if omitted
+or specified as \fI""\fP, it is derived from the size of the device or file and
+the offset; therefore, it is required if the device or file does not exist. The
+second parameter \fIsectorspercluster\fP is the size of each cluster, expressed
+in number of sectors; allowed values are the powers of two from 1 to 128; if
+omitted or specified as \fI""\fP, the program tests every allowed value and
+shows whether the filesystem could be created, and of which type, but does not
+actually create it. The third parameter \fImaxentries\fP is the maximal number
+of entries in the root directory; a value is allowed only if \fImaxentries *
+32\fP is a multiple of the sector size (512); default is 256; this value is
+silently ignored if the filesystem turns out to be a FAT32.
+.
+.
+.
+.SH FILE NAMES
+Files can be specified either as path or as a pair \fIcluster,index\fP.
+
+The path is always relative to the root of the filesystem. The special form
+\fIcluster:num\fP at the beginning makes the operation relative to the
+directory of first cluster \fInum\fP. Since `:' is invalid in a file name, this
+requires \fI-n\fP. This form can also be given as the file name for some
+operations (like reading a file, where the size is taken to be given by the
+length of the chain).
+
+The pair \fIcluster,index\fP is number of cluster where the directory entry of
+the file is, and its progressive number within it. This specification can only
+be given for existing files and directories other than /. The root directory
+and a file to be created can only be specified by path.
+.
+.
+.
+.SH SIMULATED ERRORS
+Option -e simerr.txt allows simulating IO errors when seeking, reading and
+writing to the device. Each line of the file, unless empty or starting with #,
+represents an error that will be simulated by the library. For example:
+
+.nf
+READ 12
+WRITE 5
+READ|WRITE 37
+SEEK 51
+.fi
+
+Every attempt to read cluster 12 results in an IO error, so does writing to
+cluster 5, accessing cluster 37 either way and seeking to cluster 51. Every
+line may have two further optional arguments: the first is 0 to mean sector
+(instead of cluster, the default 1); the second is -1 for simulating a failed
+operation and a number greater than 0 to simulate a short read or write.
+
+This is intended only for testing the robustness of the programs and the
+library to IO errors. It is of no use outside this.
+.SH SEE ALSO
+\fBfatview\fP(1), \fBfatbackup\fP(1), \fBfatshrink\fP(1), \fBfat_lib\fP(3)
+

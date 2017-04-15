@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# convert a manpage to html
+#
+# this is mostly 'man -Thtml', but also convert .nf/.fi blocks into <pre>
+
+[ $# -lt 2 ] && echo "usage: mantohtml man.n man.html" && exit 1
+
+# whatever is between .pre/.endpre goes to the intermediate groff output
+# surrounded by html:<pre> and </pre>
+
+cat "$1"					| \
+sed '1 i					\
+.de pre						\
+.  br						\
+.  de content endpre				\
+html:<pre>					\
+..						\
+.de endpre					\
+.  am content endappend				\
+</pre>						\
+.  endappend					\
+.  devicem content				\
+..
+s,^[.]nf,.pre,
+s,^[.]fi,.endpre,
+s,\\fB\(libllfat.txt\)\\fP,\\X'"'"'html:<a href="\1">\1</a>'"'"',
+s,\\fB\(fat[_a-z]*\)\\fP(\([0-9]\)),\\X'"'"'html:<a href="\1.html">\1(\2)</a>'"'"',g
+s,\\fB\([a-z][a-z]*\)\\fP(\([0-9]\)),\\X'"'"'html:<a href="https://linux.die.net/man/\2/\1">\1(\2)</a>'"'"',g'	| \
+						  \
+# remove tabs used to make code more readable
+sed 's,		*$,,'				| \
+						  \
+# convert input file to intermediate groff output
+groff -man -Thtml -Z -				| \
+						  \
+# convert intermediate groff output into html
+post-grohtml					| \
+						  \
+# fix left indent of <pre> by converting <p> into <div>
+sed	-e 's,<p \(.*><pre>\),<div \1,'		  \
+	-e 's,<p>\(<pre>\),<div>\1,'		  \
+	-e '/<\/pre>/ { N; s,</p>,</div>, }'	  \
+> "$2"
+

@@ -1,0 +1,2269 @@
+.TH FAT_FUNCTIONS 3 "Oct 3, 2016"
+.SH TITLE
+Description of all functions in libllfat.
+.SH OVERVIEW
+This page describes all functions in libllfat. For a basic usage guide, see
+\fBfat_lib\fP(3); an overall description of the filesystem is in \fBfat\fP(5)
+and of the library is in \fBlibllfat.txt\fP.
+
+All programs are required to have \fI#define _FILE_OFFSET_BITS 64\fP before
+any include.
+
+The functions of the library are divided by header file in the source:
+.TP
+.B unit.h
+functions for dealing with units, which are sectors and clusters, and their
+caches
+.TP
+.B fs.h
+global parameters of the filesystem, such as whether it is a FAT12, FAT16 or
+FAT32
+.TP
+.B table.h
+the file allocation table, which tells the successor of each cluster, and
+whether a cluster is unused or bad
+.TP
+.B entry.h
+a pair directory,index is a file or directory; this header file contains the
+function for reading and changing a file
+.TP
+.B directory.h
+functions for scanning a directory and looking up a file
+.TP
+.B reference.h
+a cluster reference is a pointer to a cluster
+.TP
+.B inverse.h
+the converse of cluster references
+.TP
+.B complex.h
+operations that requires a long time and cannot be stopped without leaving the
+filesystem in an inconsistent state
+.TP
+.B long.h
+long filenames
+.
+.
+.
+.SH unit.h
+A unit is a block of data in the filesystem: a sector or a cluster (including
+the root directory, which may be larger than a regular cluster). This library
+represents a unit by a structure:
+
+.nf
+typedef struct {
+	int fd;			/* filesystem this unit belongs to */
+	int32_t n;		/* index of sector/cluster */
+	int size;			/* size of this unit, in bytes */
+	uint64_t origin;	/* position of unit 0, in bytes */
+	unsigned char *data; /* the data */
+	int error;		/* error: read(1), write(2), seek(4) */
+	int dirty;		/* cached unit differs from file */
+	int refer;		/* usage counter; no-remove if > 0 */
+	void *user;		/* free for program use */
+} unit;
+.fi
+
+Every unit contains enough data to identify its position on the filesystem: its
+file descriptor, number, size and origin. The origin is the position in the
+filesystem of the unit \fIn=0\fP; therefore, the position of cluster 1 is
+origin+size, the position of cluster 2 is origin+2*size, etc. This origin is
+purely virtual, since unit 0 may not exist (this is the case for clusters).
+
+The following three functions work on an individual unit:
+.TP
+.BI "unit *fatunitcreate(int " size )
+create a unit; this is almost always not done by the application program
+.TP
+.BI "unit *fatunitcopy(unit *" u )
+create a new unit that is a copy of a given one
+.TP
+.BI "void fatunitdestroy(unit *" u )
+destroy a unit
+.P
+
+A cache is a set of units. Every filesystem that is opened by the library has a
+cache of sectors and a cache of clusters, both initially empty. When the
+library reads a sector or a cluster, it places it in the appropriate cache.
+
+The dirty field tells whether the unit has been modified since the last time it
+was read or written to the filesystem; by definition, a unit that is inserted
+in the cache by the program, rather than being read from the filesystem, is
+dirty.
+
+The refer field is the number of pointers the program has to this unit. It is
+needed because a section of code must not delete the unit from the cache just
+because it has finished using it and the dirty field is reset, since some other
+parts of the program may have a pointer to the same unit. A field that records
+the number of pointers to this cluster allows avoiding this situation: a unit
+is not deleted from the cache if refer is greater than zero. The functions in
+the library that may delete units update this field; this is also the
+responsibility of the program in all segments of code that may delete units;
+this field is not updated automatically.
+
+The following functions give access to a cache:
+.TP
+.BI "unit *fatunitget(unit **" cache ", uint64_t " origin ", \
+int " size ", long " n ", int " fd )
+get unit \fIn\fP from the cache; if the unit is not in cache, it is loaded from
+the filesystem using the other arguments to locate it; return NULL if loading
+fails
+.TP
+.BI "int fatunitinsert(unit **" cache ", unit *" u ", int " replace )
+insert a unit in cache; the third argument tells what to do if the cache
+already contains the unit: if \fIreplace=1\fP, the old unit is removed from the
+cache and deallocated; otherwise, return -1 and the new unit is not inserted;
+this function also sets \fIu->dirty\fP on the premise that a unit that is
+inserted in cache is likely not the same as in the filesystem; the program can
+still reset \fIu->dirty=0\fP after insertion
+.TP
+.BI "int fatunitdetach(unit **" cache ", long " n )
+detach the unit number n from the cache; the unit is not destroyed, so it can
+be later inserted in the same or in some other cache, or written back to the
+filesystem
+.TP
+.BI "void fatunitmove(unit **" cache ", unit *" u ", int " dest )
+the unit becomes that of number dest; this cannot be done by simply setting
+\fIu->n=dest\fP since \fIu->n\fP is the key to the cache; this function
+detaches the unit from the cache, change the key and insert it back; the last
+operation sets \fIu->dirty\fP
+.TP
+.BI "void fatunitswap(unit **" cache ", unit *" u ", unit *" w )
+this is like a move, but u becomes the new unit w->n and vice versa
+.TP
+.BI "int fatunitwriteback(unit *" u )
+writes the unit back to the filesystem, if \fIu->dirty=1\fP; this operation
+only takes a unit because all parameters needed for writing are in the unit
+itself; it is however in this list because it is in a way the converse to
+\fBfatunitget()\fB
+.TP
+.BI "void fatunitflush(unit *" cache )
+write back all units in cache
+.TP
+.BI "int fatunitdelete(unit **" cache ", long " n )
+delete a unit from the cache; this is like detaching and then destroying
+.P
+The content of a unit is in \fIu->data\fP. However, it is better accessed via
+the following functions.
+.TP
+.BI "unsigned char *fatunitgetdata(unit *" u )
+obtain \fIu->data\fP; if \fIu->data\fP is deallocated to save space, load it
+back
+.TP
+.BI "_unit8int(" unit ", " offset )
+.PD 0
+.TP
+.BI "_unit16int(" unit ", " offset )
+.TP
+.BI "_unit32int(" unit ", " offset )
+.TP
+.BI "_unit8uint(" unit ", " offset )
+.TP
+.BI "_unit16uint(" unit ", " offset )
+.TP
+.BI "_unit32uint(" unit ", " offset )
+.PD
+data at a given offset of \fIunit->data\fP is interpreted as \fBint8_t\fP,
+\fBint16_t\fP, etc.; these macro reload \fIunit->data\fP if it was deallocated;
+endianess has to be keep into account; for example:
+
+.nf
+x = le16toh(_unit16int(u, 23));
+_unit16int(u, 24) = htole16(y);
+return le16toh(_unit16int(u, 40));
+.fi
+
+A unit no longer needed can be deleted from cache to save memory. An alterntive
+is to deallocate only its content \fIu->data\fP, leaving the rest of the
+structure in cache. This may be a problem if reloading turns impossible due to
+an IO error, however.
+.TP
+.BI "void fatunitfree(unit *" u )
+deallocate the \fIu->data\fP part of a unit, if \fIu->dirty\fP and
+\fIu->refer\fP are not zero
+.TP
+.BI "void fatunitfreecache(unit *" cache )
+call \fBfatunitfree(\fP\fIu\fP\fB)\fP for every unit \fIu\fP in cache
+.P
+The following two functions are for debugging only. The second is of particular
+interest for checking clusters, since those belonging to files are better
+flushed and deleted from cache as soon as possible.
+.TP
+.BI "void fatunitdump(unit *" u ", int " hex )
+.PD 0
+.TP
+.BI "void fatunitdumpcache(char *" which ", unit *" cache )
+print the initial part of a cluster, or of all in cache
+.PD
+.P
+A cache does not need to be initialized: just setting it to NULL is enough. The
+following function is for deallocating it.
+.TP
+.BI "void fatunitdeallocate(unit *" cache )
+delete the cache and all units in there, regardless of whether they are dirty
+or referred
+.
+.
+.
+.SS Simulated IO errors
+The library allows simulating an IO error while reading a unit (sector or
+cluster). Such errors are stored in a global variable that points to an array
+of structure, each representing the error on a unit.
+
+.nf
+#define FAT_READ  1
+#define FAT_WRITE 2
+#define FAT_SEEK  4
+
+typedef struct {
+	int fd;		/* file descriptor of the fat for this error */
+	int type;		/* error on read, write or seek (def's above) */
+	int n;		/* the number of the unit */
+	int iscluster;	/* whether the unit is a sector or a cluster */
+	int res;		/* -1 for error, >=0 for short read or write */
+} fat_simulate_errors_t;
+extern fat_simulate_errors_t *fat_simulate_errors;
+.fi
+
+Each structure in the array fat_simulate_errors represents a unit that cannot
+be seeked, read or written because of an IO error. Field fd indicates which of
+the possibly many fat that are open this error is on. Field type is either
+FAT_READ, FAT_WRITE or FAT_SEEK or their disjunction; it tells which operations
+on the unit results in an error. Field n is the number of sector of cluster
+that produces the error. Field iscluster is 0 for a sector and 1 for a cluster.
+Field res is -1 for simulating the error on seek/read/write; is a number
+greater than zero for a short read or write.
+
+For example, {6, FAT_READ, 23, 1, -1} means that when trying to read (FAT_READ)
+the cluster (1) number 23 from the fat of file descriptor 5 results in an IO
+error (-1). In other words, the library behaves as if the \fBread\fP(2)
+operation that attempts to read the cluster returns -1.
+
+While the array of structures can be filled by the program itself, the library
+provides functions for reading it from a file:
+.TP
+.BI "void fatsimulateinit()
+initialize fat_simulate_errors to an empty array
+.TP
+.BI "int fatsimulateread(char *" filename ", int " fd )
+read a list of simulated errors for the fat of file descriptor fd from file; if
+fd=-1, use these errors for all fats
+.P
+An example file:
+
+.nf
+READ 12
+WRITE 5
+READ|WRITE 37
+READ|WRITE 1 SECTOR
+READ 1 SECTOR 100
+READ 0 SECTOR
+.fi
+
+The last line has an effect only if fd=-1. The possibility of using the same IO
+errors for all fats does not make sense by itself: it only exists for allowing
+the simulation on an IO error on reading the boot sector. Since this sector is
+read by \fBfatopen()\fP, the simulated error cannot be inserted before the call
+because at that point the file descriptor is not yet known.
+.
+.
+.
+.SH fs.h
+This header contains the fat structure and the functions for accessing its
+global data, such as the number of sectors, the size of clusters, etc.
+
+.nf
+typedef struct {
+	int fd;
+	int bits;
+	int nfat;				/* fat to use */
+	unit *boot;			/* boot sector */
+	unit *info; 			/* fs info sector (fat32) */
+	unit *sectors;			/* cache for sectors */
+	unit *clusters;		/* cache for clusters */
+	int32_t last;			/* last found free cluster */
+						/* README: Note 2 */
+	int32_t free;			/* number of free clusters */
+						/* README: Note 3 */
+	void *user;			/* free for program use */
+} fat;
+.fi
+
+Field \fIfd\fR is the file descriptor of the file/device where this filesystem
+comes from; it is initalized to -1, and only required when saving the
+filesystem; it is also used as an identifier for the filesystem used for
+simulated errors.
+
+Field \fIbits\fR tells whether the filesystem is a FAT12, FAT16 or FAT32. It
+is calculated from the boot sector of the filesystem the first time this number
+is needed, for example when calling fatbits(fat*). Resetting to -1 force its
+recalculation.
+
+Field \fInfat\fR is the file allocation table (FAT) to use for all operations.
+Apart from the two functions that access raw data in these tables, fatgetfat()
+and fatsetfat(), all others use f->nfat to decide whether to access the first
+or the second FAT (actually, the library supports all numbers of fats, but in
+practice these are usually two). To use a specific FAT, a program may save the
+content of f->nfat, change it, perform the operation and restore the previous
+value. The default is FAT_ALL, meaning to try all FATs in turn until one can be
+read when reading, and to save changes to all FATs when writing.
+
+Field \fIboot\fR is a direct pointer to the boot sector. This is sector 0, and
+is also in the sector cache with refer=1 to avoid deletion, but also has a
+pointer in this field to skip the search in cache since it is accessed often.
+Similarly, \fIinfo\fR is a pointer to the information sector of FAT32. If not
+present, it contains NULL.
+
+Field \fIsectors\fR is the sector cache. It is accessed using the functions in
+unit.h, above. Since the boot sector and the information sector also have
+pointers in the fat structure, the main use of this field is for accessing the
+file allocation tables (FATs). However, it can also be used to access all other
+reserved sectors before them. It can also be used for sectors after the file
+allocation tables, but since these are mostly taken by the clusters, this may
+create duplications of data and inconsistencies.
+
+Field \fIclusters\fR is the cluster cache. The first cluster is 1 in a FAT12
+and FAT32 and 2 in a FAT32 (yet, the origin field in each cluster still refers
+to the point in the filesystem were the nonexistent cluster 0 would reside).
+The library provides specific functions for reading or creating a cluster.
+
+Field \fIlast\fR is the number of the cluster that was last found free by the
+library. It corresponds to a field in the information sector of FAT32, for
+which it is also read and saved from the filesystem. For FAT12 and FAT16, it is
+initalized by the library when a free cluster if found, and kept updated, but
+is not then saved on the filesystem. The cluster it refers to may still be free
+or not; this field only exists for speeding up the search for a free cluster.
+
+FIeld \fIfree\fR is the number of free clusters, as known by the library. It is
+an actual field in the informtion sector in a FAT32, but the library uses it
+also for FAT12 and FAT16. It is reliable only after the number of free clusters
+has been recalculated; afterwards, the library keeps it updated.
+
+Field \fIuser\fR is a pointer to a structure that programs can use to pass data
+to the callbacks. No function in the library currently use it.
+
+The following functions operate on a whole fat structure.
+.TP
+.BI "fat *fatcreate()
+Create an empty filesystem; this is invalid in that it does not contain any of
+the necessary parameters such as the number of sectors, etc. and the
+allocations tables.
+.TP
+.BI "fat *fatopen(char *" filename ", off_t " offset )
+Read a filesystem from file \fIfilename\fP, starting at position \fIoffset\fP.
+Return the fat structure if the file can be open and the boot sector can be
+read, otherwise return NULL. In most cases \fIoffset\fP is zero.
+.TP
+.BI "int fatcheck(fat *" f )
+Checks that a filesystem really looks like a FAT12/16/32; return 0 if it does,
+a number less than zero measuring the number of invalid field in the sector
+otherwise.
+.TP
+.BI "int fatflush(fat *" f )
+Flush all dirty sectors and clusters to file.
+.TP
+.BI "int fatquit(fat *" f )
+Close the file without flushing the filesystem.
+.TP
+.BI "int fatclose(fat *" f )
+Flush the filesystem to file and close it.
+.P
+The following functions access the global parameters of a filesystem. These
+having get or set in the name are for reading data that is directory stored in
+the filesystem (such as the number of bytes in a sector) the others derive data
+from them (such as the number of bytes in a cluster, which is the product of
+the number bytes in a sector and the number of sectors in a cluster).
+.TP
+.BI "int fatbits(fat *" f )
+The number of bits. This is 12 for a FAT12, 16 for a FAT16 and 32 for a FAT32.
+This number is obtained from the boot sector the first fat this function is
+called, and is then stored in \fIf->bits\fP.
+.TP
+.BI "int fatsignaturebits(fat *" f )
+The bits of the fat according to the signature string stored in the boot
+sector: either "FAT12   ", "FAT16   " or "FAT32   ". This is not the correct
+way to determine such a number, but may still be of interest.
+.TP
+.BI "int fatgetbytespersector(fat *" f )
+Return the number of bytes in a sector, usually 512.
+.TP
+.BI "int fatsetbytespersector(fat *" f ", int " n )
+Set the number of bytes in a sector, usually 512.
+.TP
+.BI "uint8_t fatgetsectorspercluster(fat *" f )
+Return the number of sectors in a cluster.
+.TP
+.BI "int fatsetsectorspercluster(fat *" f ", int sectors )
+Set the number of sectors in a cluster. This is done when the filesystem is
+created with a number that is a power of two from 1 to 128. Changing it
+afterwards corrupts the filesystem.
+.TP
+.BI "int fatbytespercluster(fat *" f )
+The number of bytes in a data cluster. Since cluster 1 may have a different
+size than the others, using cluster->size instead is better. This function does
+not have a corresponding "set" function because it is not a parameter of the
+filesystem, but is the result of multiplying the number of bytes in a sector
+and the number of sectors in cluster.
+.TP
+.BI "int fatgetreservedsectors(fat *" f )
+The number of sectors (including the boot sector and possibly the information
+sector) before the first file allocation table. Usually 1 (boot sector only) in
+FAT16 and FAT16 and often 32 in a FAT32.
+.TP
+.BI "int fatsetreservedsectors(fat *" f ", int " sectors )
+Set the number of reserved sectors. This is done when the filesystem is created
+and never changed afterwards, as it almost always causes the data in the
+filesystem to become inaccessible.
+.TP
+.BI "int fatgetnumfats(fat *" f )
+The number of copies of the file allocation table. Usually 2.
+.TP
+.BI "int fatsetnumfats(fat *" f ", int " nfat )
+Set the number of copies of the file allocation table, almost always two. This
+function is only used when creating a new filesystem.
+.TP
+.BI "uint32_t fatgetnumsectors(fat *" f )
+The total number of sectors in the filesystem.
+.TP
+.BI "int fatsetnumsectors(fat *" f ", uint32_t " sectors )
+Change the number of sectors in the filesystem. Lowering this causes no harm if
+no data in stored in the sectors that are cut off. This function only changes
+the size of the filesystem, not the size of the partition/device/image file
+that contains it.
+.TP
+.BI "int fatgetfatsize(fat *" f )
+The size of each file allocation table, in sectors.
+.TP
+.BI "int fatsetfatsize(fat *" f ", int " sectors )
+Set the size of each file allocation table, in sectors. Set when formatting a
+volume and never changed afterwards.
+.TP
+.BI "int32_t fatgetrootbegin(fat *" f )
+The number of the first cluster of the root directory. This is always FAT_ROOT
+for a FAT12 and FAT16, and is usually but not always FAT_FIRST for a FAT32.
+.TP
+.BI "int fatsetrootbegin(fat *" f ", int32_t "num )
+Change the number of the first cluster of the root directory. Only works for a
+FAT32, where it returns 0. Otherwise, this function returns -1 and no change is
+done.
+.TP
+.BI "int fatgetrootentries(fat *" f )
+The maximal number of files in the root directory for a FAT12 and FAT16. For a
+FAT32, is 0. This determines the size of the cluster used for storing the root
+directory, so it cannot be changed without moving all other clusters in the
+filesystem.
+.TP
+.BI "int fatsetrootentries(fat *" f ", int " entries )
+Set the size of the root directory in a FAT12 or FAT16 filesystems. Size is
+specified in \fIentries\fP blocks of 32 bytes, so that this is the number of
+short-name files that can be stored in the root directory. On a FAT32
+filesystem this function sets this size to 0, as it should be.
+.TP
+.BI "int32_t fatnumrootsectors(fat *" f )
+The number of sectors taken by the root directory of a FAT12 or FAT16.
+.TP
+.BI "int32_t fatnumdataclusters(fat *" f )
+The number of clusters, except the root directory cluster of a FAT12 or FAT16.
+.TP
+.BI "int32_t fatlastcluster(fat *" f )
+The last cluster in the filesystem.
+.TP
+.BI "int fatisvalidcluster(fat *" f ", int32_t "n )
+Determine if \fIn\fP is a valid data cluster, meaning it is between FAT_FIRST
+(which is defined as 2) and fatlastcluster(f).
+.TP
+.BI "int fatgetdirtybits(fat *" f)
+Get the dirty bits of the volume. They have nothing to do with the dirty field
+of the units in cache, they indicate certain global conditions of the
+filesystem:
+.RS
+.IP "   * " 5
+\fIFAT_UNCLEAN\fP: the filesystem is currently mounted or it has not been
+properly unmounted; in the first case it should not be operated upon; in the
+second, it may contain errors because the last writes could have been
+incomplete; a filesystem check is in order, like with \fBdosfsck\fP(8)
+.IP "   * "
+\fIFAT_IOERROR\fP: the last time the filesystem was mounted an IO error
+occurred (the Linux driver remounts the filesystem read-only in such cases); a
+filesystem check with a sector-by-sector verification may be in order
+.P
+This function and the following one access the dirty bits in the boot sector.
+Their alternative location for FAT16 and FAT32 in the file allocation table can
+be read by \fBfatgetfatdirtybits()\fP.
+.RE
+.TP
+.BI "int fatsetdirtybits(fat *" f ", int " dirty )
+Set the dirty bits of the filesystem. The \fIdirty\fP argument is a logical OR
+of some (possibly none) of the constants \fIFAT_UNCLEAN\fP and
+\fIFAT_IOERROR\fP described for the previous function. The alternative location
+for these bits in the file allocation table can set via
+\fBfatsetfatdirtybits()\fP.
+.TP
+.BI "int fatgetbackupsector(fat *" f )
+The number of the sector containing the backup copy of the boot sector. While
+the boot sector is always 0, the backup is always 6. This field only exists
+because a value of 0x0000 or 0xFFFF mean that the backup does not exists, in
+which case this function returns -1.
+.TP
+.BI "int fatsetbackupsector(fat *" f )
+Set the number of the sector that is the backup copy of the boot sector. If
+such a backup exists its sector number is 6, otherwise it is 0x0000 or 0xFFFF.
+The function however allows it to be any reserved sector but the boot or
+information sector.
+.TP
+.BI "int fatcopyboottobackup(fat *" f )
+Copy the boot sector to its backup. A flush may be needed to save it. This
+function returns -1 if the boot sector has no backup. Also note that this only
+copies the boot sector, not the information sector or any other following
+sector.
+.TP
+.BI "int fatgetinfopos(fat *" f )
+The number of the information sector, typically 1. 
+.TP
+.BI "int fatsetinfopos(fat *" f ", int " pos )
+Sets the number of the information sector.
+.TP
+.BI "uint8_t fatgetmedia(fat *" f )
+The media descriptor. The library only uses this in fatcheck(f).
+.TP
+.BI "int fatsetmedia(fat *" f ", uint8_t "media )
+Set the media descriptor.
+.TP
+.BI "int fatgetbootsignature(fat *" f )
+The boot signature: the two bytes at offset 510 in the boot sector, or the last
+two bytes if the number of bytes per sectors is less than 512. This function
+returns 0 or -1 depending on whether such signature is correct or not.
+.TP
+.BI "int fatsetbootsignature(fat *" f )
+Add the signature to the boot sector.
+.TP
+.BI "int fatgetinfosignatures(fat *" f )
+Check whether the information sector (if any) actually contains the necessary
+signatures.
+.TP
+.BI "int fatsetinfosignatures(fat *" f )
+Add the signatures to the information sector, if any.
+.TP
+.BI "int32_t fatgetlastallocatedcluster(fat *" f )
+The number of the last cluster that was known to be free. This is an advisory
+field in FAT32, and is not to be relied. The library copies it to \fIf->last\fP
+on open and writes this field in the filesystem on flushing.
+.TP
+.BI "void fatsetlastallocatedcluster(fat *" f ", int32_t " last )
+Set the number of the sector last known to be free.
+.TP
+.BI "int32_t fatgetfreeclusters(fat *" f )
+The number of clusters known to be free. This is copied copied in \fIf->free\fP
+when the filesystem is opened, and wrote back on flush. Again, this is only
+advisory. The actual function for determining this amount is
+\fBfatclusternumfree()\fP.
+.TP
+.BI "void fatsetfreeclusters(fat *" f ", int32_t " last )
+Set the number of free clusters as stored in the filesystem.
+.TP
+.BI "void fatsummary(fat *" f )
+Print a summary of the global parameters of the filesystem to stdout. This is
+useful for debugging.
+.
+.
+.
+.SH table.h
+This header file contains the functions for accessing the file allocation
+table and its copy. This table contains the successor of each cluster, if any,
+and the indication of which cluster are free and bad (unusable because of an
+hardware problem).
+.TP
+.I FAT_FIRST
+the first regular cluster in the filesystem; this is 2, always
+.TP
+.I FAT_ROOT
+FAT12 and FAT16 also have a special cluster 1, always used to contain the whole
+root directory
+.TP
+.I FAT_UNUSED
+a value in the table that indicates that a cluster is free
+.TP
+.I FAT_EOF
+the value that tells that the cluster has no successor
+.TP
+.I FAT_BAD
+the cluster is bad; cannot be used because it is faulty
+.TP
+.I FAT_ERR
+value returned by several functions that search for cluster when none has been
+found; for example, the functions that search for a free cluster return this
+value when none exists (because the filesystem is full)
+.P
+The following functions are for accessing an element in the file allocation
+table. The first two are for accessing it at the low level, so they can for
+example be used for the first two elements of the table, which have a special
+use.
+.TP
+.BI "int32_t fatgetfat(fat *" f ", int " nfat ", int32_t " n )
+Read entry \fIn\fP in the file allocation table \fInfat\fP.
+.TP
+.BI "int fatsetfat(fat *" f ", int " nfat ", int32_t " n ", int32_t " next )
+Set entry \fIn\fP in the file allocation table \fInfat\fP to \fInext\fP.
+.P
+Unless creating or checking the integrity of a filesystem, these functions are
+not called directly but via \fBfatgetnextcluster()\fP and
+\fBfatsetnextcluster()\fP. One of the few reasons for using them instead is to
+access the first two entries of the table, which do not refer to any cluster
+but are a sort of "header" to the table; the second entry in the table is also
+an alternative position for the dirty bits of the filesystem.
+.TP
+.BI "int fatfixtableheader(fat *" f ", int " nfat )
+Fix the first two entries in the given file allocation table, which are a sort
+of table "header" since they do not represent any valid cluster.
+.TP
+.BI "int fatgetfatdirtybits(fat *" f ", int " nfat )
+.PD 0
+.TP
+.BI "int fatsetfatdirtybits(fat *" f ", int " nfat ", uint32_t " dirty )
+.PD
+The analogous to \fBfatgetdirtybits()\fP and \fBfatsetdirtybits()\fP for
+accessing the filesystem dirty bits in their alternative location, in the file
+allocation table rather than the boot sector. The same constants are used
+(\fIFAT_UNCLEAN\fP and \fIFAT_IOERROR\fP) with the same meaning (technically,
+the dirty bits are inverted here, but these two functions take care of hiding
+this).
+.TP
+.BI "int fatinittable(fat *" f ", int " nfat )
+Initialize the given file allocation table. This means that the first two
+entries (the table "header") get their correct value, the entry for the first
+cluster of the root directory gets the value \fIFAT_EOF\fP and all other
+entries are set to \fIFAT_UNUSED\fP. If the filesystem is FAT32, also the last
+allocated cluster and the estimate number of free sectors are correctly set.
+
+When called on all FATs, this function almost restores the filesystem on its
+pristine state. All that is missing is filling the first and only cluster of
+the root directory (as found with \fBfatgetrootbegin()\fP) with zero entries
+(done by \fBfatentryzero()\fP) and possibly clean the dirty bits (with
+\fBfatsetdirtybits()\fP).
+.P
+The functions normally used for obtaining the successor of a cluster, or
+whether a cluster is free or bad, are the two following ones.
+.TP
+.BI "int32_t fatgetnextcluster(fat *" f ", int32_t " cluster )
+Get the successor of a cluster. This is \fIFAT_EOF\fP on the final cluster of a
+chain, \fIFAT_UNUSED\fP if the cluster is not part of any chain, and
+\fIFAT_BAD\fP if the cluster is inaccessible in the hardware. This function
+always return \fIFAT_EOF\fP if \fIcluster=FAT_ROOT\fP.
+
+If \fIf->nfat\fP is the default value \fIFAT_ALL\fP, this value is obtained
+from the first file allocation table, and if that fails from the second, etc.
+Otherwise, get it on the FAT of index \fIf->nfat\fP.
+.TP
+.BI "int fatsetnextcluster(fat *" f ", int32_t " cluster ", int32_t " next )
+Set the successor of a cluster.
+
+If \fIf->nfat\fP is the default value \fIFAT_ALL\fP, this is set on all file
+allocation tables. Otherwise, it is set only on the table \fIf->nfat\fP.
+.P
+The above are the basic functions for accessing the chains of clusters in the
+filesystem, used for storing files and directories. The following ones call
+them, so they still work on \fIf->nfat\fP. Most of these function "wrap"
+meaning that if they are called with \fIend<begin\fP, the interval is assumed
+to be what is \fBoutside\fP \fIbegin\fP and \fIend\fP, not between.
+.TP
+.BI "int fatclusterisbetween(int32_t " cluster ", \
+int32_t " begin ", int32_t " end )
+check whether a cluster is within an interval, extremes included; if \fIend\fP
+is less than \fIbegin\fP, the interval is assumed to wrap, so that this
+function return when \fIcluster\fP is greater than or equal to \fIbegin\fP
+\fBor\fP less than or equal to \fIend\fP
+.TP
+.BI "int32_t fatclusterintervalnext(fat *" f ", int32_t " c, \
+int32_t " begin ", int32_t " end )
+Increase \fIc\fP by one, wrapping it so that it is always between \fIbegin\fP
+and \fIend\fP, and also between \fIFAT_FIRST\fP and
+\fBfatlastcluster(\fP\fIf\fP\fB)\fP, extremes included. For example, if
+\fIc=6\fP and \fIend=6\fP, it returns \fIbegin\fP.
+.TP
+.BI "int32_t fatclusterintervalprev(fat *" f ", int32_t " c ", \
+int32_t " begin ", int32_t " end )
+Same, but decreases \fIc\fP instead of increasing.
+.TP
+.BI "int32_t fatclusternumfree(fat *" f )
+The number of free clusters in the filesystem. This number is also saved in
+\fIf->free\fP, and possibly saved if the filesystem is a FAT32.
+.BI "int32_t fatclusternumfreebetween(fat *" f ", \
+int32_t " begin ", int32_t " end )
+The number of free clusters between \fIbegin\fP and \fIend\fP, inclusive. This
+interval wraps (see above).
+.TP
+.BI "int32_t fatclusterfindfree(fat *" f )
+Find a free cluster, or \fIFAT_ERR\fP if non exists. Seach start from
+\fIf->last\fP.
+.TP
+.BI "int32_t fatclusterfindfreebetween(fat *" f, \
+int32_t " begin ", int32_t " end ", int32_t " start )
+Same, but within an interval and starting the search for a given cluster.
+.TP
+.BI "int fatclusterareaisbad(fat *" f ", int32_t " begin ", int32_t " end )
+Check if some cluster between \fIbegin\fP and \fIend\fP, inclusive, is marked
+as bad.
+.TP
+.BI "int fatclusternumbadbetween(fat *" f ", \
+int32_t " begin ", int32_t " end )
+Count how many bad clusters are between
+\fIbegin\fP and \fIend\fP, inclusive.
+.TP
+.BI "int32_t fatclustermostfree(fat *" f ", \
+int " size ", int " allowbad ", int *" maxfree )
+Determine the contigous area of \fIsize\fP with most free clusters. If
+\fIallowbad\fP is 0, areas with bad clusters are excluded at all. The return
+value is the first cluster of the area, its size in \fImaxfree\fP. This is the
+same as \fIsize\fP only if the area contains no bad cluster.
+.TP
+.BI "int32_t fatclusterlongestlinear(fat *" f ", \
+int32_t " start ", int *" maxlen ", int *" maxindex )
+Find the first of the longest linear subchain of a chain. A segment of a chain
+is linear if is made of consecuitive clusters, such as \fI45,46,47,48\fP. Some
+chains are linear, the other contains only linear parts; in the worst case, the
+longest linear subchain has length 1. This function searches for the longest
+among the linear subchain. It returns the number of the first cluster in this
+subchain; other return parameters are: \fImaxlen\fP is the length of this
+subchain; \fImaxindex\fP is the index of the first cluster in the original
+chain. For example, \fI3,9,90,51,52,4,5,6,21,37,38,39,20\fP contains two linear
+subchains of maximal length: \fI4,5,6\fP and \fI37,38,39\fP. The first is
+returned; in particular, the return value is 4 (first cluster of the chain)
+while the two return parameters are 6 (this cluster is the third in the chain)
+and 3 (this subchain is long 3).
+.TP
+.BI "int fatclusterfindallocated(fat *" f ", \
+int32_t " begin ", int32_t " end )
+Find an allocated (non-free) cluster in the given interval, extremes included.
+.BI "int fatclusterfindallocatedbetween(fat *" f ", \
+int32_t " begin ", int32_t " end ", int32_t " start )
+Same as above, but start searching for the given cluster.
+.TP
+.BI "int fatclusterfreechain(fat *" f ", int32_t " begin )
+Free the chain of clusters starting from \fIbegin\fP.
+.P
+The following functions are for creating or reading a cluster from a
+filesystem. The first is used when the cluster is to be written without the
+need to first read its previous content; this is the case with clusters that
+were unused and are now allocated to place some content on them.
+.TP
+.BI "int fatclusterposition(fat *"f ", \
+int32_t " cl ", uint64_t *" origin ", int *" size )
+Determine the position of a cluster given its number: its origin and its size.
+The second is needed because cluster \fIFAT_ROOT\fP on a FAT12/FAT16 has a
+different size than the others \fIFAT_FIRST...fatlastcluster(f)\fP.
+.TP
+.BI "unit *fatclustercreate(fat *" f ", int32_t " cl )
+Create a cluster in cache, presumably to be then written some data and wrote
+back to the filesystem. This function returns NULL if a cluster of number
+\fIcl\fP is already in cache, since some other part of the code might have a
+pointer to the old cluster, and inserting the new one otherwise would create an
+inconsistency. Depending on the logic of the program, this may suggest an error
+in the code or just that the next function is to be called.
+.TP
+.BI "unit *fatclusterread(fat *" f ", int32_t " cl )
+Read a cluster from the filesystem in cache. This is more or less the same as
+\fBfatunitget()\fP, but reading clusters requires some calculations more than
+for sectors. Writing does not, so the common function \fPfatunitwriteback()\fP
+saves the cluster.
+.TP
+.BI "int32_t fatsectorposition(fat *" f ", uint32_t " sector )
+Find the cluster that contains the given sector. Return the cluster number,
+possibly \fIFAT_ROOT\fP, or a value less than \fIFAT_ERR\fP if the sector does
+not belong to any cluster. In particular, if the return value is
+\fIFAT_ERR - 1\fP this is a one of the reserved sectors; otherwise, the return
+value is less than \fIFAT_ERR - 1\fP and the sector is in the file allocation
+table number \fIreturn_value + FAT_ERR - 2\fP.
+.
+.
+.
+.SH entry.h
+This header file contains the functions for accessing directory entries. A
+directory in a FAT12/FAT16/FAT32 filesystem is represented as a sequence of
+clusters divided into 32-bytes blocks called directory entry. An entry may be
+empty or represent a file in the directory (this assumes that long file names
+are not used). The following function access the data associated to this file
+given the coordinates of a directory entry: its cluster and its index in there.
+
+In simpler words, the library represent each file as pair cluster,index, where
+the latter is an integer and the former a \fIunit*\fP typically obtained by
+\fBfatclusterread()\fP but sometimes by \fBfatclustercreate()\fP. Such a pair
+contains the file name, size, time of last write, etc. It also contain the
+first cluster of the chain that holds the file content. The pair identifies a
+32-byte block that represent a file, the block being called a \fI"directory
+entry"\fP.
+
+The following functions access all this data. In the context of files, the
+cluster of the pain cluster,index is usually called "directory", since a
+directory is a chain of cluster that contains such pairs directory,index.
+.TP
+.BI "int fatentryexists(unit *" directory ", int " index )
+Return whether the \fIindex\fP-th block of 32 bytes within the cluster
+\fIdirectory\fP is an actual file. This may not be the case if the file was
+deleted and not yet overwritten, or the block is full of zeros, which signals
+that the files in the directory are finished.
+.TP
+.BI "int fatentryend(unit *" directory ", int " index )
+Return whether the \fIindex\fP-th block of 32 bytes within the cluster
+\fIdirectory\fP marks the end of the directory, rather than being an actual
+file.
+.TP
+.BI "int fatentryislongpart(unit *" directory ", int " index )
+Return whether \fIdirectory,index\fP is only part of a long filename, rather
+than being an actual file.
+.TP
+.BI "void fatentrygetshortname(unit *" directory ", int " index ", \
+char " shortname " [13])
+Store the file name contained in the directory entry \fIdirectory,index\fP, in
+the array \fIshortname\fP, which will then contain the name in the usual
+"BASENAME.EXT" form.
+.TP
+.BI "int fatentrysetshortname(unit *" directory ", int " index ", \
+char *" shortname )
+Set \fIshortname\fP to be the name of the file in the directory entry
+\fIdirectory,index\fP. No check is done on the name except that it can be
+converted from the "BASENAME.EXT" form. In other words, this function allows
+storing an invalid filename in a directory entry. This is avoided by calling
+\fBfatinvalid()\fP and \fBfatstoragename()\fP before this function.
+See \fIFILE NAMES\fP, below.
+.TP
+.BI "void fatentryprintshortname(unit *" directory ", int " index )
+Prints the short name of the file to stdou.
+.TP
+.BI "int fatentrycompareshortname(unit *" directory ", int " index ", \
+char " shortname " [13])
+Compare the shortname of the file with the array.
+.TP
+.BI "int fatentryisdotfile(unit *" directory ", int " index )
+Checks whether the file is a dot or a dotdot file; this is just a comparison of
+the shortname with "." and with ".."
+.TP
+.BI "int32_t fatentrygetfirstcluster(unit *" directory ", int " index ", \
+int " bits )
+Find the number of the first cluster of the chain that holds the file content.
+This is \fIFAT_UNUSED\fP if the file is empty, except for certain directories.
+
+In particular, \fIFAT_UNUSED\fP is zero, and zero as the first cluster of a
+dotdot file (\fI..\fP) stands for the root directory, whose actual number is
+\fIfatgetrootbegin(f)\fP. Since subdirectories cannot be empty (since they
+contain at least the dot and dotdot entries), when the first cluster of a
+directory is 0 it can be assumed to be the root directory.
+
+The last argument is the number of bits of the filesystem (FAT12, FAT16 or
+FAT32), which can be found by \fIfatbits(f)\fP; it is required because of the
+different way of representing this information.
+.TP
+.BI "int fatentrysetfirstcluster(unit *" directory ", int " index ", \
+int " bits ", int32_t " n )
+Sets the number of the first cluster used to store the file content. Empty
+files have \fIFAT_UNUSED\fP.
+.TP
+.BI "unsigned char fatentrygetattributes(unit *" directory ", int " index )
+Return the attributes of the file, a logical OR of some of the following:
+
+.nf
+FAT_ATTR_RO
+FAT_ATTR_HIDDEN
+FAT_ATTR_SYSTEM
+FAT_ATTR_VOLUME
+FAT_ATTR_DIR
+FAT_ATTR_ARCHIVE
+.fi
+
+Also the macros \fIFAT_ATTR_ALL\fP and \fIFAT_ATTR_LONGNAME\fP are defined.
+.TP
+.BI "void fatentrysetattributes(unit *" directory ", int " index ", \
+unsigned char " attr )
+Change the attributes of the file.
+.TP
+.BI "int fatentryisdirectory(unit *" directory ", int " index )
+Check whether this file is itself a directory. If this is the case, \fIcl =
+fatentrygetfirstcluster(directory, index)\fP is the number of its first
+cluster, and reading its files can be done starting on the pair
+\fIfatclusterread(f, cl),0\fP.
+.TP
+.BI "uint32_t fatentrygetsize(unit *" directory ", int " index )
+The size of the files, in bytes.
+.TP
+.BI "void fatentrysetsize(unit *" directory ", int " index ", \
+uint32_t " size )
+Set the size of the file, in bytes.
+.TP
+.BI "int fatentrygetwritetime(unit *" directory ", int " index ", \
+struct tm *" tm )
+.PD 0
+.TP
+.BI "int fatentrygetcreatetime(unit *" directory ", int " index ", \
+struct tm *" tm )
+.TP
+.BI "int fatentrygetreadtime(unit *" directory ", int " index ", \
+struct tm *" tm )
+.TP
+.BI "int fatentrysetwritetime(unit *" directory ", int " index ", \
+struct tm *" tm )
+.TP
+.BI "int fatentrysetcreatetime(unit *" directory ", int " index ", \
+struct tm *" tm )
+.TP
+.BI "int fatentrysetreadtime(unit *" directory ", int " index ", \
+struct tm *" tm )
+.TP
+.BI "int fatentrysetwritetimenow(unit *" directory ", int " index )
+.TP
+.BI "int fatentrysetcreatetimenow(unit *" directory ", int " index )
+.TP
+.BI "int fatentrysetreadtimenow(unit *" directory ", int " index )
+.PD
+Get and set the date/time of creation, last read and last write. The "-now"
+version set the date/time using the current system time. Granularity is two
+seconds, except that only the date of last read (not the time) is ever stored.
+The structure \fIstruct tm\fP is described in \fBctime\fP(3).
+.TP
+.BI "void fatentrydelete(unit *" directory ", int " index )
+Delete this directory entry. This is like deleting the file,
+except that the clusters with the file content are not deallocated.
+.TP
+.BI "void fatentryzero(unit *" directory ", int " index )
+Fill the 32-byte block with zero. This is necessary to intialize clusters that
+appended to directories.
+.TP
+.BI "void fatentryprint(unit *" directory ", int " index )
+Print some of the data associated to the file to stdout. This is mainly for
+testing.
+.
+.
+.
+.SH directory.h
+This header contains functions that are similar to these in \fIentry.h\fP, but
+do not involve only a directory entry directory,index but also the rest of the
+filesystem. For example, the first cluster of a file can be determined from the
+directory entry only; instead, the number of clusters a file take require
+following the chain, which can only be done using the file allocation table.
+.TP
+.BI "int fatentrynumclusters(fat *" f ", unit *" directory ", int " index )
+Number of clusters of the file. This is the length of the chain starting at
+cluster \fIfatentryfirstcluster(directory,index)\fP.
+.TP
+.BI "int fatnextentry(fat *" f ", unit **" directory ", int *" index )
+If \fIdirectory,index\fP is a directory entry, this function changes it to
+point the next directory entry, existing or otherwise. Depending on the value
+of \fIindex\fP, this may involve finding the successor of cluster
+\fIdirectory\fP and loading it from the filesystem. If such a next entry
+exists, 0 is returned. Otherwise, a non-zero value is returned and
+\fIdirectory,index\fP are set to point to \fINULL,0\fP; this may happen because
+the directory is finished but also because of an error in reading the next
+cluster.
+
+An example cycle for scanning a directory:
+
+.nf
+directory = fatclusterread(f, num);
+for (index = -1; ! fatnextentry(f, &directory, &index); ) {
+	// directory,index is a directory entry;
+	// it can be used on any of the function in entry.h
+
+	// for example:
+	if (! fatentryexists(directory, index))
+		continue;
+	fatentryprint(directory, index);
+	puts("");
+}
+.fi
+.P
+The following functions look up a file given its short name or complete path.
+They all have a \fIint32_t dir\fP argument, which is the number of the first
+cluster of a directory where to search for a file. The functions that have a
+\fIchar *path\fP argument ignore \fIdir\fP if the path begins with `/', and
+search from the root directory instead. The validity of the short name or path
+is not checked; this can be done by calling \fIfatinvalidname()\fP or
+\fIfatinvalidpath()\fP. See \fIFILE NAMES\fP, below.
+.TP
+.BI "int fatlookupfile(fat *" f ", int32_t " dir ", \
+const char *" shortname ", unit **" directory ", int *" index )
+Search for a file of name \fIshortname\fP in the directory whose first cluster
+is \fIdir\fP. If not found, returns -1. Otherwise return 0 and store the
+directory entry of the file in \fIdirectory,index\fP.
+See also \fIFILE NAMES\fP, below.
+.TP
+.BI "int32_t fatlookupfirstcluster(fat *" f ", int32_t " dir ", \
+const char *" shortname )
+This function combines a call to the previous function with
+\fIfatentrygetfirstcluster(\fIdirectory\fB,\fIindex\fB)\fR, a common sequence
+in code. The return value is \fIFAT_ERR\fP if the file does not exist.
+See comments in the description of \fIfatentrygetfirstcluster()\fP about
+\fIFAT_UNUSED\fP.
+See also \fIFILE NAMES\fP, below.
+.TP
+.BI "int fatlookuppath(fat *" f ", int32_t " dir ", \
+const char *" path ", unit **" directory ", int *" index )
+Set \fIdirectory,index\fP to the directory entry of the file specified by the
+string \fIpath\fP. Search is rooted in the directory \fIdir\fP, unless the path
+begins with `/'. If the file is not found, -1 is returned, otherwise 0.
+See also \fIFILE NAMES\fP, below.
+.TP
+.BI "int32_t fatlookuppathfirstcluster(fat *" f ", int32_t " dir ", \
+const char *" path )
+Same as the previous function, but returns the first cluster of the file or
+\fIFAT_ERR\fP if the file does not exist.
+See comments in the description of \fIfatentrygetfirstcluster()\fP about
+\fIFAT_UNUSED\fP.
+See also \fIFILE NAMES\fP, below.
+.P 
+Some functions search for a free directory entry and create a new file in it.
+The \fIint32_t dir\fP argument is the first cluster of the directory where to
+start, and the output parameters \fIdirectory,index\fP point to the free entry
+or to the entry of the newly created file.
+.TP
+.BI "int fatfindfreeentry(fat *" f ", unit **" directory ", int *" index )
+Find the next available directory entry after \fIdirectory,index\fP. If this is
+impossible, return -1. Otherwise, return 0 with the free entry in
+\fIdirectory,index\fP. The search may involve the addition of a new cluster to
+the directory. Therefore, this function may only fail if the cluster
+\fIdirectory\fP is the root on a FAT12 or FAT16, or all clusters are already
+allocated.
+
+This function is intended not only for creating a single file, but also a
+sequence of them. To this aim, it increases of \fIdirectory,index\fP itself; it
+first move the pair to the next entry and then checks whether the entry is
+free. As a result, pass \fIindex=-1\fP for creating a single file:
+
+.nf
+index = -1;
+if (! fatfindfreeentry(f, &directory, &index)) {
+	// file cannot be created
+}
+// create file
+.fi
+
+Also pass \fIindex=-1\fP when creating the first of a sequence of files, and
+and do not move \fIdirectory,index\fP between calls:
+
+.nf
+for (index = -1;
+     ! fatfindfreeentry(f, &directory, &index); ) {
+	// create a file in directory,index
+	// DO NOT call fatnextentry(f, &directory, &index);
+}
+.fi
+.TP
+.BI "int fatfindfreeentrypath(fat *" f ", \
+int32_t " dir ", const char *" path ", \
+unit **" directory ", int *" index )
+Same as the previous function, but instead of starting from the directory entry
+given as the initial value of the parameters \fIdirectory,index\fP, search in
+the directory whose name is \fIpath\fP starting from the directory \fIdir\fP.
+If \fIpath\fP begins with '/', the root is used as the starting directory.
+See also \fIFILE NAMES\fP, below.
+.TP
+.BI "int fatinvalidname(const char *" name )
+Check if \fIname\fP is a valid file name. It is if it contains at most one dot,
+if the part before and after the dot are long at most eight and three,
+respectively, and whether each single character is valid. Note that lower-case
+characters are valid, but should be converted into upper case, for example by
+\fIfatstoragename()\fP. Return -1 if the name is invalid and 0 if valid. Names 
+\fI.\fP and \fI..\fP are considered special and this function returns 1 on
+them.
+See \fIFILE NAMES\fP, below.
+.TP
+.BI "int fatinvalidpath(const char *" path )
+Check whether \fIpath\fP is valid.
+When creating new files, note that "/" and "/ABCD/" are valid paths.
+Return -1 if the path is not valid, 1 if it ends with either \fI.\fP or
+\fI..\fP, and 0 otherwise.
+See \fIFILE NAMES\fP, below.
+.TP
+.BI "char *fatstoragename(char *" name )
+Turn \fIname\fP into upper case and remove any trailing spaces at the end of
+the basename and of the extension. Programs are expected to accept names with
+lower case characters and trailing spaces, but to convert them this way when
+creating a file. The converted string is dynamically allocated: call
+\fBfree\fP(3) when done with it.
+See \fIFILE NAMES\fP, below.
+.TP
+.BI "char *fatstoragepath(const char *" path )
+Turn a path into the form in which is actually stored in the filesystem. This
+is the same as calling \fIfatstoragename()\fP on each part of the path. Free
+the resulting string when done with it.
+See \fIFILE NAMES\fP, below.
+.TP
+.BI "int fatcreatefile(fat *" f ", int32_t " dir ", char *" path ",  \
+unit **" directory ", int *" index )
+Create a file given its full path, starting from the directory whose first
+cluster is \fIdir\fP if \fIpath\fP does not begin with '/'. The resulting value
+of the pair \fIdirectory,index\fP is the directory index of the newly created
+file. It already has the specified name, size zero and no cluster. All other
+file data has still to be created: attributes, times and content (if any).
+
+This function does not check whether a file with that name already exists, so
+it can create duplicate files. It neither verify the validity of the path,
+either (see \fIFILE NAMES\fP, below). This is supposed to be done by the
+program:
+
+.nf
+r = fatgetrootbegin(f);
+
+if (fatinvalidpath(path)) {
+	// path invalid
+}
+else {
+	converted = fatstoragepath(path);
+	if (! fatlookuppath(f, r, converted, &directory, &index)) {
+		// file exists
+		// includes paths like /ABCD/EFGH/
+		// where the directory exists
+	}
+	else if (fatcreatefile(f, r, converted, &directory, &index))
+		// file cannot be created
+	else
+		// operate on file
+	free(converted);
+}
+.fi
+.
+.
+.
+.SH reference.h
+A cluster reference is the "predecessor" of a cluster in the filesystem. For a
+cluster in the middle or the end of the chain this is simply the previous
+cluster; for the first cluster of the chain, it is the directory entry of the
+file.
+
+This is needed for example for cutting a chain at some cluster \fInum\fP.
+Marking this cluster as unused is not enough, as its previous cluster still
+points to it as its successor in the file allocation table. For example, if
+\fInum=12\fP and the aim was to free cluster 12, just marking 12 as unused
+produces the chain:
+
+.nf
+3 -> 47 -> 12 -> ...	before the cut
+3 -> 47 -> 12(UNUSED) 	after deallocating cluster 12
+.fi
+
+The resulting chain is valid since \fIFAT_UNUSED\fP is considered as an
+alternative to \fIFAT_EOF\fP to mark the end of the chain, but cluster 12 has
+not been removed from the chain. Rather than cutting \fIbefore\fP cluster 12,
+the result is a cut after it. The correct result is obtained by marking the
+predecessor of 12 with \fIFAT_EOF\fP:
+
+.nf
+3 -> 47 -> 12 -> ...		before the cut
+3 -> 47(EOF) 12(UNUSED) 	correct way for deallocating cluster 12
+.fi
+
+To change the link that points to cluster 12, what is needed is not
+\fInum=12\fP but rather \fIprevious=47\fP since the cut is obtained by
+\fBfatsetnextcluster(f, 47, FAT_UNUSED)\fP.
+
+While this works when working with a cluster in the middle of a chain, the
+first cluster of a chain has no predecessor. Yet, it can still be cut out of
+the chain by \fBfatentrysetfirstcluster(directory, index, FAT_UNUSED)\fP, where
+\fIdirectory,index\fP is the directory entry of the file that has this chain.
+
+A cluster reference allows disregarding the difference. It is defined as a
+triple \fIdirectory,index,previous\fP, so that every cluster that is used in
+the filesystem has a cluster reference pointing to it: the first cluster of a
+chain is referred by \fIdirectory,index,0\fP; the successor of cluster
+\fIprevious\fP is referred by \fINULL,0,previous\fP. Cutting the target of a
+reference of out the chain can be done by calling \fBfatreferencesettarget(f,
+directory, index, previous, FAT_EOF)\fP without the need to distinguish the two
+cases.
+
+The cluster that is pointed to by a cluster reference
+\fIdirectory,index,previous\fP is its \fBtarget\fP. It can be obtained and
+modified by the following two functions.
+.TP
+.BI "int32_t fatreferencegettarget(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous )
+Determine the target of the reference \fIdirectory,index,previous\fP.
+.TP
+.BI "int fatreferencesettarget(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", int32_t " new )
+Change the target of the reference \fIdirectory,index,previous\fP.
+.
+.P
+Actually, a cluster reference may take four forms:
+.TP
+\fIdirectory!=NULL,index,0\fP
+reference to the first cluster of the directory entry \fIdirectory,index\fP
+.TP
+\fINULL,0,previous>0\fP
+reference to the successor of \fIprevious\fP
+.TP
+\fINULL,0,-1\fP
+reference to the first cluster of the root directory
+.TP
+\fINULL,0,0\fP
+void reference
+.P
+The following functions check what a cluster reference is.
+.TP
+.BI "int fatreferenceiscluster(unit *" directory ", int " index ", \
+int32_t " previous )
+The reference is itself a cluster: cluster \fIprevious\fP.
+.TP
+.BI "int fatreferenceisentry(unit *" directory ", int " index ", \
+int32_t " previous )
+The reference is a directory entry: \fIdirectory,index\fP
+.TP
+.BI "int fatreferenceisdirectory(unit *" directory ", int " index ", \
+int32_t " previous )
+The reference is directory entry \fIdirectory,index\fP, and this is the
+directory entry of a directory, that is, it has the \fIFAT_ATTR_DIR\fP
+attribute.
+.TP
+.BI "int fatreferenceisdotfile(unit *" directory ", int " index ", \
+int32_t " previous )
+The reference is the directory entry of a dot file. Not only it is in the form
+\fIdirectory,index\fP, but has the \fIFAT_ATTR_DIR\fP attribute and its name is
+"." or ".."
+.TP
+.BI "int fatreferenceisboot(unit *" directory ", int " index ", \
+int32_t " previous )
+The reference points to the first cluster of the root directory: it is in the
+form \fINULL,0,-1\fP. Since the position of the root directory is determined
+from data in the boot sector, the boot sector is considered the reference to
+the first cluster of the root directory.
+.TP
+.BI "int fatreferenceisvoid(unit *" directory ", int " index ", \
+int32_t " previous )
+The reference is void: \fINULL,0,0\fP.
+.P
+For testing, a file reference can be print to stdout with the following
+function.
+.TP
+.BI "void fatreferenceprint(unit *" directory ", \
+int " index ", int32_t " previous )
+Print a representation of the cluster reference to stdout.
+.
+.P
+The point of using a cluster reference rather than the cluster itself is that a
+cluster can be moved to another position without changing the content of its
+chain. While \fIfatunitmove()\fP only copies the content of a cluster to
+another, the reference to a cluster allows changing the incoming link to the
+cluster itself. For example, the content of cluster \fI14\fP can be moved to
+cluster \fI50\fP without affecting the content of the file it is used for:
+
+.nf
+24 -> 92 -> \fI14\fP -> 7 -> 32	before
+24 -> 92 -> \fI50\fP -> 7 -> 32	after
+.fi
+
+Given the numbers \fI14\fP and \fI50\fP, the content of cluster \fI14\fP can be
+copied to cluster \fI50\fP and cluster \fI7\fP be made the successor of
+\fI50\fP. The remaining operation is to change the link \fI92->14\fP into
+\fI92->50\fP; this requires the number of the cluster that precedes \fI14\fP:
+the reference to cluster \fI14\fP.
+
+This reference is also required when \fI14\fP is the first cluster of the
+chain. For this reason, moving a cluster requires a reference to the cluster
+and the number of the destination. When swapping clusters, two references are
+needed.
+.TP
+.BI "int fatclustermove(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+int32_t " new ", int " writeback )
+
+Move the cluster that is the target of the reference
+\fIdirectory,index,previous\fP to cluster \fInew\fP. If \fIwriteback\fP is not
+zero, the cluster is also wrote back to the filesystem; this is a good idea so
+that this function can check for IO errors and revert the move in this case.
+
+Moving requires the source cluster to be used and the target to be unused,
+otherwise the function returns -1 and the operation is not done; moving an
+unused cluster does not make much sense, and can still be made by
+\fBfatunitmove()\fP; if the destination is used the clusters can only be
+swapped. The return value is also -1 if the cluster cannot be moved because it
+is the cluster of the root directory of FAT12 or FAT16.
+
+The return value is -2 if if the current target cluster cannot be read because
+of an IO error and -5 if it cannot be moved to the destination because of an IO
+error (in this case the move is rolled back). The last error is -5 for
+uniformity with the following function.
+.TP
+.BI "int fatclusterswap(fat *" f ", \
+unit *" dfirst ", int " ifirst ", int32_t " pfirst ", \
+unit *" dsecond ", int " isecond ", int32_t " psecond ", \
+int " writeback);
+Swap the clusters that are the target of the references
+\fIdfirst,ifirst,pfirst\fP and \fIdsecond,isecond,psecond\fP. The return value
+is -1 if either cluster are unused or one of them is the cluster of the root
+directory in a FAT12 or FAT16. If \fIwriteback\fP is 1 the cluster are wrote
+back to the filesystem; this is recommended, so that IO errors can be checked
+and the swap possibly rolled back.
+
+An IO error results in values -2, -3, -4, -5 depending on which operation
+failed, and any changes made so far rolled back: -2 means that the first
+cluster cannot be read, -4 that it cannot be wrote back in place of the
+second; -3 and -5 mean the same for the second cluster. In all these cases, the
+link between clusters are restored into their original state.
+.TP
+.BI "int fatfollowpath(fat *" f ", const char *" path ", \
+char **" left ", unit **" directory ", int *" index ", int32_t *" previous )
+Move the cluster reference \fI*directory,*index,*previous\fP following
+\fIpath\fP as much as possible (see \fIFILE NAMES\fP, below). The output
+parameter \fI*left\fP points to the trailing part of \fIpath\fP that could not
+be followed; it points to it terminating '\\0' if all path has been followed.
+The last part of a path may be a regular file. Return 0 if the entire path was
+followed, -1 otherwise.
+
+For example, if the directory \fI/AAA/BBB/CCC/DDD\fP exists but contains no
+file name \fIEEE\fP, and the functions is called with the cluster reference
+pointing to the directory entry of \fI/AAA/BBB\fP and the path equal to
+\fICCC/DDD/EEE/FFF\fP, at the end the cluster reference points to the directory
+entry of \fI/AAA/BBB/CCC/DDD\fP and \fI*left\fP to the final part \fIEEE/FFF\fP
+of \fIpath\fP; the return value is -1.
+
+This function aims at factoring out the path walk operation that is common to
+looking up a path and creating a new file from its path (but is not used for
+this yet):
+.RS
+.IP "   * " 5
+lookup succeeds if the entire path matches; in this case, the updated cluster
+reference points to the directory entry of the file, which is the expected
+result of a lookup;
+.IP "   * "
+file creation requires the file not to exists; therefore, it can be done only
+if the path could \fInot\fP be followed entirely, but the leftover part does
+not contain slashes; if this is the case, the updated cluster reference points
+to the directory where the file is to be created, which is necessary to create
+the file.
+.RE
+.
+.P
+The cluster reference \fINULL,0,-1\fP points to the first cluster of the root
+directory, which is therefore obtained by calling \fIfatreferencegettarget(f,
+NULL, 0, -1)\fP. From this, a program can analyze the directory entries in the
+root directory, possibly doing the same if one of them is itself also a
+directory. The same can be done starting from an arbitrary cluster reference to
+perform some operation on all clusters of a file or the entire content of a
+directory, recursively. The functions in the following section facilitate this
+task by following the chains and calling itself recursively, so that the
+program only needs to pass a function to be execute on every cluster reference.
+.
+.
+.
+.SH fatreferenceexecute()
+This function is still declared in \fIreference.h\fP, but is described in its
+own section because the explanation is long and several other functions are
+implemented using it. The latter is because a number of operations can be
+reformulated as "follow the chain from this cluster, possibly with recursion".
+This is exactly what this function does, running a callback at each step.
+.TP
+.BI "typedef int(* refrun)(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+unit *" startdirectory ", int " startindex ", int32_t " startprevious ", \
+unit *" dirdirectory ", int " dirindex ", int32_t " dirprevious ", \
+int " direction ", void *" user )
+The callback function that is called on every cluster reference. The
+explanation of the parameters are below.
+.TP
+.BI "void fatreferenceexecute(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+refrun " act ", void *" user )
+Execute function \fIact\fP on every cluster reference that is reachable
+starting from \fIdirectory,index,previous\fP. More details follow.
+.P
+In the most basic case, \fBfatreferenceexecute()\fP is called on the boot
+sector, the reference to the first cluster of the root directory. It calls the
+passed callback function \fIact\fP on this reference, on the reference to the
+other clusters of the root directory (if any) and then recursively on its
+files.
+
+If \fIdirectory,index,previous\fP is a cluster or the directory entry for a
+file, nothing else is done. The other case is that
+\fIdirectory,index,previous\fP is the directory entry of a file that also
+happens to be a directory. In this case, the content of the directory is to be
+analyzed. This means that the callback is not only run to the clusters of the
+chain starting at \fIfatentrygetfirstcluster(directory, index)\fP, but also on
+each directory entry within. The \fIdirection\fP parameter is done to
+distinguish the two case. In particular, \fIact\fP is called:
+.IP "   * " 5
+on the cluster reference and the reference to the following clusters in the
+chain with \fIdirection=0\fP; if this the cluster reference is not the
+directory entry of a directory, nothing else is to be done
+.IP "   * "
+on the cluster reference with \fIdirection=1\fP to signal it is entering the
+directory
+.IP "   * "
+on the cluster reference of each directory entry in the directory with
+\fIdirection=0\fP, and recursively within
+.IP "   * "
+again on the cluster reference with \fIdirection=-1\fP to signal leaving the
+directory
+.IP "   * "
+again on the cluster reference and following chain with \fIdirection=-2\fP for
+the final cleanups to be done after the recursive calls
+.P
+If all that is needed is to perform some operation on all used clusters of the
+filesystem, \fIact\fP can return immediately if \fIdirection\fP is not zero.
+Some other operations instead require different actions when entering and
+leaving a directory, or after that.
+
+The \fIrefrun\fP function \fIact\fP receives as parameters:
+.TP
+\fIdirectory,index,previous\fP
+the cluster reference
+.TP
+\fIstartdirectory,startindex,startprevious\fP
+the directory entry where the chain containing the cluster start
+.TP
+\fIdirdirectory,dirindex,dirprevious\fP
+the previous directory entry belongs to a directory; this is the directory
+entry of that directory
+.P
+This allows \fIact\fP to make different operations depending on which file the
+cluster belongs to and on which directory this file belongs. By these same
+definition, if the cluster reference is a directory entry, the other two are
+its directory and the parent directory of it.
+
+The callback also receives a free \fIvoid *user\fP parameter for data to be
+shared by the caller and the recursive calls.
+
+The above description refers to the case where the callback returns
+\fIFAT_REFERENCE_NORMAL\fP, but the callback can affect this behaviour by
+returning a different value.
+.TP
+\fIFAT_REFERENCE_CHAIN\fP
+Follow the chain of clusters following the given reference, as described above.
+.TP
+\fIFAT_REFERENCE_RECUR\fP
+Proceed recursively, as described above.
+.TP
+\fIFAT_REFERENCE_ORIG\fP
+When following a chain of cluster, use the successor as found before calling
+the callback, rather than after. This is necessary if the callback deletes the
+cluster.
+.TP
+\fIFAT_REFERENCE_ALL\fP
+Analyze also the directory entries that are used for long filenames and deleted
+files.
+.TP
+\fIFAT_REFERENCE_DELETE\fP
+After a recursive calls, the cluster containing directory entries are no longer
+needed, so they can be deallocated to save memory. This is done with this
+return value.
+.P
+The above description of \fBfatreferenceexecute()\fP is what happens when the
+return value is always \fIFAT_REFERENCE_NORMAL\fP, which is defined as
+\fIFAT_REFERENCE_CHAIN | FAT_REFERENCE_RECUR | FAT_REFERENCE_DELETE\fP. Some
+steps can be skipped by removing some part of this logical OR. Another useful
+value is \fIFAT_REFERENCE_COND(r)\fP, which conditions the recursive visit to
+the value of \fIr\fP; this macro is defined as \fIFAT_REFERENCE_CHAIN |
+FAT_REFERENCE_DELETE | ((r) ? FAT_REFERENCE_RECUR : 0)\fP. Finally,
+\fIFAT_REFERENCE_ABORT\fP is defined as 0, and makes the function end as soon
+as possible.
+
+A callback may take advantage of the following macros.
+.TP
+\fIFATEXECUTEDEBUG\fP
+Prints the three cluster references. This is intended for testing and
+debugging, since the sequence of calls to the callback is not always obvious.
+.TP
+\fIFATEXECUTEFIXDOT\fP
+This macro requires a variable \fIint32_t cl\fP to be declared in the calling
+function. It fixes the dot (.) and dotdot (..) files. This is necessary when
+moving clusters: if the first cluster of the directory DIR is moved, DIR/. and
+DIR/SUBDIR/.. still incorrectly point to the old cluster. When recursion
+reaches any of these two, this macro fixes them.
+.TP
+\fIFATEXECUTEISDIR\fP
+This expression evaluates to true if the reference is to a directory cluster
+(that is, a cluster that contains directory entries, as opposed to the content
+of a file). This is the same as the \fIisidir\fP field of the inverse FAT (see
+below) entry of the cluster.
+.P
+During the scan of a directory, a directory cluster may not be readable; this
+happens because of an IO error or the lack of memory for storing the cluster.
+If this is the case, \fBfatreferenceexecute()\fP stops the scan, runs the
+callback with \fIdirection=-1\fP and \fIdirection=-2\fP, does the same for the
+parent directory and its ancestors up to the root, and returns -1.
+
+A number of other functions in the library are defined from
+\fBfatreferenceexecute()\fP.
+.TP
+.BI "typedef void (* filerun)(fat *" f ", char *" path ", \
+unit *" directory ", int " index ", void *" user )
+.PD 0
+.TP
+.BI "void fatfileexecute(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+filerun " act ", void *" user )
+.PD
+Execute a function on every file. This is like \fBfatreferenceexecute\fP,
+except that the callback is only run on the directory entries, and it is also
+passed the path of the file (including its name).
+.TP
+.BI "void fatdump(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+int " recur ", int " all )
+Print an indented summary of the filesystem starting from the cluster reference
+\fIdirectory,index,previous\fP. The dump is recursive if if \fIrecur\fP is
+non-zero. To dump the whole filesystem pass \fINULL,0,-1\fP and \fIrecur=1\fP.
+This includes the chain of clusters of each file and directory. If \fIall=1\fP,
+also the directory entries of the deleted files and long file names parts are
+printed.
+.TP
+.BI "void fatcalls(fat *" f ", int " all )
+This function helps testing. It prints the sequence of calls
+\fBfatreferenceexecute()\fP does to a callback when that returns
+\fIFAT_REFERENCE_NORMAL\fP. If \fIall=1\fP, also long file names and deleted
+files are considered.
+.TP
+.BI "int32_t fatcountclusters(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", int " recur )
+Return the number of clusters that can be reached from the passed reference,
+possibly including recursion.
+.TP
+.BI "void fatfixdot(fat *f);
+Fix all dot (.) and dotdot (..) files in the filesystem, by making them
+respectively point to their directory and its parent. This is needed when
+moving or swapping clusters and using \fIFATEXECUTEFIXDOT\fP does not work
+because some dot and dotdot files are not reached by recursion, for example
+because the initial call does not start from the boot sector or the call has
+been aborted.
+.TP
+.BI "int fatcutbadstart(fat *" f ", \
+unit *" directory ", int " index ", uint32_t " previous )
+.PD 0
+.TP
+.BI "int fatcutbad(fat *f ", int " verbose )
+.PD
+If a chain contains a cluster marked \fIFAT_BAD\fP, it is cut immediately after
+it. Return 1 if this action has been taken at least one. In this case, the
+cluster following that one in the chain are not deallocated (they could not);
+this can be done by calling \fIfatcleanunused()\fP.
+.P
+Some other functions use \fBfatreferenceexecute()\fP but are described in the
+following sections because they either use an inverse FAT or are interruptible.
+.
+.
+.
+.SH inverse.h
+The function \fBfatreferencegettarget()\fP gives the cluster that is the target
+of the reference. An inverse FAT does the converse: given a cluster, it
+provides its reference. If the cluster is the first of a chain, this is the
+directory entry of the file; otherwise, it is the previous cluster.
+
+Programs should avoid the use of an inverse FAT, if they can. First, building
+an inverse FAT requires scanning the whole filesystem; second, the inverse FAT
+may take lot of memory, since it is a table with an entry for every cluster,
+used or not; third, all directory clusters have to stay in memory until the
+inverse FAT is freed.
+
+Working with references and deriving their targets is better than working on
+clusters and obtaining their reference via an inverse FAT, but some operations
+such as defragmenting a filesystem requires it.
+
+.nf
+typedef struct {
+	unit *directory;
+	int index;
+	int32_t previous;
+	int isdir;
+} fatinverse;
+.fi
+
+An inverse FAT is a pointer to an array of such structures, one for each
+cluster. For example, the predecessor of cluster \fIcl\fP in a chain is
+\fIrev[cl].previous\fP.
+
+The following functions create, delete, update and print an inverse FAT.
+.TP
+.BI "fatinverse *fatinversecreate(fat *" f ", int " file )
+Create and return an inverse FAT for the filesystem \fIf\fP. The resulting
+memory area is not to be deallocated by \fBfree\fP(3) but via the following
+function. Apart from empty directories, all directory clusters are linked from
+this table, and will not be deallocated until the inverse FAT is removed.
+Argument \fIfile\fP tells whether the inverse FAT is to be created in memory or
+in a file that is then mapped to memory via \fBmmap\fP(2); the latter
+possibility is intended for filesystems too big for their inverse FAT to be in
+memory plus swap.
+.TP
+.BI "int fatinversedelete(fat *" f ", fatinverse *" rev )
+Deallocates an inverse FAT. Also update the reference count of the directory
+clusters and possibly deallocate them as well. If the inverse FAT is stored in
+a file (rather than in memory), delete that file.
+.TP
+.BI "void fatinverseclear(fatinverse *" rev ", int32_t " cluster )
+Mark the cluster as unused
+.TP
+.BI "int fatinverseisvoid(fatinverse *" rev ", int32_t " cluster )
+Check whether the cluster is marked as unused.
+.TP
+.BI "int32_t fatinverseset(fat *" f ", fatinverse *" rev ", \
+unit *" directory ", int " index ", int32_t " previous ", int " isdir )
+Update the inverse FAT entry for the cluster that is the target of the cluster
+reference \fIdirectory,index,previous\fP.
+.P
+Creating an inverse FAT requires a recursive scan of the entire filesystem.
+When the filesystem is modified it should be updated rather than recalculated
+from scratch. This is to be done whenever the chains of clusters are changed in
+some way, for example by allocating, moving or deallocating a cluster. The
+following two functions help in debugging.
+.TP
+.BI "void fatinverseprint(fat *" f ", fatinverse *" rev ", int32_t " cl )
+Print an element of the inverse FAT, for testing and debugging.
+.TP
+.BI "int fatinversecheck(fat *" f ", fatinverse *" rev ", int " file )
+Check whether \fIrev\fP is the inverse FAT of \fIf\fP. This is done by
+recalulating another inverse FAT for the same filesystem and then comparing. As
+a result, this function is only intended for testing. It checks whether
+\fIrev\fP has been updated correctly to reflect the changes in the filesystem,
+but is not suited for a production program. Argument \fIfile\fP tells whether
+the new inverse FAT is to be stored in a file, rather than in memory.
+.P
+Updating an inverse FAT can also be done at the same time as when changing a
+cluster chain.
+.TP
+.BI "void fatinversesettarget(fat *" f ", fatinverse *" rev ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+int32_t " new ", int " isdir )
+This is like \fBfatreferencesettarget()\fP, but also updates the inverse FAT.
+In most cases, this is the function to call when an inverse FAT has been
+created. To deallocate cluster \fIcl\fP, call with referecene \fINULL,0,cl\fP
+and \fInew=FAT_UNUSED\fP.
+.TP
+.BI "int fatinversemove(fat *" f ", fatinverse *" rev ", \
+int32_t " src ", int32_t " dst ", int " writeback )
+.PD 0
+.TP
+.BI "int fatinversemovereference(fat *" f ", fatinverse *" rev ", \
+unit *" directory ", int " index ", int32_t " previous ", int " isdir ", \
+int32_t " dst ", int " writeback )
+.PD
+Move used cluster \fIsrc\fP to unused cluster \fIdst\fP. In the second variant,
+the source of the move is given as a cluster reference rather than a cluster
+number; also whether it is a directory cluster has to be specified: if using
+\fBfatreferenceexecute()\fP, pass the result of the macro
+\fIFATEXECUTEISDIR\fP. If such a reference is known and the \fIisdir\fP can be
+determined this avoids a page fault if the part of the inverse FAT that
+contains the entry for the cluster is swapped out of memory.
+.TP
+.BI "int fatinverseswap(fat *" f ", fatinverse *" rev ", \
+int32_t " src ", int32_t " dst ", int " writeback )
+.PD 0
+.TP
+.BI "int fatinverseswapreference(fat *" f ", fatinverse *" rev ", \
+unit *" srcdir ", int " srcindex ", int32_t " srcprevious ", \
+int " srcisdir ", \
+unit *" dstdir ", int " dstindex ", int32_t " dstprevious ", \
+int " dstisdir ", \
+int " writeback )
+.PD
+Swap the two used clusters \fIsrc\fP and \fIdst\fP. In the second version,
+the source and the destination are given as cluster references rather than
+numbers. This may be convienient for the same reason outlined for moving
+clusters in the previous paragraph.
+.P
+The following functions make use of the inverse FAT. Others are in the next
+section since they deal interruptions.
+.TP
+.BI "int fatinversereferencetoentry(fatinverse *" rev ", \
+unit **" directory ", int *" index ", int32_t *" previous )
+Move the cluster reference \fIdirectory,index,previous\fP following back its
+chain until reaching a directory entry. In other words, it finds the directory
+entry of a file starting from one of its clusters. Return 0 if succesful, -1 if
+the directory entry could not be found. If the reference already points to a
+directory entry, it is not changed.
+.TP
+.BI "char *fatinversepath(fatinverse *" rev ", \
+unit *" directory ", int " index ", int32_t " previous )
+Return the complete path of the file containing the given cluster reference.
+The returned string is dynamically allocated, and should be deallocated with
+\fBfree\fP(3).
+.TP
+.BI "int fatinversepreventry(fat *" f ", fatinverse *" rev ", \
+unit **" directory ", int *" index ) 
+The converse to \fBfatnextentry()\fP: move from a directory entry to the
+previous one, possibly loading the previous directory cluster.
+Return -1 if this is the first entry in the directory.
+.TP
+.BI "int fatcleanunused(fat *" f )
+Mark unused all unused clusters.
+.
+.
+.
+.SH complex.h
+Some functions may take a long time because they need to scan the entire
+filesystem or a large part of it. If they modify the chains of clusters or
+their content, just stopping them is to be avoided, since the filesystem may be
+left in an inconsistent state. For examnple, when moving a cluster from a
+position to another the content may be copied before the link between its
+previous and next clusters is update.
+
+This header file contains macros to facilitate writing functions of this kind.
+The principle is that whenever the function reaches a state where it could be
+stopped easily (for example, because all that is required is to flush the
+filesystem), it check if it should and do it in this case. For the same reason,
+an IO error while reading or writing a cluster may make proceeding impossible,
+so that the best action to take is to stop and save the filesystem, requesting
+to run a filesystem checker.
+.TP
+\fIFATINTERRUPTIBLEGLOBALS(name)\fP
+Every interruptible function needs a name (an arbitrary string, usually the
+name of the main function or something similar) to pass to this and the
+following macro. This one defines some globals that are used in the following.
+.TP
+\fIFATINTERRUPTIBLESTART(name)\fP
+Before starting the entire operation, this macro is called to stop SIGTERM and
+SIGINT. This way, a signal does not unconditionally terminate the program; it
+is not ignored either: the arrival of a signal can be checked by the following
+macro.
+.TP
+\fIFATINTERRUPTIBLECHECK(name)\fP
+This condition is true if the operation is to be aborted. The functions
+implementing it should check this at regular intervals when the operation can
+be safely aborted without making the filesystem inconsistent. The start of a
+recursive macro or of a \fIrefun\fP callback to \fBfatreferenceexecute()\fP may
+be a good point.
+
+If this macro is true, the operation is supposed to be aborted as soon as
+possible without laving the filesystem in an inconsistent state. In the case of
+recursive functions, returning immediately may be the quickest way to ensure
+integrity. This macro may also need to be checked at the end: if true, some
+cleanup may need to be done.
+
+The return value identifies the reason for stopping.
+.RS
+.IP "   * " 5
+\fIFATINTERRUPTIBLEINTERRUPTED\fP; a signal arrived (-1)
+.IP "   * "
+\fIFATINTERRUPTIBLENORMAL\fP; do not stop, proceed (0)
+.IP "   * "
+\fIFATINTERRUPTIBLEIOERROR\fP; stop because of an IO error (1)
+.RE
+.TP
+\fIFATINTERRUPTIBLEABORT(name, condition)\fP
+Called to abort the operation, as if a signal arrived; condition is a number
+greater than zero, with 1 suggested for interruption due to an IO error; this
+number is what FATINTERRUPTIBLECHECK(name) returns from this point on.
+.TP
+\fIFATINTERRUPTIBLEFINISH(name)\fP
+At the end, this macro enables the signals again.
+.P
+Due to globals, a function using these macros is not reentrant. Also, the
+previous signal handlers are not stored at the beginning and restored at the
+end. They are set to their default value at the end, regardless of their
+previous handlers.
+
+The following functions deal with interruption.
+.TP
+.BI "int fatuflush(fat *" f )
+Uninterruptible flush. Stopping a flush at any intermediate step almost always
+leaves the filesystem inconsistent. Therefore, this function simply disable
+interrupting signal until it ends.
+.TP
+.BI "void fatmovearea(fat *" f ", int32_t " srcbegin ", int32_t " srcend ", \
+int32_t " dstbegin ", int32_t " dstend )
+Move the cluster in the area \fIsrcbegin-srcend\fP to the area
+\fIdstbegin-dstend\fP, without changing the content of any file or directory.
+Apart from the final flush of the file allocation tables and the directory
+clusters, it can be stopped at any time, with some of clusters moved and the
+others still at their place.
+.TP
+.BI "void fatcompact(fat *" f )
+Compact a filesystem by moving used clusters to the empty space at the
+beginning. This function is actually a stub for the previous one.
+.TP
+.BI "int fattruncate(fat *" f ", int " numclusters )
+Truncate files or directory at the first cluster that is over
+\fInumclusters\fP. Does not only remove these clusters, but also every other
+one that follows them in their chain.
+.TP
+.BI "int fatlinearize(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+int32_t " start ", int " recur ", int " testonly ", int *" nchanges )
+Move or swap clusters in such a way the chain starting from the reference
+\fIdirectory,index,previous\fP becomes linear, that is, its clusters are
+consecutive (like 54,55,56,57).
+
+Parameter \fIstart\fP specifies where the chain should start; the area needs
+not to be free: used clusters are swapped with the ones of the file. If
+\fIrecur\fP is not zero, the linearization is done recursively. With
+\fItestonly\fP different than zero, no change is actually performed. If
+\fInchanges\fP is not NULL, the number of changes done or required is stored in
+\fI*nchanges\fP.
+
+Before linearizing a large file or directory, reckoning the effort needed may
+be useful. This is obtained by calling this function with a non-zero value for
+\fItestonly\fP and a non-NULL value of \fInchanges\fP. After the call, if
+\fI*nchanges\fP is zero the file is already linear; otherwise, it is the number
+of clusters to be moved or swapped to linearize the it.
+
+If interrupted, this function leaves a consistent filesystem with only part of
+the chain(s) linearized.
+.TP
+.BI "int fatdefragment(fat *" f ", int " testonly ", int *" nchanges )
+Defragment the filesystem. The last two parameters are like in
+\fIfatlinearize()\fP.
+.
+.
+.
+.SH long.h
+A number of functions deal with long filenames. Apart the ones that explicitely
+scan for long name parts, the others are mostly duplicates of the corresponding
+functions for short names.
+.TP
+.BI "void fatlonginit(struct fatlongscan *" scan )
+.PD 0
+.TP
+.BI "void fatlongend(struct fatlongscan *" scan )
+.TP
+.BI "int fatlongscan(unit *" directory ", int " index ", \
+struct fatlongscan *" scan )
+.PD
+Analyze the directory entry in \fIdirectory,index\fP, returning a specific
+value to indicate that the sequence for a file is complete. Looking up a file
+is easier to do with the other functions below; this one is aimed at situations
+where directory entries are processed one at time, such as in a callback to
+\fBfatreferenceexecute()\fP.
+
+An example cycle is:
+
+.nf
+struct fatlongscan scan;
+
+for (index = 0, fatlonginit(&scan);
+     (res = fatlongscan(directory, index, &scan)) != FAT_END;
+     fatnextentry(f, &directory, &index)) {
+ 	...
+	if (res & FAT_SHORT) {
+		// the sequence for a file is complete
+		// name (long or short) is scan.name
+		// other file data is obtained or changed via:
+		// fatentrygetfirstcluster(directory, index), etc.
+		...
+		// if name needed outside of the loop:
+ 		s = wcsdup(scan.name);
+ 		...
+	}
+}
+fatlongend(&scan);
+.fi
+
+The return value is \fIFAT_END\fP if the directory is finished before a full
+sequence for a file was found. Otherwise, if the return value contains
+\fIFAT_SHORT\fP then:
+.RS
+.IP "   * " 5
+the file name is in \fIscan.longname\fP; it derives from the longname entries
+if any, otherwise from the shortname; either way, it is a widestring with
+proper capitalization
+.IP "   * "
+the rest of the file data (size, first cluster, time, attributes) is in
+\fIdirectory,index\fP, so it can be accessed via the functions in
+\fIentry.h\fP like \fIfatentrygetfirstcluster()\fP,
+\fIfatentrysetfirstcluster()\fP, etc.
+.IP "   * "
+the pair \fIlongdirectory,longindex\fP tells where the sequence for this file
+begins
+.RE
+.IP
+If the return value also contains \fIFAT_LONG_ALL\fP, the name derives from a
+long filename sequence, rather than from the short name.
+
+The \fIstruct fatlongscan\fP type is defined as follows.
+The field \fIscan.len\fP is the size of the allocated string \fIscan.name\fP,
+and is therefore its length plus one.
+The field \fIscan.err\fP contains the number of conversion errors, and should
+normally be zero; otherwise, the filesystem is corrupted.
+Most programs do not need the first two fields.
+
+.nf
+struct fatlongscan {
+	int n;
+	uint8_t checksum;
+	unit *longdirectory;
+	int longindex;
+	wchar_t *name;
+	int len;
+	int err;
+};
+.fi
+.TP
+.BI "int fatlongnext(fat *" f ", unit **" directory ", int *" index ", \
+unit **" longdirectory ", int *" longindex ", wchar_t **" name )
+Find the next file in a directory, including its longname.
+
+The input value of the parameters \fIdirectory,index\fP point to the start of a
+directory or to the previous directory entry; the output value point to the
+position of the short entry of the next file. It contains most of the file
+data, which can can be retrived or changed via the \fIentry.h\fP functions. For
+example, the shortname is obtained via \fIfatentrygetshortname(f, directory,
+index, shortname)\fP. The pair \fIlongdirectory,longindex\fP is where the
+sequence of entries for this file begins.
+
+The name of the file is returned in \fIname\fP, which points to a dynamically
+allocated wide string. The program is supposed to free it when no longer used.
+
+The return value is \fIFAT_END\fP if the directory is finished before finding
+any file. Otherwise, is \fIFAT_SHORT\fP if a file is located, and 
+\fIFAT_SHORT | FAT_LONG_ALL\fP if the name comes from a sequence of long file
+name entries, rather than the short name only.
+
+If the return value includes \fIFAT_LONG_ERR\fP, some errors have been
+encountered while conerting the long file name to a wide string. This means
+that the long name is incorrect, possibly because the filesystem is corrupted.
+
+An example cycle:
+
+.nf
+for (index = 0;
+     (res = fatlongnext(f, &directory, &index,
+     	&startdirectory, &startindex, &name)) != FAT_END;
+     fatnextentry(f, &directory, &index)) {
+	...
+	// res & FAT_LONG_ALL if name comes from the long name,
+	//	otherwise it comes from the shortname
+	// res & FAT_LONG_ERR means error in the long name
+	...
+	...
+	free(name);
+}
+.fi
+.
+.TP
+.BI "int fatnextname(fat *" f ", unit **" directory ", int *" index ", \
+wchar_t **" name )
+Find the next file in a directory, including its longname. The pair
+\fIdirectory,index\fP is the position of the short entry where most of the
+file data are located, and can be retrived or changed via the \fIentry.h\fP
+functions. The wide string \fIname\fP is the full name of the file.
+
+This function is like \fBfatlongnext()\fP, but discards the
+\fIlongdirectory,longindex\fP return value and returns only 0 or -1 depending
+on whether a next entry exists or not: errors in converting the long names are
+silently ignored. If such errors should be detected, use \fBfatlongnext()\fP
+instead.
+
+An example cycle using this function:
+
+.nf
+for (index = 0;
+     ! fatnextname(f, &directory, &index, &name);
+     fatnextentry(f, &directory, &index)) {
+	...
+	...
+	free(name);
+}
+.fi
+
+Since \fIname\fP points to a dynamically allocated area, it has to be freed
+when done with it.
+.
+.P
+The following functions are for looking up a file given its name or full path,
+and the first cluster of the directory where to start the search. The all use
+the \fIdirectory,index\fP, \fIlongdirectory,longindex\fP and \fIname\fP as
+output-only parameters: the directory entry that contains the file data and the
+one where the long name begins. They do not check the validity of the name or
+path; this can be done by \fIfatinvalidnamelong()\fP and
+\fIfatinvalidpathlong()\fP. See \fIFILE NAMES\fP, below.
+.TP
+.BI "int fatlookupfilelongboth(fat *" f ", int32_t " dir ", \
+wchar_t *" name ", unit **" directory ", int *" index ", \
+unit **" longdirectory ", int *" longindex )
+.PD 0
+.TP
+.BI "int fatlookupfilelong(fat *" f ", int32_t " dir ", wchar_t *" name ", \
+unit **" directory ", int *" index )
+.PD
+Search for a file with the given name (a widestring) in the directory starting
+at cluster \fIdir\fP. Return 0 if found, -1 otherwise. The
+\fIdirectory,index\fP pair is the directory entry that contains the shortname
+and the other data of the file. The pair \fIlongdirectory,longindex\fP is the
+first entry of the sequence that contains the long name.
+See also \fIFILE NAMES\fP, below.
+.TP
+.BI "int32_t fatlookupfirstclusterlong(fat *" f ", int32_t " dir ", \
+wchar_t *" name )
+Find the number of the first cluster of the file \fIname\fP in the directory
+starting at cluster \fIdir\fP, or \fIFAT_ERR\fP if it does not exist.
+See comments in the description of \fIfatentrygetfirstcluster()\fP about
+\fIFAT_UNUSED\fP.
+See also \fIFILE NAMES\fP, below.
+.TP
+.BI "int fatlookuppathlongboth(fat *" f ", int32_t " dir ", \
+wchar_t *" path ", unit ** " directory ", int *" index ", \
+unit **" longdirectory ", int *" longindex )
+.PD 0
+.TP
+.BI "int fatlookuppathlong(fat *" f ", int32_t " dir ", wchar_t *" path ", \
+unit **" directory ", int *" index )
+Lookup a file from its full path starting from the directory whose first
+cluster is \fIdir\fP, or from the root if the path begins with '/'. Return 0 if
+found, -1 otherwise. The output-only arguments \fIdirectory,index\fP are the
+directory entry containing the file data; \fIlongdirectory,longindex\fP is the
+directory entry where the long name begins.
+See also \fIFILE NAMES\fP, below.
+.PD
+.TP
+.BI "int32_t fatlookuppathfirstclusterlong(fat *" f ", \
+int32_t " dir ", wchar_t *" path )
+Return the number of the first cluster of a file or
+\fIFAT_ERR\fP if the file does not exist. Start from the directory whose first
+cluster is \fIdir\fP unless \fIpath\fP begins with '/'; in the latter case,
+start from the root.
+See comments in the description of \fIfatentrygetfirstcluster()\fP about
+\fIFAT_UNUSED\fP.
+See also \fIFILE NAMES\fP, below.
+.P
+A file with a long filename takes more than one directory entry. The following
+two functions search for a sufficient contiguous space in a directory. In most
+cases, they are not called directly but by the functions for creating an empty
+file, below.
+.TP
+.BI "int fatfindfreelong(fat *" f ", int " len ", unit **" directory ", \
+int *" index ", unit **" startdirectory ", int *" startindex )
+Find \fIlen\fP consecutive free entries starting from the one following
+\fIdirectory,index\fP, appending a cluster to the directory if needed. It may
+fail on the root directory of a FAT12 or FAT16 or when a new cluster should be
+created by none is free; in this case, it returns -1. Otherwise, it returns 0
+and set \fIstartdirectory,startindex\fP to the first free entry and
+\fIdirectory,index\fP to the last.
+
+When searching for the first or only sequence of free cluster, pass
+\fIindex=-1\fP. To find the next sequence call this function again with
+\fIdirectory,index\fP unchanged since the previous call.
+.TP
+.BI "int fatfindfreelongpath(fat *" f ", \
+int32_t " dir ", wchar_t *" path ", int " len ", \
+unit **" directory ", int *" index ", \
+unit **" startdirectory ", int *" startindex )
+Find \fIlen\fP consecutive free entries in the directory \fIpath\fP starting
+from directory \fIdir\fP, or from the root if \fIpath\fP begins with '/'.
+Return -1 if unsuccessful and 0 otherwise. In the latter case,
+\fIstartdirectory,startindex\fP and \fIdirectory,index\fP respectively point to
+the first and last entry of the sequence. Contrary to the previous function,
+\fIdirectory,index\fP is an output-only parameter.
+See also \fIFILE NAMES\fP, below.
+.P
+The lookup and file creation functions do not check whether the name or path is
+valid, nor turn them into the form that is actually stored in the filesystem.
+The following functions have to be explicitely called to do this.
+.TP
+.BI "int fatinvalidnamelong(const wchar_t *" name )
+Check whether a long file name is valid.
+Return -1 if the name is not valid, 1 if it is either \fI.\fP or
+\fI..\fP, and 0 otherwise.
+.TP
+.BI "int fatinvalidpathlong(const wchar_t *" path )
+Check whether a long path name is valid.
+Return -1 if the path is not valid, 1 if it ends with either \fI.\fP or
+\fI..\fP, and 0 otherwise.
+.TP
+.BI "wchar_t *fatstoragenamelong(const wchar_t *" name )
+Turn the string into the form that is actually stored as a long file name in
+the filesystem. This means that leading and trailing spaces are removed, as
+well as trailing periods. The returned string is dynamically allocated:
+deallocate with \fBfree\fP(3) when done with it.
+.TP
+.BI "wchar_t *fatstoragepathlong(const wchar_t *" path )
+Turn the string into the actual path in the filesystem. This amounts to call
+\fIfatstoragelong()\fP on every part of the path.
+.P
+Every file has a short name, and optionally a long name. The specification of
+the filesystem does not impose any correspondence between the two, but whenever
+a file has a long name, the short name is usually derived from it in some way.
+Nevertheless, this library offers a function for creating a file with two
+arbitrary names, in addition to functions that derive the shortname from the
+long name.
+
+The file is created empty with default attribute and times, but can then be
+changed via the \fIfatentryset...(directory, index, ...)\fP functions.
+
+The file creation functions do not check if a file with the given name exists.
+The program is supposed to do it using the appropriate lookup functions.
+However, the functions that generate the short name from the long name take
+care of avoiding duplicates. In other words, what is passed to the functions is
+not checked, what is generated by them is.
+
+Also, these functions do not check whether a file name or path is valid, nor
+turn them into the form that is actually stored in the filesystem. The
+functions \fIfatinvalidnamelong()\fP, \fIfatinvalidpathlong()\fP,
+\fIfatstoragenamelong()\fP and \fIfatstoragepathlong()\fP have to be
+explicitely called to do this. See \fIFILE NAMES\fP below for details.
+.TP
+.BI "int fatcreatefileshortlong(fat *" f ", int32_t " dir ", \
+unsigned char " shortname " [11], unsigned char " casebyte ", \
+wchar_t *" longname ", \
+unit **" directory ", int *" index ", \
+unit **" startdirectory ", int *" startindex )
+Create a new file with the given shortname and longname in the directory of
+first cluster \fIdir\fP. Return -1 if unsuccessful and 0 otherwise. In the
+latter case, the newly created file takes the entries between
+\fIstartdirectory,startindex\fP and \fIdirectory,index\fP.
+
+The shortname is an 11-byte unterminated array, not an usual "FILENAME.EXT"
+string; argument \fIcasebyte\fP allows the basename (0x08) and/or the extension
+(0x10) to be considered lowercase.
+
+This function does not check or adapt the names;
+see \fIFILE NAMES\fP, below.
+.TP
+.BI "int fatcreatefilelongboth(fat *" f ", \
+int32_t " dir ", wchar_t *" longname ", \
+unit **" directory ", int *" index ", \
+unit **" startdirectory ", int *" startindex )
+.PD 0
+.TP
+.PD
+.BI "int fatcreatefilelong(fat *" f ", \
+int32_t " dir ", wchar_t *" longname ", \
+unit **" directory ", int *" index )
+Create a new file with the given longname in the directory of first cluster
+\fIdir\fP. Return -1 if unsuccessful and 0 otherwise. In the latter case, the
+newly created file takes the entries between \fIstartdirectory,startindex\fP
+and \fIdirectory,index\fP; the input value of these four parameters is ignored.
+The shortname is derived from the longname, and can be read by
+\fIfatentrygetshortname(f, directory, index, shortname)\fP.
+In most cases, the program calls \fIfatinvalidnamelong()\fP and
+\fIfatstoragenamelong()\fP before this function
+(see \fIFILE NAMES\fP, below).
+.TP
+.BI "int fatcreatefilelongpathboth(fat *" f ", \
+int32_t " dir ", wchar_t *" path ", \
+unit **" directory ", int *" index ", \
+unit **" startdirectory ", int *" startindex )
+.PD 0
+.TP
+.PD
+.BI "int fatcreatefilelongpath(fat *" f ", \
+int32_t " dir ", wchar_t *" path ", \
+unit **" directory ", int *" index )
+Create a new file from its path, starting from the directory of first cluster
+\fIdir\fP, or from the root if \fIpath\fP begins with '/'. Return -1 if
+unsuccessful and 0 otherwise. In the latter case, the newly created file takes
+the entries between \fIstartdirectory,startindex\fP and \fIdirectory,index\fP.
+The shortname is derived from the longname, and can be read by
+\fIfatentrygetshortname(f, directory, index, shortname)\fP.
+In most cases, the program calls \fIfatinvalidpathlong()\fP and
+\fIfatstoragepathlong()\fP before this function
+(see \fIFILE NAMES\fP, below).
+.
+.P
+A function similar to \fBfatreferenceexecute()\fP exists for long names. The
+difference is that the callback is run with three additional arguments that
+identifies the long name of the file, and never on deleted entries.
+.TP
+.BI "typedef int(* refrunlong)(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+unit *" startdirectory ", int " startindex ", int32_t " startprevious ", \
+unit *" dirdirectory ", int " dirindex ", int32_t " dirprevious ", \
+wchar_t *" name ", int " err ", unit *" longdirectory ", int " longindex ", \
+int " direction ", void *" user)
+.PD 0
+.TP
+.BI "int fatreferenceexecutelong(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+refrunlong " act ", void *" user )
+.PD
+Same as \fBrefrun\fP and \fBfatreferenceexecute()\fP, but the callback receives
+three additional arguments:
+.RS
+.IP - 3
+\fIname\fP is the long name of the file; it is deallocated immediately when the
+callback returns, so if it is needed after the callback is returned (that is,
+at the end of the filesystem scan or just in the next callback run) it has to
+be duplicated via \fBwcsdup\fP(3); this parameter is NULL if the cluster
+reference does not point to a directory entry
+.IP -
+\fIerr\fP indicates whether some errors occurred during the conversion of the
+long file name; it should normally be zero
+.IP -
+\fIlongdirectory,longindex\fP is the first entry of the sequence that contains;
+it is NULL,0 if the cluster reference does not point to a directory entry
+.RE
+.IP
+Also, the callback is not run on directory entries of long name parts and
+deleted entries: FAT_REFERENCE_ALL is silently ignored. However, the callback
+receives \fIlongdirectory,longindex\fP; therefore, it can access the directory
+entries that contain the long name of a file.
+.TP
+.BI "void fatdumplong(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+int " recur ", int " all )
+Print an indented summary of the filesystem starting from the cluster reference
+\fIdirectory,index,previous\fP. The dump is recursive if if \fIrecur\fP is
+non-zero. To dump the whole filesystem pass \fINULL,0,-1\fP and \fIrecur=1\fP.
+This includes the chain of clusters of each file and directory. If \fIall\fP is
+not zero, also the directory entries of the long file names are printed.
+.TP
+.PD 0
+.BI "typedef void (*" longrun ")(fat *" f ", wchar_t *"path ", \
+unit *" directory ", int " index ", \
+wchar_t *" name ", int " err ", unit *" longdirectory ", int " longindex ", \
+void *" user )
+.TP
+.BI "int fatfileexecutelong(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+longrun " act ", void *" user )
+.PD
+Run a callback on every file in the tree rooted at the cluster reference
+\fIdirectory,index,previous\fP. This function is similar to
+\fIfatfileexecute()\fP, but the callback receives the path and the file name,
+both as wide strings, and the \fIlongdirectory,longindex\fP directory entry
+where the long name starts. Parameter \fIerr\fP indicates whether an error
+occurred while converting the long name, and should normally be zero.
+.P
+Going from a shortname entry to the start of the long name (if any) requires an
+inverse fat, since the start of the long name may reside in a previous
+directory cluster. This is why the following two functions have an inverse fat
+as an argument.
+.TP
+.BI "int fatshortentrytolong(fat *" f ", fatinverse *" rev ", \
+unit *" directory ", int " index ", \
+unit **" longdirectory ", int *" longindex )
+Given a directory entry \fIdirectory,index\fP of a shortname, obtain the start
+of the long name \fIlongdirectory,longindex\fP, if any. Return 0 if
+successful, -1 if the file does not have a valid longname.
+.TP
+.BI "int fatlongreferencetoentry(fat * "f ", fatinverse *" rev ", \
+unit **" directory ", int *" index ", int32_t *" previous ", \
+unit **" longdirectory ", int *" longindex ) 
+Move back the cluster reference \fIdirectory,index,previous\fP to the directory
+entry of the file and set \fIlongdirectory,longindex\fP to the start of the
+long file. Return 0 if successful, -1 if the file has no long name, and -2 if
+the shortname directory entry could not be found (for example, the reference is
+to an unused cluster or to a cluster in the root directory).
+.TP
+.BI "int fatshortentrytolongname(fat *" f ", fatinverse *" rev ", \
+unit *" directory ", int " index ", wchar_t **" longname )
+Determine the long name of a file from its short name entry. The resulting wide
+string \fIlongname\fP has to be deallocated with \fBfree\fP(3) when no longer
+used.
+.TP
+.BI "wchar_t *fatinversepathlong(fat *" f ", fatinverse *" rev ", \
+unit *" directory ", int " index ", int32_t " previous )
+Return the complete path of the file containing the given cluster reference.
+The returned string is dynamically allocated, and should be deallocated with
+\fBfree\fP(3).
+.
+.
+.
+.SH FILE NAMES
+The lookup and file creation functions do not check whether the file name or
+path is valid, nor they convert them in the form that is actually stored in the
+filesystem. The program is supposed to do it by calling the appropriate
+functions: \fIfatinvalidname()\fP, \fIfatinvalidpath()\fP,
+\fIfatstoragename()\fP, \fIfatstoragepath()\fP, \fIfatinvalidnamelong()\fP,
+\fIfatinvalidpathlong()\fP, \fIfatstoragenamelong()\fP and
+\fIfatstoragepathlong()\fP.
+
+Usually, this is to be done. For example, shortnames are stored in the
+filesystem in upper case; yet, the programs are supposed to find them even when
+the name passed to them is in lower or mixed case (these filesystems have
+case-insensitive names). This is accomplished by converting all names via
+\fIfatstoragename()\fP or \fIfatstoragepath()\fP before looking up a path or
+creating a new file. The same applies to long names, whose leading spaces and
+trailing periods and spaces are removed.
+
+At the beginning of a path, the special forms \fICLUSTER:num\fP (for short
+names) and \fIcluster:num\fP (for long names) mean to start from cluster
+\fInum\fP instead of the \fIdir\fP argument. Such path names are invalid since
+they contain the character `:'.
+.
+.
+.
+.SH SEE ALSO
+\fBfat\fP(5), \fBfat_lib\fP(3), \fBlibllfat.txt\fP
+

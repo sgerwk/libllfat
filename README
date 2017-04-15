@@ -1,0 +1,50 @@
+LIBLLFAT
+========
+
+This is a library for low-level accessing a FAT12/16/32 filesystem. It offers
+functions for reading and writing the basic elements of such filesystems such
+as the number of sectors and the successor of a cluster, but also some more
+complex operations such as looking up a file and defragmenting a filesystem.
+
+See COPYING for licensing information.
+
+Also see DISCLAIMER: this library has not been extensively tested, and some
+operations may corrupt the filesystem it is operated upon to the point of
+making recovery virtually impossible. The suggested application area of this
+library is for filesystem images that can be easily recreated in case of such
+failures.
+
+Programs:
+
+	fatview
+		show the structure of a filesystem
+	fattool
+		various operations on a filesystem, such as reading and writing
+		a cluster or a file, etc.
+	fatbackup
+		copy the essential parts of a filesystem
+	fatshrink
+		reduce the size of a filesystem
+
+Documents:
+
+	doc/libllfat.txt
+		overview of the library
+	doc/fat.5
+		short description of the filesystem
+	doc/fat_lib.3
+		description of the main functions, with examples
+	doc/fat_functions.3
+		all functions in the library
+
+Structure of the source:
+
+	lib	the library itself
+	tools	some programs that use it
+	build	where these programs are built, with some example filesystems
+
+Install:
+
+	make
+	make install
+

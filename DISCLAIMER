@@ -1,0 +1,9 @@
+This library has NOT been extensively tested. Do not use it unless you have a
+copy of all data in the filesystem it is run on.
+
+While operations involving only reading data should be safe (but again, this is
+cannot be told for sure so far), complex changes such as defragmenting might
+garble the filesystem to the point of making recovery impossible. The suggested
+application of such operations is on filesystem images that can be recreated in
+case of failure.
+

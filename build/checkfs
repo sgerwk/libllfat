@@ -1,0 +1,15 @@
+#!/bin/sh
+
+[ $# -lt 1 ] && echo fat image missing && exit 1
+
+FAT=$1
+
+/sbin/dosfsck $FAT
+[ $? == 0 ] || exit
+
+mtype -i $FAT '::entry.c' | diff -sq - ../lib/entry.c
+mtype -i $FAT '::fs.c' | diff -sq - ../lib/fs.c
+mtype -i $FAT '::libllfat.txt' | diff -sq - ../doc/libllfat.txt
+mtype -i $FAT '::aaa/testfs' | diff -sq - testfs 
+mtype -i $FAT ::aaa/bbb/makefile | diff -sq - Makefile 
+

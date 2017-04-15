@@ -1,0 +1,66 @@
+.TH FATBACKUP 1 "Oct 16, 2016"
+.SH NAME
+fatbackup \- copy the essential parts of a FAT12/16/32 filesystem
+.SH SYNOPSIS
+.B fatbackup
+[\fI-i\fP] [\fI-u\fP] [\fI-a\fP] \fIsource destination\fP
+.
+.
+.
+.SH DESCRIPTION
+
+Copy the reserved sectors, the file allocation tables and the directory
+clusters of a FAT12/16/32 filesystem to another. This data is the structure of
+the filesystem, everything except the actual content of the files.
+
+If the destination is a regular file (an image), it is created sparse if the
+operating system supports it where the file is. For example, running
+"\fIfatbackup /dev/sdb1 /home/sgerwk/image.fat\fP" on Linux, if \fI/home\fP is
+an ext2 filesystem then \fIimage.fat\fP will be sparse. Even if its size may
+look large, only the actual structure of the original filesystem takes space.
+This can be checked with \fIls -ls image.fat\fP.
+
+If the filesystem in \fI/dev/sdb1\fP later becomes corrupted, it can be
+restored by copying its structure back: \fI fatbackup /home/sgerwk/image.fat
+/dev/sdb1\fP. Only the structure of the filesystem is restored; if the content
+of a file is corrupted or changed, it is not. This may be a problem when
+deleting old files and creating new ones, especially on a FAT12 or FAT16.
+.
+.
+.
+.SH OPTIONS
+.TP
+\fB-i\fP
+if the destination file exists, overwrite without asking; the default is to ask
+.TP
+\fB-u\fP
+copy only the sectors of the file allocation tables that are actually used for
+the existing files and directories
+.TP
+\fB-a\fP
+write sectors and clusters without checking whether they are already the same
+in the sources and in the destination; this is implicit if the destination file
+does not exists, otherwise the default is that sectors and clusters are written
+only if they do not coincide
+.
+.
+.
+.SH NOTE
+This program only saves the skeleton of the filesystem, but if the media is
+partitioned also the master boot record is essential. To save it:
+
+.nf
+	dd if=/dev/sdb of=image.mbr bs=512 count=1
+	fatbackup /dev/sdb1 image.fat
+.fi
+
+.SH BUGS
+No check is done on the destination: if a backup is copied to a filesystem that
+was not where the backup comes from, its content is likely irreparably
+corrupted.
+.
+.
+.
+.SH SEE ALSO
+\fBfattool\fP(1), \fBfat_lib\fP(3)
+

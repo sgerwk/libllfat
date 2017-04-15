@@ -1,0 +1,731 @@
+.TH LIBLLFAT 3 "Oct 2, 2016"
+.SH NAME
+libllfat \- a library to access a FAT12/16/32 at low-level
+.
+.
+.
+.SH OVERVIEW
+This man page shows how to do the basic operations on a filesystem. It is
+intended for programming, so the functionality that are most expected to be
+used in a program come first.
+
+See \fBlibllfat.txt\fP for an overview of the filesystem and the library,
+\fBfat\fP(5) for a brief description of the filesystem and
+\fBfat_functions\fP(3) for all functions in the library.
+
+The code snippets in this man page are from the file \fIfatexample.c\fP in the
+sources.
+.
+.
+.
+.SH OPEN, FLUSH AND CLOSE A FILESYSTEM
+For a normal access to the filesystem, when it is not expected to contain
+errors:
+
+.nf
+#define _FILE_OFFSET_BITS 64
+#include <...>
+...
+
+char *devicename = "...";
+fat *f;
+
+f = fatopen(devicename, 0);
+if (f == NULL) {
+	printf("cannot open %s as a FAT filesystem\\n", devicename);
+	exit(1);
+}
+if (fatcheck(f)) {
+	printf("%s does not look like a FAT filesystem\\n", devicename);
+	printf("fix it (with dosfsck or similar) if it was\\n");
+	exit(1);
+}
+.fi
+
+Only programs aimed at fixing invalid filesystems may skip the call to
+\fBfatcheck()\fP or continue anyway.
+
+The filesystem can be saved (flushed) at any time, and closed when no longer
+needed:
+
+.nf
+  ...
+fatflush(f);			// save filesystem
+  ...
+if (saveornot)
+	fatclose(f);		// flush and close filesystem
+else
+	fatquit(f);		// close without saving
+.fi
+.
+.
+.
+.SH FIND A FILE
+Every file is represented by a pair \fIunit *directory, int index\fP. Such a
+pair allows for example to access the file name, attributes, content, etc. Such
+a pair can be obtained from the file path:
+
+.nf
+char *path;
+size_t len;
+wchar_t *wpath, *converted;
+unit *directory;
+int index;
+
+path = ...			// path in the current locale
+
+len = mbstowcs(NULL, path, 0);
+if (len == (size_t) -1) {
+	// invalid wide string
+	// abort operation
+}
+wpath = malloc((len + 1) * sizeof(wchar_t));
+mbstowcs(wpath, path, len + 1);
+if (fatinvalidpathlong(wpath) < 0) {
+	// invalid path:
+	// abort operation
+}
+converted = fatstoragepathlong(wpath);
+if (fatlookuppathlong(f, fatgetrootbegin(f),
+		converted, &directory, &index)) {
+	// file does not exist:
+	// abort operation
+}
+printf("file found: %d,%d\n", directory->n, index);
+.fi
+
+The pair \fIdirectory,index\fP obtained by this fragment of code allows most of
+the operations on files, as described in the next section.
+.
+.
+.
+.SH OPERATE ON A FILE
+Given the \fIdirectory,index\fP pair of a file, the file is accessed by a
+number of functions named \fBfatentryget\fP and \fBfatentryset\fP, followed by:
+\fBsize\fP, \fBattributed\fP, \fBtime\fP, \fBfirstcluster\fP. The first cluster
+allows accessing (reading and writing) the file content, and is described in
+details in the next section.
+
+The following fragment of code reads some file metadata and updates the read
+time to the current time.
+
+.nf
+struct tm tm;
+
+printf("file size: %d\\n", fatentrygetsize(directory, index));
+if (fatentryisdirectory(directory, index))
+	printf("is a directory\\n");
+fatentrygetcreatetime(directory, index, &tm);
+printf("creation time: %s", asctime(&tm));
+fatentrysetreadtimenow(directory, index);	// update read time
+.fi
+.
+.
+.
+.SH READ THE CONTENT OF A FILE 
+Each file is contained in a chain of clusters. Each cluster has a number of
+type \fBint32_t\fP. The number of the first cluster of a file is obtained by
+\fBfatentrygetfirstcluster()\fP and the following ones by
+\fBfatgetnextcluster()\fP. Given a cluster number, its content is obtained by
+\fBfatclusterread()\fP.
+
+To change the data contained in the cluster, obtain
+\fIfatgetunitdata(cluster)\fP and operate on it; then set
+\fIcluster->dirty=1\fP; the cluster will be saved by \fIfatflush(f)\fP and
+\fIfatclose(f)\fP, but can also be saved immediately by
+\fIfatunitwriteback(cluster)\fP.
+
+.nf
+unit *directory;
+int index;
+uint32_t size;
+int32_t st, cl;
+unit *cluster;
+unsigned char *data;
+
+// obtain directory,index: see section FIND A FILE, above
+
+size = fatentrygetsize(directory, index);
+st = fatentrygetfirstcluster(directory, index, fatbits(f));
+
+for (cl = st; cl >= FAT_ROOT; cl = fatgetnextcluster(f, cl)) {
+	cluster = fatclusterread(f, cl);
+	data = fatunitgetdata(cluster);
+
+	// operate on the data buffer, size is min(size, cluster->n)
+	// if changed, set cluster->dirty=1 and call fatwriteback(cluster)
+
+	size = size > (uint32_t) cluster->size ?
+		size - (uint32_t) cluster->size : 0;
+}
+.fi
+
+Changing the size of the file only requires calling \fBfatentrysetsize()\fP if
+the clusters containing it are not modified. Otherwise, some clusters need to
+be freed or allocated. This is explained in the next section.
+.
+.
+.
+.SH APPEND CLUSTERS TO A FILE
+A free cluster is obtained by \fIfatclusterfindfree(f)\fP. It is appended to
+the file by:
+.IP "   * " 5
+\fIfatentrysetfirstcluster(directory,index,new)\fP if the file was empty;
+.IP "   * "
+\fIfatsetnextcluster(f,last,new)\fP if it was not, where \fIlast\fP was the
+last cluster of the file.
+.P
+The difference can be neglected if using a
+.I cluster reference,
+a triple \fIdirectory,index,previous\fP. At the beginning, this is the pair
+\fIdirectory,index\fP of the file with the addition of \fIprevious=0\fP. Follow
+the chain by \fBfatreferencegettarget()\fP until the end of the file, then add
+the new cluster by \fBfatreferencesettarget()\fP.
+
+.nf
+unit *directory;
+int index;
+int32_t previous, target, new;
+
+// obtain directory,index as in FIND A FILE, above
+
+new = fatclusterfindfree(f);
+
+previous = 0;
+target = fatreferencegettarget(f, directory, index, previous);
+while (target != FAT_EOF && target != FAT_UNUSED) {
+	// if required, obtain cluster=fatclusterread(f, target)
+	// and operate on the cluster
+
+	directory = NULL;
+	index = 0;
+	previous = target;
+	target = fatreferencegettarget(f, directory, index, previous);
+}
+fatreferencesettarget(f, directory, index, previous, new);
+fatreferencesettarget(f, NULL, 0, new, FAT_EOF);
+.fi
+
+Appending a further cluster does not require scanning the chain again:
+
+.nf
+previous = new;
+new = fatclusterfindfree(f);
+fatreferencesettarget(f, NULL, 0, previous, new);
+fatreferencesettarget(f, NULL, 0, new, FAT_EOF);
+.fi
+.
+.
+.
+.SH CREATE A NEW FILE
+This is obtained by first creating an empty file and then setting its
+attributes and content.
+
+.nf
+wchar_t *converted;
+unit *directory;
+int index;
+
+// convert path as described in FIND A FILE, above
+
+fatcreatefilelongpath(f, fatgetrootbegin(f),
+	converted, &directory, &index);
+
+// change file attributes via fatentryset___(directory, index, ___);
+// append clusters as in APPEND CLUSTERS TO FILES, above
+.fi
+.
+.
+.
+.SH SCAN A DIRECTORY
+The number of the first cluster of the directory to scan is needed. This is
+\fIfatgetrootbegin(f)\fP for the root directory. For every other directory, it
+can be obtained by a lookup for the directory name. Either way, the first
+cluster is then read by \fBfatclusterread()\fP and the scan may begin.
+
+The function \fBfatnextname()\fP changes its parameters to point to the next
+directory entry. Its return value tells whether the directory is finished. An
+example cycle for scanning a directory is:
+
+.nf
+unit *directory;
+int index;
+wchar_t *wpath = L"/example/dir", *name;
+
+d = fatlookuppathfirstclusterlong(f, fatgetrootbegin(f), wpath);
+directory = fatclusterread(f, d);
+
+for (index = 0;
+     ! fatnextname(f, &directory, &index, &name);
+     fatnextentry(f, &directory, &index)) {
+
+	// "name" is the name of a file in the directory /example/dir
+	// can be operated upon via directory,index
+
+	free(name);
+}
+.fi
+
+Within the loop, the \fIdirectory,index\fP pair represents each file in the
+directory, in turn. It can be read or written as described in the previous
+sections.
+
+In this example \fIwpath\fP is hardcoded in the program; the above section FIND
+A FILE explain how to obtain it from a string in the current locale. When
+scanning the root directory, \fId\fP can also be obtained from
+\fIfatgetrootbegin(f)\fP. During the scan, if one of the files is itself a
+directory it can be recursively scanned:
+
+.nf
+if (fatentryisdirectory(directory,index)) {
+	d = fatentrygetfirstcluster(directory, index, fatbits(f));
+	directory = fatclusterread(f, d);
+	for (index = -1; ...) {
+		// as above
+	}
+}
+.fi
+.
+.
+.
+.SH EXECUTING A FUNCTION ON EVERY FILE
+The library allows executing a function on every file in the filesystem. Such a 
+function must have a certain signature.
+.TP
+.BI "typedef void (* filerunlong)(fat *" f ", wchar_t *" wpath ", \
+unit *" directory ", int " index ", \
+unit *" longdirectory ", int " longindex ", \
+void *" user )
+A function to be executed on a file has this format: its arguments are the
+complete path of the file, the \fIdirectory,index\fP pair of the file and the
+\fIvoid*\fP structure passed to the following function.
+.TP
+.BI "void fatfileexecutelong(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+filerunlon " act ", void *" user )
+Execute "\fIact\fP" on every file. Pass
+\fIdirectory=NULL,index=0,previous=-1\fP to execute on every file of the
+filesystem. For a different starting directory obtain \fIdirectory,index\fP by
+\fIfatlookuppathlong()\fP and add \fIprevious=0\fP. Argument \fIuser\fP is
+passed unchanged to the function "\fIact\fP".
+.P
+As an example, the following program prints the complete path of every file in
+the filesystem, and its entry.
+
+.nf
+void printentry(fat __attribute__((unused)) *f,
+		char *path, unit *directory, int index,
+		void __attribute__((unused)) *user) {
+	printf("%-20s ", path);
+	fatentryprint(directory, index);
+	printf("\\n");
+}
+
+int main() {
+	...
+	fatfileexecute(f, NULL, 0, -1, printentry, NULL);
+	...
+}
+.fi
+.
+.
+.
+.SH CLUSTER REFERENCES
+In a FAT filesystems, clusters form chains. The number of the first cluster of
+a chain is obtained by \fIfatentrygetfirstcluster(directory,index)\fP; given
+the number of a cluster, its next one is obtained by \fIfatgetnextcluster(f,
+previous)\fP. This means that every cluster has its number obtainable from
+either \fIdirectory,index\fP or from \fIprevious\fP.
+This is generalized as a \fIcluster reference\fP:
+
+	a \fBcluster reference\fP is a triple \fIdirectory,index,previous\fP
+
+In other words, a cluster reference is something that points to a cluster;
+everywhere in the filesystem that contains the number of a cluster is a cluster
+reference.
+.IP "   *" 5
+a file \fIdirectory,index\fP has the number of its first cluster, and this is
+represented by the cluster reference \fIdirectory,index,0\fP
+.IP "   *"
+cluster \fIn\fP has a successor,
+and the reference to the successor is \fINULL,0,n\fP
+.P
+Appending a new cluster to a file is done by setting it as the first cluster in
+the directory entry \fIdirectory,index\fP if the file was empty, and setting
+the next of the last cluster \fIlast\fP otherwise. The same can be done
+uniformly in the two cases with \fBfatreferencesettarget()\fP. In the same way,
+the first or next cluster can be found from a cluster reference via
+\fBfatreferencegettarget()\fP.
+
+Almost every used cluster in the filesystem has exactly one reference that
+points to it. The exceptions are: the first cluster of the root directory (not
+pointed from anywhere) and the first cluster of any directory (pointed from its
+"." file and from the ".." files in all its subdirectories). Also, the unused
+clusters are not pointed to by anywhere. The dot and dotdot files have to be
+taken care by software, but the other two cases are encoded as special cluster
+references.
+.TP
+\fIdirectory!=NULL,index,previous\fP
+The file \fIdirectory,index\fP; its target is the first cluster of the file.
+.TP
+\fIcluster==NULL,index,previous>=2\fP
+A cluster; its target is the successor of "\fIprevious\fP".
+.TP
+\fIcluster==NULL,index,previous=-1\fP
+The boot sector; it points to the first cluster of the root directory in a
+FAT32 volume, and this is pretended to be the case also in FAT12/16.
+.TP
+\fIcluster==NULL,index,previous=0\fP
+The null reference is considered a pointer to all unused clusters.
+.
+.
+.
+.SH RECURSIVE CLUSTER SCANS
+A function can be executed on every cluster reference in the filesystem. This
+is done on cluster references rather than cluster numbers because this allows
+for more changes to be done. Indeed, the triple \fIdirectory,index,previous\fP
+allows deleting or moving the cluster that is the target of the reference,
+while \fInumber\fP only allows changing the cluster content and its successor.
+
+While a recursive scan can be programmed, it is easier to have the function
+\fIfatreferenceexecutelong()\fP to do it and rather concentrate on writing a
+function of type \fIfatrefrunlong\fP that only processes a single cluster at
+time. As an example, the function for counting the clusters used in the
+filesystem is implemented this way:
+
+.nf
+// structure that is passed between calls
+struct fatcountclustersstruct {
+	int32_t n;
+};
+
+// function that is executed on each cluster (callback)
+int _fatcountclusters(...,
+		unit *directory, int index, int32_t previous, ...
+		int direction, void *user) {
+	struct fatcountclustersstruct *s;
+
+	if (direction != 0)
+		return 0;
+	if (fatreferenceisdotfile(directory, index, previous))
+		return FAT_REFERENCE_DELETE;
+
+	s = (struct fatcountclustersstruct *) user;
+
+	if (fatreferenceiscluster(directory, index, previous))
+		s->n++;
+
+	return FAT_REFERENCE_NORMAL;
+}
+
+// run the callback on every cluster reachable
+// from directory,index,previous
+int32_t fatcountclusters(fat *f,
+		unit *directory, int index, int32_t previous) {
+	struct fatcountclustersstruct s;
+	s.n = 0;
+	fatreferenceexecutelong(f, directory, index, previous,
+		_fatcountclusters, &s);
+	return s.n;
+}
+.fi
+
+A further benefit of programming by a cluster reference callback is that the
+same function can be used on a file, on a directory, on a chain of clusters or
+even on the whole filesystem. For example, \fIfatcountclusters(f, NULL, 0,
+-1)\fP calulates the number of clusters used in the filesystem;
+\fIfatcountclusters(f, NULL, 0, 104)\fP is the number of clusters from cluster
+104 up to the end of the chain.
+.
+.
+.
+.SH fatreferenceexecutelong()
+Many functions are or can be implemented via recursive cluster reference
+callbacks, so the mechanism is described in details. The signature of the
+callback and of the functions are:
+.TP
+.BI "typedef int(* refrunlong)(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+unit *" startdirectory ", int " startindex ", int32_t " startprevious ", \
+unit *" dirdirectory ", int " dirindex ", int32_t " dirprevious ", \
+wchar_t *" name ", int " err ", unit *" longdirectory ", int " longindex ", \
+int " direction ", void *" user )
+The callback that is run on every cluster reference.
+.TP
+.BI "void fatreferenceexecutelong(fat *" f ", \
+unit *" directory ", int " index ", int32_t " previous ", \
+refrunlong " act ", void *" user )
+The function "\fIact\fP" is called on \fIdirectory,index,previous\fP and to
+every reference to a cluster reachable from it, recursively; for example, from
+\fINULL,0,-1\fP the callback is run on the reference to every cluster in the
+filesystem.
+.P
+The effect of \fIfatreferenceexecutelong(f, directory, index, previous, act,
+user)\fP, is that the callback \fIact\fP is run on these cluster references:
+.IP "   * " 5
+\fIdirectory,index,previous\fP and then on the reference to each following
+cluster in the chain, with \fIdirection=1\fP; if this reference is not a file
+directory,index, or is a file but not a directory, nothing else is done
+.IP "   * " 
+\fIdirectory,index,previous\fP, with \fIdirection=1\fP; this is to signal it is
+entering the directory
+.IP "   * "
+recursively on each file in the directory; more precisely: for every directory
+entry \fIsubdirectory,subindex\fP, the callback receives
+\fIsubdirectory,subindex,0\fP
+.IP "   * "
+\fIdirectory,index,previous\fP, with \fIdirection=-1\fP; this is to signal it
+is entering the directory
+.IP "   * "
+\fIdirectory,index,previous\fP and the reference to each following cluster in
+the chain, with \fIdirection=-2\fP; this is for operations to perform on them
+after recursively visiting the directory itself
+.P
+The callback is passed the following three references:
+.TP
+\fIunit *directory, int index, int32_t previous\fP
+the cluster reference
+.TP
+\fIunit *startdirectory, int startindex, int32_t startprevious\fP
+the cluster reference to the directory entry of the file this cluster belongs
+to
+.TP
+\fIunit *dirdirectory, int dirindex, int32_t dirprevious\fP
+the cluster reference to the directory entry of the directory containing this
+file
+.P
+In other words: a cluster is part of a chain; this chain belongs to a file that
+is contained in a directory. The callback receives a reference to the cluster,
+to the file and to the directory. For the last two, the callback receives the
+directory entry for the file or directory.
+
+If the reference is a directory entry (as opposite to a cluster), by these same
+rules the second is the directory and the third is the parent directory.
+
+The callback also receives the file name in \fIname\fP and also a related
+directory entry \fIlongdirectory,longindex\fP which is only necessary if the
+file is to be deleted or renamed (\fBfat_functions\fP(3) has more details about
+this).
+
+The last argument of the callback is the \fIvoid*\fP pointer that was
+originally passed as the last argument to \fBfatreferenceexecutelong()\fP; it
+contains data to be preserved between calls, and is in most cases a structure.
+
+The callback manipulates the sequence of cluster references by its return
+value:
+.TP
+.I
+FAT_REFERENCE_CHAIN
+visit the following clusters of the chain
+.TP
+.I
+FAT_REFERENCE_ORIG
+follow the original chain even if the callback changed the successor of the
+cluster
+.TP
+.I
+FAT_REFERENCE_RECUR
+if the cluster reference is a directory entry of a directory, recursively visit
+its files
+.TP
+.I
+FAT_REFERENCE_DELETE
+a directory cluster is deleted from the cache when done scanning its entries,
+if its refer field is zero; see BAD LUSTERS
+.P
+In most cases, the return value is \fIFAT_REFERENCE_NORMAL\fP, defined as
+\fIFAT_REFERENCE_CHAIN | FAT_REFERENCE_RECUR | FAT_REFERENCE_DELETE\fP. If the
+callback changes the links between cluster it may add \fIFAT_REFERENCE_ORIG\fP.
+If running recursively depends on some condition \fIs\fP, return
+\fIFAT_REFERENCE_COND(s)\fP. Return \fIFAT_REFERENCE_DELETE\fP to cut short
+execution.
+.
+.
+.
+.SH INVERSE FAT
+A cluster reference is a pointer to a cluster. In many cases, the inverse link
+is needed: given a cluster number, find the reference that points to it. For
+example, to deallocate cluster \fIn\fP, one needs to know either its
+predecessor cluster (if this is not the first cluster of the chain) or the
+\fIdirectory,index\fP pair of the file (if this is the first cluster). An
+inverse FAT is a large array that contains the reference to every cluster, used
+or not.
+
+If \fIrev\fP is an inverse FAT, then the reference to cluster \fIn\fP is
+\fIrev[n].directory,rev[n].index,rev[n].previous\fP. The inverse fat also has a
+field \fIrev[n].isdir\fP that tells whether the cluster is part of a regular
+file or of a directory.
+
+For example, the inverse FAT allows finding the file a cluster belongs to, if
+any:
+
+.nf
+int32_t cl = 401;
+fatinverse *rev;
+unit *directory;
+int index;
+int32_t previous;
+
+rev = fatinversecreate(f, 0);
+
+directory = NULL;
+index = 0;
+previous = cl;
+if (fatinversereferencetoentry(rev, &directory, &index, &previous))
+	printf("cluster %d is in no file\\n", cl);
+else {
+	printf("cluster %d is in file: ", cl);
+	fatentryprint(directory, index);
+	printf("\\n");
+}
+
+fatinversedelete(f, rev);
+.fi
+
+An inverse FAT requires a scan of the entire filesystem to be created, and is a
+large data structure. If the operation to be performed only requires something
+to be done on every cluster in the filesystem, \fBfatreferenceexecutelong()\fP
+is faster and demands less memory.
+
+Creating an inverse FAT may require some time and take quite an amount of
+memory. Therefore, if needed it is better to be created only once, and updated
+if the cluster structure is changed, rather than being created and destroyed
+for each operation that requires it.
+.
+.
+.
+.SH OPERATING ON A CLUSTER
+.
+.
+.
+.SS Reading a cluster
+A cluster can be read by \fIcluster = fatclusterread(f, n)\fP; this function
+load the cluster and also stores in a cache, so that a further call to the same
+function retrieves it from memory. The variable \fIcluster\fP can be then used
+to access various data about the cluster. In particular: the size of the
+cluster is \fIcluster->size\fP, its content is \fIfatunitgetdata(cluster)\fP.
+Various macros access a specific value inside a cluster: \fI_unit8int\fP,
+\fI_unit8uint\fP, \fI_unit16int\fP, etc.
+
+.nf
+unit *cluster;
+int i;
+
+// read cluster 45
+cluster = fatclusterread(f, 45);
+if (cluster == NULL) {
+	// cluster cannot be read/created
+}
+
+// print content of cluster
+for (i = 0; i < cluster->size; i++)
+	printf("%02X ", _unit8uint(cluster, i));
+.fi
+.
+.
+.
+.SS Changing a cluster
+Once read (or created, as explained below), the cluster can be written and
+saved to the filesystem.
+
+.nf
+_unit32int(cluster, 22) = -341245;		// 32-bit int at offset 22
+_unit16uint(cluster, 90) = 321;		// 16-bit unsigned int at 90
+cluster->dirty = 1;
+
+fatunitwriteback(cluster);
+fatunitdelete(&f->clusters, cluster->n);
+.fi
+
+Saving needs not to be done immediately. If a large number of clusters is
+planned to be changed writing and deleting when done with them may save from
+memory exhaustion; otherwise, \fIfatflush(f)\fP or \fIfatclose(f)\fP save all
+of them.
+.
+.
+.SS Creating a new cluster
+A cluster can be read from the filesystem and then changed, but if the previous
+content is not important it can just be created as new in memory.
+
+.nf
+cluster = fatclustercreate(f, num);
+if (cluster == NULL) {
+	// the cluster is already in cache, so it may be used
+	// by some other part of the code; if overwriting is
+	// not a problem:
+	cluster = fatclusterread(f, num);
+	// otherwise, fail
+}
+if (cluster == NULL) {
+	// cluster cannot be read/created
+	// ...
+}
+.fi
+.
+.
+.
+.SS All clusters
+The data clusters are numbered from \fIFAT_FIRST\fP to \fIfatlastcluster(f)\fP.
+Some may be used and some not. On a FAT12 or a FAT16 also \fIFAT_ROOT\fP is a
+valid, and is the only cluster of the root directory. Especially in this case
+\fIcluster->size\fP is important, because \fIFAT_ROOT\fP is often larger than
+the other clusters, and in general may also be smaller.
+
+.nf
+int32_t cl;
+unit *cluster;
+
+for (cl = fatbits(f) == 32 ? FAT_FIRST : FAT_ROOT;
+	cl <= fatlastcluster(f);
+	cl++) {
+
+	cluster = fatclusterread(f, cl);
+
+	// operate on cluster
+	// size is cluster->size
+}
+.fi
+.
+.
+.
+.SH CREATING A NEW FILESYSTEM
+The library does not contain any specific function for this task. The
+complication is that the type of a filesystem is not uniquely determined from
+the total number of sectors in the device/image, but depends on the number of
+sectors in each cluster, which can be chosen as a power of two between 1 and
+128. Also the maximal number of entries in the root directory may sometimes
+affect the type of the filesystem.
+
+These parameters can be entered into a structure created by
+\fIf=fatcreate()\fP, as well as a file descriptor in \fIf->fd\fP. The function
+\fIfatzero()\fP resets the filesystem as empty and closing causes it to be
+saved. The \fIfatformat()\fP function in the program \fIfattool.c\fP shows how
+this can be done.
+
+.nf
+	fat *f;
+
+	f = fatcreate();
+	f->devicename = devicename;
+
+	f->boot = fatunitcreate(512);
+	f->boot->n = 0;
+	f->boot->origin = 0;
+	f->boot->dirty = 1;
+	fatunitinsert(&f->sectors, f->boot, 1);
+
+	fatsetnumsectors(f, sectors);
+	// insert the other parameters
+
+	f->fd = open(f->devicename, O_CREAT | O_RDWR, 0666);
+	if (f->fd == -1)
+		// file cannot be created
+	fatzero(f);
+	fatclose(f);
+.fi
+
+.SH COMPLETE DESCRIPION OF ALL FUNCTIONS
+A detailed description of all functions is in \fBfat_functions\fP(3). An
+overview of the FAT12/16/32 filesystems is in \fBfat\fP(5) and of the library
+is in \fBlibllfat.txt\fP.
+

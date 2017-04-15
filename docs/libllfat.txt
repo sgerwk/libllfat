@@ -1,0 +1,1112 @@
+LIBLLFAT
+========
+
+This is a library for low-level access to a FAT12/16/32 filesystem.
+
+For an hands-on guide, see fat_lib(3). The description of all functions is in
+fat_functions(3).
+
+Since it is for low-level access, it allows operations that would result in an
+invalid filesystem. Since checking and repairing a filesystem is one of its
+possible applications, it also allows operating on an invalid filesystem.
+
+Filesystem structure
+--------------------
+
+	- reserved sectors (including the boot and info sectors)
+	- fat0
+	- fat1
+	- root directory megacluster
+	- cluster2
+	- cluster3
+	- ...
+
+The fats could be more than two or even a single one, but they are almost
+always two.
+
+The root directory megacluster only exists in fat12 and fat16. It is the only
+cluster of the root directory, and may be larger than the regular clusters. In
+fat32 is large zero, and the root directory starts in one of the regular
+clusters.
+
+The library
+-----------
+
+A filesystem is represented by a fat *f structure. Any number of filesystems
+may be open at the same time. Reading from an existing filesystem is done by
+fatopen() usually followed by fatcheck(); see recipe below. A new filesystem is
+created via fatinit().
+
+Most commonly, a filesystem has two copies of the fat. Which one to use is
+decided by f->nfat. The default FAT_ALL is almost always right: first fat that
+can be read, all fats on writing. To operate on a specific FAT, save f->nfat,
+do the operation and restore.
+
+Sectors are read and written through a cache f->sectors. The boot sector is
+also referenced by f->boot to skip the cache search, since it is accessed
+often. For the same reason the number of bits of the fat (12, 16 or 32) is also
+stored in f->bits.
+
+Clusters are accessed via the cache f->clusters.
+
+Other fields in the fat * structure are: a reference to the information sector,
+the number of the last cluster known to be free, the estimate of the free
+clusters, and a void * that can be freely used by applications to pass data to
+the callbacks.
+
+Sectors and clusters are called "units".
+
+Unit
+----
+
+Units are sectors and clusters. This library contains functions that:
+
+	- read a unit from an existing filesystem
+	- create a new unit from
+	- copy a unit
+	- insert a unit in a cache
+	- write a unit back to the filesystem
+	- remove a unit from the cache
+
+Every unit contains its "coordinates": the file descriptor of the filesystem it
+comes from, its progressive number, its size and its origin (the position in
+the filesystem of the unit of number zero).
+
+This allows to write back a unit to the filesystem, but also to copy it to a
+different filesystem (changing the file descriptor and possibly the origin). To
+move a unit to a different number do not simply change its number, since this
+is the key of the unit in cache; rather, detach the unit from the cache, change
+its number and insert it back. The functions fatunitmove() and fatunitswap() do
+this; for clusters, functions that do this but also preserve the content of the
+filesystem exist (fatreferencemove(), fatinversemove(), etc.)
+
+The actual content of the unit is in the field unit->data, which is better not
+accessed directly but via fatunitgetdata(unit). This is because the data in a
+unit can be freed via fatunitfree(u), and fatunitgetdata(unit) takes care or
+reloading it in this case; see [Deleting clusters]. This is however a problem
+if an IO error occurs while reloading: see [Implementation notes]. If possible,
+an unit that is in use somewhere else is better not freed.
+
+Numbers inside unit->data can be read or written via the macros _unit8int,
+_unit8uint, unit16int, etc. These access unit->data via fatunitgetdata(unit),
+but do not by themselves take into account endianess: see [Implementation
+notes] for an explanation of how to do this.
+
+The field u->dirty tells whether the unit in cache differs from that in the
+filesystem. This field is set to 1 by fatunitinsert() even if the unit is
+already in cache; this function is called by fatunitmove() and fatunitswap().
+The u->dirty field is reset to 0 when reading or writing back a unit to the
+filesystem. The principle is that inserting a unit in cache means that the
+program has either created or manipulated it, and is therefore different from
+what is in the filesystem; reading from or writing to the filesystem make them
+the same. All library functions set u->dirty when changing u->data; the same
+must do all programs using the library.
+
+The field u->refer is a usage counter. If greater than 0, the unit is never
+deallocated or deleted from cache. It is set to 1 and never changed in the boot
+and information sectors. Its typical use is for cluster containing directory
+entries used in recursive function, like _fatreferenceexecute(), below.
+
+A void * field allows passing data to the callbacks.
+
+Clusters
+--------
+
+The content of files and directories is stored in clusters, sequences of
+consecutive sectors. Every cluster may have a successor, so that if a file or
+directory does not fit in a cluster, it can use a second one, or a third. etc.
+
+Every cluster is identified by a number of 12, 16 or 28 bits depending on the
+type of fat (fat32 has 28 bits). This library uses a 32 bit signed integer in
+all cases, the negative numbers for special cases (end of chain, unused
+cluster, etc.):
+
+	cluster numbers are of type int32_t
+
+Clusters are read by cluster=fatclusterread(f,number). This function returns
+NULL if an IO error occurred (the caller has to deal with this case somehow:
+see [IO errors] below). Otherwise, it returns a pointer to a unit, so the
+cluster number, size and content are in cluster->n, cluster->size and
+fatunitgetdata(cluster).
+
+	after changing the content of a cluster, set cluster->dirty=1
+
+If a cluster is to be overwritten and its previous data does not matter, it can
+be created without first reading it by cluster=fatclustercreate(f,number). If
+this function succeds, it sets cluster->dirty. It returns NULL if the cluster
+is already in cache. This hints that some other part of the code has a pointer
+to the cluster. If this is not a problem, the cluster can be obtained by
+cluster=fatclusterread(f,number) and cluster->dirty=1.
+
+Possible values for the cluster number:
+
+	FAT_ERR	(-1000)	returned by the functions that search for a cluster
+			if not found (for example, the functions that search
+			for a free cluster if none exists)
+	FAT_BAD (-2)	the cluster is marked as defective on the hardware
+	FAT_EOF (-1)	the cluster does not have a successor
+	FAT_UNUSED (0)	the cluster is currently unused
+	FAT_ROOT (1)	megacluster of the root directory in fat12/fat16
+	FAT_FIRST (2)	first data cluster
+	...
+	fatlastcluster(f) last data cluster
+
+Clusters of number FAT_FIRST ... fatlastcluster(f) are regular clusters; they
+may be free and can have a successor or being moved. Instead, FAT_ROOT is only
+a valid clusters in fat12/fat16 filesystem, it never has a successor and is
+never free, and cannot be moved; it is however a valid cluster, so it can be
+read and changed.
+
+The file allocation table (FAT) tells the successor of each cluster. The
+library provides the functions fatgetnextcluster() e fatsetnextcluster() to get
+or set it. The value FAT_EOF indicates the cluster has no successor, meaning
+that the chain of cluster is finished. The value FAT_UNUSED means that the
+cluster is unused.
+
+The first unused cluster is found by fatclusterfindfree().
+
+The root megacluster
+--------------------
+
+This cluster FAT_ROOT contains the whole root directory in fat12/fat16. It does
+not exists in fat32.
+
+It may be larger than the regular clusters. If clusters are read and written
+via fatclusterread() and fatunitwriteback()/fatflush() and cluster->size is
+used for its size, a program needs not to take into account this difference
+explicitly.
+
+This library uses FAT_ROOT (1) for the root directory, but the dotdot entries
+(..) of its direct subdirectories use 0 instead. This has to be kept into
+account when using such entries.
+
+While scanning a cluster chain:
+	- the first may be FAT_ROOT (this is only the case when scanning the
+	  root directory, or .. in a directory that is in root);
+	- the others cannot
+
+Therefore, the scan is over when a _successor_ (not the current cluster) is
+less than FAT_FIRST. Or when the current cluster is less than FAT_ROOT.
+
+Directory entry
+---------------
+
+A directory has, like a file, an associated chain of clusters. These clusters
+contain 32-bytes blocks, called directory entries. Each entry represents a file
+in the directory. Each entry is identified by the pair cluster/index: the
+cluster where it is stored and its number within. For example, a directory may
+be stored in clusters 102,791,42; the entry 791/3 is the third block of 32
+bytes in cluster 791.
+
+	a directory entry is a pair cluster,index
+
+A scan of a directory can be done using fatnextentry(f, &cluster, &index) to
+move cluster/index to the next entry. This function takes care of reading the
+next cluster if the current one is finished. Its return value tells whether
+such next entry exists or not. See [Recipes] below for a cycle schema for
+scanning a whole directory.
+
+The functions in entry.h access a directory entry: they read and write the file
+name, attributes, times (creation, last write and read), first cluster, size.
+Some other convenience functions check whether an entry is unused, it
+represents a directory, a dot or dotdot file (. and ..) or a long name part;
+others delete the entry or zeros it, compare the filename with a string, print
+the entire entry. The functions in directory.h find the first unused entry (to
+create a new file) or find the cluster/index number corresponding to a file
+name.
+
+NOTE: the functions in entry.h all use a pair cluster/index, as opposed to
+cluster_number/index. This means that a cluster containing directory entries
+cannot be deleted during the scan of its entries. The functions are not even
+passed something that point to the cache, so they cannot load the cluster
+again. The clusters can be deallocated cluster->data, however.
+
+Cluster reference
+-----------------
+
+Altering the structure of a chain of clusters requires the references to its
+clusters. The number of the first cluster of the chain is in a directory entry
+(identified by a pair directory/index, where the first is a cluster); the
+number of each following cluster is the successor of its previous cluster
+accordint to the file allocation table. This means that a cluster may be
+pointed to by a pair cluster/index or by its previous cluster.
+
+A cluster reference is a triple (directory,index,previous).
+
+	- directory!=NULL
+		directory/index identify a directory entry; this cluster
+		reference points to the first cluster of the file whose entry
+		is in directory/index
+	- directory==NULL and previous>=1
+		"previous" is a cluster; this cluster reference points to its
+		next cluster according to the file allocation table
+	- directory==NULL and previous=-1
+		the boot sector is considered the reference to the first
+		cluster of the root directory; its target is always FAT_ROOT
+		for fat12/fat16 and is usually 2 but can be changed for fat32
+	- directory==NULL and previous=0
+		the void reference; it points to no cluster
+		
+The program can uniformly access (read and write) the cluster number pointed by
+a reference via the functions:
+
+	fatreferencegettarget(fat,directory,index,previous)
+	fatreferencesettarget(fat,directory,index,previous,new)
+
+This target may be FAT_EOF (end of chain) or FAT_UNUSED (unused cluster or
+first cluster of an empty file).
+
+Allocating and deallocating clusters
+------------------------------------
+
+These operations are needed when creating, modifying and deleting a file or
+directory.
+
+A cluster that is currently unused can be found by fatclusterfindfree(). It is
+allocated by setting its successor to either another cluster or FAT_EOF. It is
+inserted in a chain of cluster by either fatentrysetfirstcluster() or
+fatsetnextcluster(), depending on whether its is to be placed at the start or a
+middle of the chain. No distinction is necessary when using cluster references:
+given the free cluster c and the reference directory,index,previous:
+
+	// insert unused c as the target of reference directory,index,previous
+	target = fatreferencegettarget(fat,directory,index,previous);
+	fatsetnextcluster(f,c,target);
+	fatreferencesettarget(fat,directory,index,previous,c);
+
+In the same way, to remove a cluster from a chain:
+
+	// remove the target of directory,index,previous from the chain
+	target = fatreferencegettarget(fat,directory,index,previous);
+	next = fatgetnextcluster(f,target);
+	fatreferencesettarget(fat,directory,index,previous,next);
+	fatsetnextcluster(f,target,FAT_UNUSED);
+
+When using an [Inverse FAT], appropriate functions replace fatsetnextcluster()
+and fatreferencesettarget() to keep the inverse FAT updated (see below).
+
+Moving and swapping clusters
+----------------------------
+
+The low-level function fatunitmove() changes the number of a cluster in cache,
+but does not update the reference that point to it. For example, if the next of
+cluster 4 is 5, and cluster 5 is moved to 10 by fatunitmove(), after the move
+the next of 4 is still 5. The same applies to fatunitswap().
+
+Moving and swapping in the correct way is done by fatreferencemove() and
+fatreferenceswap(). The first requires the source cluster to be used and the
+destination unused; the second requires two used clusters. They check these
+conditions and return -1 if they are not met. Either way, after the operation
+the clusters are moved in a way that does not change the content of the
+filesystem: its files and directories are unaffected.
+
+The only exception is that moving or swapping the first cluster of a directory
+creates an inconsistent filesystem: see note [Dot and dotdot files] below.
+
+After the move or swap, the clusters are not modified in any other way than
+their number. Any pointer to the cluster is still valid and the same as before,
+except for the number:
+
+	unit *cl = fatclusterread(f, fatreferencegettarget(NULL, 0, 4));
+	// cl is a pointer to the cluster that is the target of
+	// the cluster reference NULL,0,4
+
+	fatclustermove(f, NULL, 0, 4, 10);
+	// the same cluster is now cluster 10, which is the new target of the
+	// same cluster reference NULL,0,4
+
+	// cl still points to the same structure, but cl->n is 10
+
+See below for how to deal with [Bad sectors] and [IO errors], and how to move
+or swap clusters in the presence of an [Inverse FAT].
+
+Analyzing a part or the entire filesystem
+-----------------------------------------
+
+The function fatreferenceexecute() runs a callback on all cluster references.
+
+If it is started from the reference (NULL,0,-1), the boot sector, it crosses
+the entire filesystem. But it can be started from an arbitrary cluster
+reference for operations to be performed on all clusters reachable from that.
+Given a cluster reference, this function:
+
+	- runs the callback on the cluster reference and every following
+	  cluster in the chain, with direction=0;
+	if the initial reference is not to the directory entry of a file that
+	also happens to be a directory, nothing else is done; otherwise:
+	- calls the callback again with direction=1 on the cluster reference;
+	  this is to signal it is entering the directory
+	- calls itself recursively on each directory entry
+	- runs the callback with direction=-1 to signal laving the directory
+	- runs the callback with direction=-2 on the reference of every
+	  cluster of the chain; this is for operations to perform on them after
+	  recursively visiting the directory itself
+
+The callback receives:
+
+	- the cluster reference
+	- the cluster reference to the directory entry of the file this cluster
+	  belongs to
+	- the cluster reference to the directory entry of the directory
+	  containing this file
+
+In other words: a cluster is part of a chain; this chain belongs to a file that
+is contained in a directory. The callback receives a reference to the cluster,
+to the file and to the directory. A reference to a file or directory "SOMENAME"
+is the directory entry that contains "SOMENAME" as its shortname.
+
+If the reference is a directory entry (as opposite to a cluster), by these same
+rules the second is the directory and the third is the parent directory.
+
+The callback also receives the void* pointer that was originally passed as the
+last argument to fatreferenceexecute(); it contains data to be preserved
+between calls, and is in most cases a structure.
+
+The return value of the callback tells what to do:
+
+	- FAT_REFERENCE_CHAIN: visit the following clusters of the chain
+	- FAT_REFERENCE_ORIG: follow the original chain, even if the called
+	  	function changed the successor of the cluster
+	- FAT_REFERENCE_RECUR: if the cluster reference is a directory entry of
+	  	a directory, recursively visit its files
+	- FAT_REFERENCE_ALL: call on all directory entries including long name
+		parts and deleted files
+	- FAT_REFERENCE_DELETE: a directory cluster is deleted from the cache
+		when done scanning its entries, if its refer field is zero
+		(more details in [Deleting clusters], below)
+
+In most cases, the return value is FAT_REFERENCE_NORMAL, defined as
+FAT_REFERENCE_CHAIN | FAT_REFERENCE_RECUR | FAT_REFERENCE_DELETE. If the
+callback changes the links between cluster it may add FAT_REFERENCE_ORIG. If
+running recursively depends on some condition s, return FAT_REFERENCE_COND(s).
+Return FAT_REFERENCE_DELETE to cut short execution, like in [Interruptible
+functions].
+
+If a directory cluster could not be read (because of low memory or IO error)
+execution is cut short, the callback is run with direction=-1 and direction=-2
+for the current directory and every intermediate one and the final return value
+is -1.
+
+Notes on clusters and references
+--------------------------------
+
+[Cluster reference order]
+	It is the natural sequence of cluster references: the first is the boot
+	sector (reference to the first cluster of the root). The clusters of
+	the root directory follow. Then, each file entry in them, recursively.
+
+[Dot and dotdot files]
+	Almost every used cluster is pointed from only a single point in the
+	filesystems: the first cluster of a file from a directory entry; the
+	others from their previous cluster. The only exception is the first
+	cluster of a directory, which is also pointed to by its dot file (.)
+	and by the dotdot file (..) in all its subdirectories.
+
+	Moving this cluster leaves these other references incorrect. If using
+	fatreferenceexecute(), FATEXECUTEFIXDOT fixes them when the callback is
+	run on . and .. (this macro requires and uses a variable int32_t cl).
+
+	Otherwise, fix all dot and dotdot entries at the end by fatfixdot().
+
+Deleting clusters
+-----------------
+
+To save space, units can be either deallocated their unit->data field with
+fatunitfree() or deleted from the cache with fatunitdelete().
+
+Deallocating unit->data with fatunitfree() is transparent if data is always
+accessed (both read and write) via fatunitgetdata(unit), which reloads the unit
+if deallocated. The macros _unit8int, _unit8uint, _unit16int, etc. all use this
+function, and so do the functions fatentry*. Deallocating unit->data is however
+problematic if reloading encounters an IO error [Implementation notes].
+
+Deleting the unit from the cache with fatunitdelete() requires some care: if
+some other part of the code has a pointer to a cluster, deleting the cluster
+would make the pointer dangling. This problem occurs for example in
+fatreferenceexecute(): it scans directory clusters, calling itself recursively
+on each entry; if during the recursive call these directory clusters are
+deleted, at the end of the recursive call the scan cannot procede.
+
+For this reason, units have a unit->refer field that counts the number of
+references to the unit. A unit is never deleted if this field is greater than
+zero. The boot sector (and the information sector, if present) has this field
+set to 1 and never changed to avoid deletion.
+
+For clusters, the principle is:
+
+	every time a cluster is the target of a new pointer,
+	increase cluster->refer++; every time a pointer to a
+	cluster is no longer used, cluster->refer-- and
+	possibly writeback and delete the cluster
+
+This is what fatreferenceexecute() does: it increases directory->refer at the
+beginning and decreases it at the end. More generally, this rule inludes
+cluster references like directory,index,previous: if directory is not NULL,
+this is a pointer to a cluster.
+
+Following this rule literally is hard because new cluster pointers are obtained
+even by assigments like cluster1=cluster or calls like function(cluster).
+Fortunately, it can be ignored if during the use of the new pointer no cluster
+is deleted. For example, _fatdefragment() obtain a new cluster pointer in
+fatclustermove() and deletes it a few lines of code below; this is safe because
+a. no other pointer to the cluster is created or ceased to be used in between,
+and b. fatunitdelete() deletes the cluster only if its refer field is zero.
+
+Also note that a cluster is deleted only if cluster->dirty is zero. To delete a
+cluster that has cluster->dirty=1, write it back to the filesystem with
+fatunitwriteback(cluster) and then delete it.
+
+Inverse FAT
+-----------
+
+The filesystem provides a link from a cluster reference to its target cluster.
+The inverse fat does the converse: it links a cluster number to its reference.
+
+This is needed for example when moving cluster. If cluster number 4 is moved to
+number 10, its reference is needed to preserve the content of the filesystem:
+if the predecessor of 4 is 235, the link 235->4 must become 235->10. The same
+applies if 4 is the first cluster of a file: the directory entry for the file
+must be changed to point to cluster 10. This cannot be done using only the
+number 4, the number of cluster to move.
+
+The inverse FAT provides a reference given a cluster number.
+
+	- creation and deletion: fatinversecreate(), fatinversedelete()
+	- update: when changing a cluster reference in some way, the inverse
+	  FAT becomes incorrect; it is fixed by:
+	  	. fatinverseset(), when a cluster reference has a new target
+		. fatinverseclear(), when a cluster is made unused
+	- fatinversesettarget(), fatinversemove() and fatinverseswap() call the
+	  corresponding functions in reference.h and update the inverse FAT
+
+When a cluster is unused, its reference is NULL,0,0.
+
+The function fatinversecheck() helps debugging errors in updating the reverse
+FAT by creating a new inverse FAT and comparing it with the current one; if the
+program has updated the inverse FAT correctly, they should be the same. Since
+this function requires scanning the whole filesystem, it is not suitable for a
+final program.
+
+Updating the inverse FAT is done automatically if the cluster links are changed
+via fatinversesettarget(), fatinversemove() and fatinverseswap(). These
+functions respectively set the target of a cluster reference (change the first
+or following cluster of a chain), move a cluster to a different number or swap
+two clusters, all updating the inverse FAT.
+
+The corresponding to fatsetnextcluster(f,c,next) is
+fatinversesettarget(f,NULL,0,c,next,isdir). Otherwise, use the old function but
+then call fatinverseset(f,NULL,0,c,isdir) to update the inverse FAT. The isdir
+parameter is explained just below.
+
+The inverse FAT also tells whether a cluster is part of a directory or of a
+regular file. This is the field inverse_fat[cluster_number].isdir and the isdir
+parameters of the functions that update the inverse FAT.
+
+When updating an inverse reference, passing isdir=-1 means to try to guess if
+this cluster is part of a directory or not. It works if either a. the reference
+is directory,index,0 or b. the reference is NULL,0,n and cluster n has a
+correct value of isdir in the inverse fat; otherwise, the guess will be wrong
+and the inverse fat made wrong. For example, building a cluster chain from the
+end cannot be done passing isdir=-1. Using an explicit value isdir=0 or isdir=1
+is generally better, if possible.
+
+Every directory cluster is pointed to by the inverse FAT entry of the first
+cluster of every file it contains. When creating the inverse FAT, the
+directory->refer field is updated to reflect this fact [Deleting clusters]. As
+a result, a directory cluster is ever deleted only if the files it contains are
+all empty, or only when the inverse FAT is dellocated via fatinversedelete().
+
+An inverse FAT may be quite large. Since it may not fit in memory, it can be
+created on a file that is then mapped to memory via mmap(2). This is what
+happens when fatinversecreate() or fatinversecheck() are called with the
+argument file=1. The file is then deleted in fatinversedelete().
+
+File names and paths
+--------------------
+
+Programs accessing a FAT filesystem are supposed to do some changes to file
+names and paths before using them for a lookup or file creation. For example, a
+short file name should be turned uppercase (this is what makes shortnames
+case-insensitive, since they are converted both before lookup and creation); a
+long file name should be removed any trailing period.
+
+The library does not automatically convert names and path before attempting to
+use it. It does not checks whether they are valid, either. This is because one
+of the possible uses of a low-level library is to access a file whose name is
+invalid because of partial corruption of the filesystem; also, creating a file
+with an invalid name may be useful to avoid accidental deletion or regular
+access.
+
+Programs that access the filesystem in a regular way should use the functions
+for checking and converting file names and paths: fatinvalidname(),
+fatinvalidpath(), fatstoragename(), fatstoragepath(), fatinvalidnamelong(),
+fatinvalidpathlong(), fatstoragenamelong() and fatstoragepathlong(). The first
+eight are for shortnames the others for long names. Examples showing their
+usage are fileoptiontoreference() and filecreate() in fattool.c
+
+At the beginning of a path, the special form "CLUSTER:n" stands for cluster n.
+For example, if the directory "AAA" starts at cluster 104 and contains the file
+"XXX", this file can also be referred as "CLUSTER:104/XXX". The same form can
+be used for a file name, but only when looking for its first cluster. Paths
+likes these are not valid since they contain the forbidden character `:', and
+cannot therefore be checked for validity. When using the functions for long
+names, the form is "cluster:n", in lower case.
+
+Long names
+----------
+
+The original FAT filesystem only supported file names made of 11 uppercase
+characters and some symbols (such as _ and -), 8 for the base and 3 for the
+extension. Long names are added in a sequence of fake directory entries that
+precede the real one.
+
+This library uses two directory entries for a file with a long name:
+
+	longdirectory,longindex	the first directory entry of the long name
+	directory,index		the entry that contains the short name of the
+				file and all its other data, such as its size
+				and first cluster
+
+The functions for accessing the long names have two such pairs of arguments as
+input and/or output, except the ones in the first point:
+
+- scan the directory entries one at time: fatlonginit(), fatlongend(),
+  fatlongscan(); the return value tells whether the entry is the last for a
+  file; a return argument contains the long name, if any
+
+- search a directory for the next long name: fatlongnext(), fatnextname()
+
+- look up a file by its long name: fatlookupfilelongboth(),
+  fatlookupfilelong(), fatlookupfirstclusterlong(), fatlookuppathlongboth(),
+  fatlookuppathlong(), fatlookuppathfirstclusterlong()
+
+- create a file by long name: fatfindfreelong(), fatfindfreelongpath(),
+  fatcreatefileshortlong(), fatcreatefilelong(), fatcreatefilelongpath()
+
+- execute a callback on every cluster reference or every file, passing it also
+  the long name: fatreferenceexecutelong(), fatfileexecutelong()
+
+- go back in the inverse fat to the start of the long name:
+  fatshortentrytolong(), fatlongreferencetoentry()
+
+Bad sectors
+-----------
+
+Clusters are marked FAT_BAD in the fat if they are defective. They should not
+be moved or swapped, since a. their content is by definition wrong or at least
+unreliable, and b. moving such a cluster means marking the other as bad while
+it is likely not.
+
+The functions fatreferencemove(), fatreferenceswap(), fatinversemove() and
+fatinverseswap(), emit a warning when they are requsted to move a bad cluster,
+but perform the operation anyway. This is because the right action to take is
+only known by the caller, which should act as if the reference to the bad
+cluster were FAT_EOF. For example:
+
+	target = fatreferencegettarget(f, directory, index, previous);
+	if (fatgetnextcluster(f, target) == FAT_ERR) {
+		fatreferencesettarget(f, directory, index, previous, FAT_EOF);
+		// return, if nothing else is to be done when target=FAT_EOF
+	}
+
+All functions in the library that move and swap clusters do such a check.
+However, the successor of a bad cluster cannot be known (because its number has
+been overwritten by FAT_BAD in the fat). This means that the rest of the chain
+is left orphaned.
+
+The functions that search for a free cluster never return a bad one. The
+problem never occurs when allocating a new cluster or moving a cluster to a
+free one.
+
+IO errors
+---------
+
+When reading or writing back units, an IO error may occur. The functions return
+NULL or -1 in such cases; clusters are never marked bad when reading or writing
+them [Implementation issues]. The caller is responsible to react in the
+appropriate way. Unless the program has exactly the purpose of fixing
+filesystem errors, the safest choice is to stop operation, rollback and save
+the filesystem to its latest consistent state.
+
+When unit->data has been freed by fatunitfree(unit), it is automatically
+reloaded when calling fatunitgetdata(unit). However, checking for IO errors at
+any access of unit data would complicate the code too much, so a simple message
+is print and the program ends via exit(1). If this leaves the filesystem
+incorrect, units should never be deallocated (but they still may be deleted, if
+possible).
+
+The functions for moving and swapping clusters fatreferencemove(),
+fatreferenceswap(), fatinversemove() and fatinverseswap() do not change the
+structure of the filesystem if reading a clusters fails. They also do the same
+if writing them back fails, if they are called with writeback=1, which is
+recommended. Otherwise, the caller is responsible to invert the change when
+writing the clusters back if this operation fails. The return value of these
+functions tells which IO operation failed:
+
+	-2:	read first cluster
+	-3:	read second cluster (swap only)
+	-4:	write (second cluster) on the position of the first (swap only)
+	-5:	write (first cluster) on the position of the second
+
+All IO errors can be simulated: see [Simulated IO errors].
+
+IO errors while reading a FAT
+-----------------------------
+
+When a sector of the FAT cannot be read due to an IO error, fatgetnextcluster()
+returns FAT_ERR and fatsetnextcluster returns -1 (writing an element of the fat
+requires first reading the cluster(s) where the entry resides). When the IO
+error is generated on write, fatunitwriteback(unit) returns -1; such errors are
+silently ignored in fatunitflush() and consequently in fatflush() and
+fatclose().
+
+If the first two functions are passed f->nfat=FAT_ALL, then fatgetnextcluster()
+reads the FATs in order until the next can be read, and returns FAT_ERR if it
+cannot. The function fatsetnextcluster() writes the element in all FATs, but
+returns -x if x of them cannot be read.
+
+Either way, these function may return FAT_ERR or a negative value to signal an
+error in reading (fatgetnextcluster and fatsetnextcluter) or writing
+(fatunitwriteback) a sector. The caller should react in the appropriate way.
+The other library functions currently only consider FAT_ERR as a chain
+terminator; this is correct (since the successor of this cluster cannot be
+determined) but incomplete (most functions should terminate in this case).
+
+Errors of this kind can be simulated by "READ 1 SECTOR" and similar in a
+simulated error file. The number is the absolute index of the sector in the
+filesystem, is not relative the begin of a FAT.
+ 
+Simulated IO errors
+-------------------
+
+To test the resistence of a program against IO errors, the library simulates
+them on request. For example, it may generate an IO error when attempting to
+read cluster 12 or write cluster 5. This is different than FAT_BAD, which is
+just a special mark for a cluster in the FAT table.
+
+The IO errors to simulate are in the global array fat_simulate_errors. Filling
+it explicitely in the program is possible, but reading it from file is easier:
+
+	fatsimulateinit();
+	if (fatsimulateread(simerrfile, f.fd)) {
+		printf("cannot read %s\n", simerrfile);
+		exit(1);
+	}
+	... same for each filesystem
+
+The file has the following format:
+	READ 12
+	WRITE 5
+	READ|WRITE 37
+attempting to read cluster 12 produces the same effect as if an IO error
+occurred. Same for writing cluster 5 and accessing cluster 37 either way. Also
+errors on seek and short read/write can be simulated, as well as errors on
+sectors instead of clusters. More details about the syntax are in the included
+example file faterrors.txt.
+
+The second parameter of fatsimulatedread() associates the simulated errors in
+the file to a specific filesystem among the many that may be open at the same
+time. If fd=-1, the errors are associated to all filesystem; this possibility
+only exists to allow simulating an error on reading the boot sector and the
+information sector, since these are read by fatopen() and before it is called
+f.fd is not known.
+
+Interruptible functions
+-----------------------
+
+Some operations modify the filesystem so that interrupting them may leave the
+filesystem incorrect; for example, fatdefragment swaps clusters immediately,
+but the file allocation tables are only written back at the end; also, it
+aborts on IO errors (fixing these require a media scan for bad clusters: see
+[Implementation issues]).
+
+The macros in complex.h help building such functions; first choose an arbitrary
+name, then insert FATINTERRUPTIBLEGLOBALS(name) before the functions
+implementing the operation; before starting the operation, call
+FATINTERRUPTIBLESTART(name); whenever execution can be safely cut short, check
+whether this is to be done and do it:
+
+	if (FATINTERRUPTIBLECHECK(name))
+		// cut execution: for example, if this is a callback to
+		// fatreferenceexecute(), return 0 or
+		// FAT_REFERENCE_DELETE
+
+During the operation, if execution cannot continue due to IO errors:
+
+	FATINTERRUPTIBLEABORT(name, FATINTERRUPTIBLEIOERROR);
+
+At the end, check again FATINTERRUPTIBLECHECK(name) to see if the operation was
+aborted and execute whichever cleanup is needed: for example: call fatfixdot()
+if directory clusters have been moved; suggest running a volume check program
+if abortion was due to IO errors (FATINTERRUPTIBLECHECK(name) ==
+FATINTERRUPTIBLEIOERROR).
+	
+Wrappers around fatreferenceexecute()
+-------------------------------------
+
+fatcalls()
+	this is a debugging function, showing the sequence of calls
+	fatreferenceexecute() makes to the callback; for each, the arguments
+	to the callback are print in the form:
+
+		directory->file->reference (direction)
+
+fatdump()
+	show the filesystem; pass all=1 to also print the deleted directory
+	entries and the long filename parts
+
+fatfilexecute()
+	runs a callback on every file in the filesystem
+
+	the callback receives the path of the directory containing the file (a
+	string) and the directory/index pair of the directory entry of the file
+
+fatmovearea()
+	moves all clusters in a certain area to another; the areas may wrap
+	over the end of the cluster area; clusters are analyzed in cluster
+	reference order (see note above [Cluster reference order]); each
+	cluster in the source area is moved to the first free cluster in the
+	target area
+	
+	a special exception ensure this function can be used to "compact" used
+	cluster at the beginning of the filesystem: if a cluster in the source
+	area is also in the destination, it is moved only if the destination
+	cluster number is less than the source cluster number
+
+fatcompact()
+	move all used clusters are at the beginning of the filesystem; files
+	are not guaranteed to be contiguous
+	
+fattruncate()
+	limit the filesystem to a certain size by truncating files that have
+	clusters over a given bound; directories with their first cluster over
+	the bound are removed altogether, since they could not contain the
+	mandatory files . and ..
+
+fatdefragment()
+	move the clusters at the beginning, in cluster reference order
+	see note above [Cluster reference order]
+
+Recipes
+-------
+
+Open a filesystem:
+	#define _FILE_OFFSET_BITS 64
+	#include ...
+	...
+	f = fatopen(devicename, 0);
+	if (f == NULL) {
+		printf("cannot open %s as a FAT filesystem\n", devicename);
+		exit(1);
+	}
+	if (fatcheck(f)) {
+		printf("%s does not look like a FAT filesystem\n", devicename);
+		printf("fix it (with dosfsck or similar) if it was\n");
+		exit(1);
+	}
+	only programs aimed at fixing invalid filesystems may skip the call to
+	fatcheck(), or continue anyway
+
+Saving and/or closing a filesystem:
+	fatflush(f);		// save dirty units to filesystem
+	fatquit(f);		// deallocate without saving, close file
+	fatclose(f);		// flush units and and close data
+
+Print the structure of the whole filesystem: fatdump()
+
+Read/create a cluster:
+	- read: fatclusterread(f, num);
+	- create:
+		cluster = fatclustercreate(f, num);
+		if (cluster == NULL) {
+			// the cluster is already in cache, so it may be used
+			// by some other part of the code; if overwriting is
+			// not a problem:
+			cluster = fateclusterread(f, num);
+			// otherwise, fail
+		}
+		if (cluster == NULL) {
+			// cluster cannot be read/created
+			// ...
+		}
+
+Cycle over all data clusters: FAT_FIRST ... fatlastcluster(fat*)
+	- read a cluster given its number: fatclusterread(fat*, int32_t)
+	- read/change fatunitgetdata(cluster), size is cluster->size;
+	  if changed, set cluster->dirty
+	- write back cluster: fatunitwriteback(cluster); all: fatflush(fat*)
+	- delete from cache: fatunitdelete();
+	- free data: fatunitfree(); all: fatunitfreecache()
+	on a fat12/fat16 also cluster FAT_ROOT is valid
+
+Cycle over directory entries, given the first cluster of the directory:
+	- directory = fatclusterread(f, cluster_number)
+	- for (index = -1; ! fatnextentry(f, &directory, &index); ) {
+		// directory/index is a directory entry (a file)
+		// functions for accessing the entry are in entry.h:
+		// fatentryexists(), fatentryislongpart(), fatentryisdotfile(),
+		// fatentrygetshortname(), fatentrygetattributes(), ...
+	  }
+	- when doing a recursive visit, update directory->refer and delete from
+	  cache when done using it, like in _fatreferenceexecute()
+
+Access a file, given its directory entry directory/index:
+	- fatentrygetfirstcluster(directory, index, bits) is its first cluster
+	  (or FAT_UNUSED if the file is empty)
+	- fatgetnextcluster(f, cluster) is the next of each cluster,
+	  until this function returns FAT_EOF
+	or use fatreferencegetnext() for both
+
+Lookup a file, given its name or complete path, or create a new one
+	- fatlookupfile()
+	- fatlookuppath()
+	- fatfindfreeentry()
+	- fatcreatefile()
+	They all return the directory,index pair of the file.
+	See also the other functions in directory.h
+
+Execute a function on all files: fatfileexecute().
+	For also accessing the chain of clusters, use fatreferenceexecute()
+
+Execute a function on all used clusters, in cluster order:
+	- fatreferenceexecute()
+	- in the callback, return immediately if previous<FAT_ROOT
+	- the cluster to operate on is "previous"
+
+Do something on some clusters:
+	operations starting from a cluster (like visiting a file or a subtree)
+	are better implemented via fatreferenceexecute(); first, this function
+	takes care of recursion and deletion of clusters after visiting, so
+	that the problem focuses into what to do on a specific cluster (the
+	callback); second, even operations that are initially assumed to
+	operate on a single file may later turn out to be useful for a subtree,
+	or operations on subtrees useful on a single chain
+
+Do something only on all directory clusters:
+	- fatreferenceexecute()
+	- if the reference is a directory entry:
+		* if it is the entry of a file, return FAT_REFERENCE_DELETE
+		* if it is . and .. also return FAT_REFERENCE_DELETE
+		* otherwise, return FAT_REFERENCE_NORMAL
+	- if direction==0, do the operation
+
+Change a chain of clusters:
+	- first: fatentrysetfirstcluster(directory_cluster, index)
+	- others: fatsetnextcluster(f, ncluster, nextcluster)
+	- uniformly: fatreferencesettarget(f, cluster_reference)
+	  fatinversesettarget() if using an inverse fat
+
+Move a cluster:
+	fatclustermove(), fatclusterswap()
+	if using an inverse fat: fatinversemove(), fatinverseswap()
+
+Dealing with chain cycles:
+	function fatinversecreate() avoid being trapped in cycles by returning
+	0 if a cluster has already been analyzed; this stops
+	fatreferenceexecute() from following the current chain
+	
+	the same can be done in any callback to fatreferenceexecute() if cycles
+	may be present: whenever a cluster is detected to be part of a cycle
+	(for example, it is marked as being already visited), return
+	FAT_REFERENCE_DELETE; if the function breaks the cycle, the return
+	value FAT_REFERENCE_ORIG may or may not be appropriate depending on how
+	the cycle is broken
+
+Debug
+-----
+
+The library is made of modules (unit, fs, table, entry, directory, reference,
+inverse, complex). Each has its debug variable fat(module)debug, like
+fatunitdebug, fatfsdebug, etc. They are all initialized to zero. Set to one to
+print tracking info.
+
+Module dependencies:
+
+unit          <--+--  table <-\
+     <- fs    <-/           <--+-- directory <-- reference <-- inverse
+     <- entry               <-/                                 ^  ^
+							        |  |
+							  complex  long
+
+Notes
+-----
+
+Note 1:
+	Due to a limit in the way the cache is implemented, freeing is not the
+	same as deleting a non-dirty and non-sticky unit from the cache. It
+	only deallocates unit->data and set it to NULL, but the unit remains in
+	cache. This is irrelevant if always using fatunitget(), fatunitinsert()
+	and fatunitgetdata(), as they all consider unit->data==NULL as if the
+	unit were not in cache.
+
+Note 2:
+	The field f->last of a fat structure is close to the "last known
+	allocated sector" of fat32, but not quite. The library uses it as the
+	first cluster to search when looking for a free cluster (unless the
+	start is explicitly given), and set it to the cluster found to be free.
+
+	If such a search is always followed by the allocation of that free
+	cluster, the result is the same. The difference is that the library
+	returns it if the cluster is in fact free, rather than the following
+	free one.
+
+	This is mostly irrelevant, since this filesystem element is advisory
+	and the program can change f->last after opening (increasing it by one)
+	and before closing (decreasing it by one if it no cluster has been
+	allocated).
+
+Note 3:
+	The number of free clusters f->free is initialized to -1 (unknown);
+	only on fat32 it is read from the filesystem by fatopen() and saved by
+	fatflush() and fatclose(), but the program can arbitrarily change it in
+	between.
+	
+	This number can only be relied upon after calling fatclusternumfree(),
+	which recomputes and returns its value.
+	
+	It is updated when a cluster is made used or made unused, but only if
+	it is not -1 and the change is made on all fats at the same time
+	because f->nfat=FAT_ALL (this is the default).
+
+Note 4:
+	Function fatgetlastallocatedcluster() returns the temporally last
+	allocated cluster as stored in the information sector of a fat32. It
+	should not be relied upon, and is not updated by the library. The value
+	to use is f->last, but this value is unlikely to be useful directly.
+	Indeed, fatclusterfindfree() uses it as the starting point, and so does
+	fatclusterfindfreebetween() when passed start=-1. See also Note 2.
+
+Implementation issues
+---------------------
+
+Endianess is implemented by a. converting every value coming from a unit with
+le16toh and le32toh; and b. converting every value that is to be written in a
+unit with htole16 and htole32 before it is written. For example:
+	x = le16toh(_unit16int(...));
+	return le16toh(_unit16int(...));
+	_unit16int(...) = htole16(x);
+The script "lib/endian" check for this to be done correctly.
+The 8-bit values that are combined by the library itself do not require
+conversion since they use bit operations like shift/and/or, which work the same
+regardless of endianess.
+
+Sectors are never deleted from the cache by the library itself. However, the
+library does not maintain any pointer to the FAT sectors; therefore, a program
+can delete them and they will be reloaded if needed.
+
+When reading a cluster fails, a mark FAT_BAD could automatically inserted in
+the FAT table. This requires only a small change to fatclusterread(), but is a
+bad choice. Indeed, FAT_BAD would replace the information of which cluster
+follows the faulty one. This is a minor problem for a regular file, since its
+content is corrupted anyway, but a huge one for directories: the clusters
+following the faulty one may contain several files and subdirectories that are
+still accessible but would be lost if marking the cluster FAT_BAD. This
+operation is better left to a program specifically designed to verify and
+restore the integrity of filesystems (such as dosfsck), which may "jump over"
+the faulty cluster if it belongs to a directory.
+
+If unit->data has been freed via fatunitfree(unit) and is later accessed via
+fatunitgetdata(unit), this function reloads it from the filesystem. Dealing
+with IO errors at this point would complicate the code too much, as accessing
+data may occur deep into functions fatentry* and functions calling them. For
+this reason, fatunitgetdata(unit) simply prints a message and exit(1) in this
+case. The alternative is to have a callback and its data into the unit struct,
+for this case. Typically the function would simply exit, but the [Interruptible
+functions] would call FATINTERRUPTIBLEABORT(name, FATINTERRUPTIBLEIOERROR) to
+cut short operation and flush the filesystem.
+
+The current way of dealing with IO errors in the FAT is to return FAT_ERR or a
+negative value. An alternative is to just terminate the program, but this may
+leave the filesystem in an inconsistente state. Using setjmp/longjmp is
+possible, but would not rollback the fields cluster->refer, so it can only be
+appropriate if the policy in case of IO errors is not to continue operating on
+the filesystem but to close it as soon as it can be saved in a consistent
+state.
+
+The reference to a cluster could have been represented by a three-field
+structure, but is instead implemented by three separate values
+(directory,index,previous). Also, the different values that indicate
+end-of-chain in a zero-length chain (FAT_UNUSED) or otherwise (FAT_EOF) could
+have been hidden by the library, but this would not have made it a library for
+low-level access.
+
+The inverse FAT points to every directory cluster that contains at least a
+non-deleted entry. This disallow deletion of such clusters. A solution could
+have been to store part of the inverse fat and some of these clusters to file,
+but this is probably better left to the virtual memory mechanism of the
+operating system.
+
+The argument "file" to fatinversecreate() makes the inverse FAT to be created
+as a file the is mapped to memory via mmap(2). The alternative would have been
+to try malloc first, and then this other method if memory is not enough.
+However: a. malloc may return a value even if there is not yet enough memory
+(when this memory is used, the process receives SIGIO); and b. during the
+creation of the inverse FAT all directory clusters are loaded in memory, so
+more memory is needed after the inverse FAT is created.
+
+The functions for moving and swapping clusters with an inverse FAT have two
+variants each, where the clusters can be given either as numbers or as cluster
+references. The first variant uses the inverse FAT to determine the references
+from the clusters. If the inverse FAT is all in memory, this is not a problem
+as it amounts to a lookup in an array. But the inverse FAT may be large: it is
+an array of structures, one for each cluster. For large filesystems, part of it
+may be swapped to disk. In such cases, if the reference to a cluster is already
+known then using it rather than obtaining it from the inverse FAT may save a
+page fault. For example, when defragmenting a filesystem the reference to the
+first cluster to move/swap is known, and is used to call the variants of the
+move and swap functions that take cluster references. Of the two clusters
+involved in each call, the first is also the one that is more likely not being
+sequential (while the second is), so it is more likely to generate a page
+fault.
+
+The macros in complex.h are not exactly right, as they do not save the current
+interrupt handlers at the begining and restore them on exit.
+
+The function fatlinearize() fixes the dot and dotdot files only in the tree
+rooted at the cluster reference it is passed. If this is not the boot sector
+(the reference to the root directory) the other dot and dotdot files are fixed
+by scanning the directory tree of the whole filesystem. In some cases, it would
+be more efficient to check if each cluster to move or swap is the first of a
+directory, and fixing its dot and the dotdot files of its subdirectories if it
+does.
+
+When reading a simulated errors file a printf warns about this. A similar
+message is also printed when simulating an error (for example, when reading
+cluster 12 and the simulation file contains READ 12). These cannot be masked
+(they are printf, not dprintf), because it is way too easy to forget of
+simulation errors.
+
+Since the first character of a short filename entry is replaced by 0xE5 on
+deletion, the checksum of this short name no longer matches that in the long
+name. While this could allow recovering that first character, there can be no
+guarantee that the long name was actually associated to the short.
+
+According the spec, fatstoragepathlong() removes any trailing space or period
+from long filenames. This means that it turns 'xxx.. . ... ' into 'xxx', which
+is perhaps surprising. It also turn both '...' and '.. ' into the empty string,
+following the same rule; this means that 'aaa/.. /bbb' becomes 'aaa//bbb', the
+same as 'aaa/bbb'.
+
+Programs
+--------
+
+fatview
+	show the internal structure of a FAT filesystem
+
+fatshrink
+	reduce the size of a FAT filesystem
+
+fattool
+	various operations on a FAT filesystem: map of free/used/bad clusters,
+	fix dot and dotdot files, defragment, set the last known cluster
+	indicator, make a filesystem empty, mark all unused clusters as unused,
+	force deletion of a file, create an hard link, fill unused clusters
+	with zero (for making an image sparse), make the clusters of a file
+	consecutive, mark some clusters as bad, etc.; see fattool.1
+
+fatbackup
+	copies the reserved sectors, the FATs and the directory clusters; these
+	are the essential parts of a filesystem, everything but the actual file
+	content; recovery can be done just by copying back using the same
+	program
+

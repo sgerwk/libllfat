@@ -1,0 +1,39 @@
+# simulated errors
+#
+# read this file from a program:
+#
+#		fatsimulateinit();
+#		fat_simulate_errors = fatsimulateread(filename, f.fd);
+#
+# format of each line:
+#
+#	READ/WRITE/SEEK number [sector/cluster [error/short]]
+#
+# READ/WRITE/SEEK	give error or seek, read, or write
+#			multiple cases are allowed, like READ|WRITE
+# number		the number of the sector or cluster
+# sector/cluster	1 or CLUSTER = cluster (default)
+#			0 or SECTOR = sector (the number is the absolute number
+#			            of the sector in the filesystem, not within 
+#				    the fat)
+# error/short		-1 = operation fails (default)
+#			>=0  short read or short write (only read or write)
+
+# the library simulates a failure when attempting to read cluster 12
+READ 12
+
+# same when attempting to write cluster 5
+WRITE 5
+
+# both read and write, cluster 37
+# READ|WRITE 37
+
+# error on both read and write on sector 1
+# READ|WRITE 1 SECTOR
+
+# simulate a short read (100 bytes) when attempting to read sector 1
+# READ 1 SECTOR 100
+
+# read error on the boot sector; only works if fd=-1
+# READ 0 SECTOR
+

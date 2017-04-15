@@ -1,0 +1,112 @@
+TODO
+====
+
+the first character of a file is allowed to be 0x05 to represent 0xE5; this
+should be included in the conversion from string to shortname and vice versa
+
+testfs creates four filesystems for testing, one for each bit number (12, 16,
+and 32) plus one with a multi-cluster root directory; fattest runs some test on
+them
+
+heuristics correction mode: if the next of a cluster is incorrect (a number
+greater than fatlastcluster(f), or FAT_EOF and FAT_UNUSED but the file is not
+finished yet), it is assumed to be the next of current cluster; this is not
+always the right choice, and is almost always wrong on directories, but is
+often right for regular files; the same can be done when two clusters have the
+same successor; typically, the one having its next as a successor is right;
+otherwise, if one of the two sectors is before the common successor and the
+other is not, the first is right; if they are both before, the one that is
+closer is right; this could be implemented as a function in fattool.c, both for
+reading a file and for fixing such problems; such an heuristics can also be
+used for deciding which FAT to use
+
+function for changing the number of sectors in a cluster; relatively easy on an
+empty filesystem; could in theory be done on a non-empty filesystem, provided
+that that the number of clusters is reduced, but perhaps it's better to just
+allow it on only empty filesystems
+
+doc: a possible application of the functions for finding and setting the next
+of a cluster and the size of a file in fattool is to realize cyclic files; this
+allows for files that looks very long even if they take little space; can be
+used for making a simple multimedia device to cyclically play a file even if it
+lacks the cyclic play feature; also useful for this are the hardlink and
+filldeleted functions 
+
+doc: clarify that the .. files in the directories in the root have 0 as their
+first cluster, but the actual cluster is fatgetrootbegin(f), which always
+returns a number greater than zero
+
+when the number of sectors is zero, the size of the partition, device or file
+can be used instead
+
+fatcheck() may include some other checks, such as version=0.0 for FAT32; others
+are mentioned as comments in the source
+
+add the function for creating and deleting an empty directory in fattool
+
+allow the use of a custom fatgetnextcluster(); add a function field in the fat
+structure; if not NULL, this function is used in place of fatgetnextcluster();
+this allows testing a FAT without changing the current one
+
+transactions: whenever something is changed in a sector or cluster, make the
+changes to a copy; this way, it would be possible to commit (copy the modifies
+sectors and clusters onto their originals) or rolling back (delete the copies)
+
+overlay: read from two files, save changes to the new; requires a map of which
+sectors/clusters are to be read from which files; on linux > 3.6 sparse files
+can be used instead: with this kernel a program can check whether a part of a
+file is allocated or not (SEEK_HOLE and SEEK_DATA); if the sector or cluster is
+allocated, use it; otherwise, use that in the first; this allows testing
+changes to an image or device without actually changing it
+
+simulated errors: also include a probability for the error to occur (default:
+1) and allow intervals of sectors/clusters;
+for example: READ 20-25 CLUSTER -1 0.2
+
+the first four bit of each entry in a FAT32 should not be changed; this
+requires reading before writing the new value; the library currently just sets
+them to zero
+
+graphical filesystem browser (maybe with a web browser and local-cgi)
+
+fatunitget() returns NULL if it fails loading the unit, but terminates via
+exit() if memory is exhausted (malloc returns NULL); this disallows rolling
+back changes or saving the filesystem to some coherent state; some way to
+distinguish between a failed loading and memory full is needed (a global error
+number variable, for example)
+
+functions like fatinversecreate() and fatlinearize() may take time but are
+predictable, since they cycle over the clusters of the filesystem; they can
+therefore calculate their state of progress, and show it to the user; this
+could be done via a callback to be run every x clusters
+
+fatbackup: add an option to also copy the data clusters; this is not the same
+as dd or cp, since the unused clusters are not written and the resulting image
+has holes in their position (is a sparse file)
+
+check that all file positions have type off_t
+
+by the specification the shortnames should be unsigned char *, not char *; this
+would however cause type warning on the string.h functions, they would all
+require casts
+
+check sectors (read only, or read/write), ane mark FAT_BAD the clusters
+containing the ones that cannot be accessed
+
+ENTRYPOS() is defined separately in entry.c and long.c; maybe it should be
+exported, but it overlaps _unit8uint(); maybe also ENTRYPOS16() and
+ENTRYPOS32() should be defined?
+
+check if something else is missing from the official spec
+
+an OO language with exceptions and automatic garbage collection could deal with
+both IO errors in nested functions and the deallocation of clusters no longer
+used; however, clusters and sectors are always linked from the cache, so they
+can be considered unused if this is their only reference, not when they are
+unreferenced
+
+mmap, so that loading and unloading clusters and sectors is done by the kernel;
+maybe this could be an alternative to the cache in unit.{c,h}
+
+python binding
+

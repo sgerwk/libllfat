@@ -1,0 +1,101 @@
+<html>
+<head>
+<title>libllfat</title>
+</head>
+<body>
+
+<a href="https://github.com/sgerwk/libllfat">github page</a>
+&nbsp; | &nbsp;
+<a href="https://github.com/sgerwk/libllfat/archive/master.zip">download
+latest</a>
+
+<hr />
+
+<h1>libllfat</h1>
+
+<p>This is a library for low-level accessing a FAT12/16/32 filesystem. It
+offers functions for reading and writing the basic elements of such filesystems
+such as the number of sectors and the successor of a cluster, but also some
+more complex operations such as looking up a file and defragmenting a
+filesystem.</p>
+
+<p>See COPYING for licensing information.</p>
+
+<p>Also see DISCLAIMER: this library has not been extensively tested, and some
+operations may corrupt the filesystem it is operated upon to the point of
+making recovery virtually impossible. The suggested application area of this
+library is for filesystem images that can be easily recreated in case of such
+failures.</p>
+
+<p><b>Programs:</b></p>
+
+<dl>
+
+<dt><a href="fatview.html">fatview</a>
+<dd>show the structure of a filesystem
+
+<dt><a href="fattool.html">fattool</a>
+<dd>various operations on a filesystem, such as reading and writing
+a cluster or a file, etc.
+
+<dt><a href="fatbackup.html">fatbackup</a>
+<dd>copy the essential parts of a filesystem
+
+<dt><a href="fatshrink.html">fatshrink</a>
+<dd>reduce the size of a filesystem
+
+</dl>
+
+<p><b>Documents:</b></p>
+
+<dl>
+
+<dt><a href="libllfat.txt">libllfat.txt</a>
+<dd>overview of the library
+
+<dt><a href="fat.html">fat.5</a>
+<dd>short description of the filesystem
+
+<dt><a href="fat_lib.html">fat_lib.3</a>
+<dd>description of the main functions, with examples
+
+<dt><a href="fat_functions.html">fat_functions.3</a>
+<dd>all functions in the library
+
+</dl>
+
+<p><b>Structure of the source:</b></p>
+
+<dl>
+
+<dt>lib
+<dd>the library itself
+
+<dt>tools
+<dd>some programs that use it
+
+<dt>build
+<dd>where these programs are built, with some example filesystems
+
+<dt>doc
+<dd>man pages
+
+</dl>
+
+<p><b>Install:</b></p>
+
+<pre>
+make
+make install
+</pre>
+
+<hr />
+
+<a href="https://github.com/sgerwk/libllfat">github page</a>
+&nbsp; | &nbsp;
+<a href="https://github.com/sgerwk/libllfat/archive/master.zip">download
+latest</a>
+
+</body>
+</html>
+

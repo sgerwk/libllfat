@@ -1,0 +1,121 @@
+.TH FAT 5 "Oct 7, 2016"
+.SH NAME
+FAT \- the FAT12, FAT16 and FAT32 filesystems
+.
+.
+.
+.SH OVERVIEW
+This page describes these filesystem to the aim of clarify what libllfat does.
+An overview of the library is in \fBlibllfat.txt\fP, a programming guide in 
+\fBfat_lib\fP(3) and a description of all functions in \fBfat_functions\fP(3).
+.
+.
+.
+.SH PARTS
+A FAT filesystem is composed of two parts:
+
+.nf
++----------+
+| sectors  |
++----------+
+| clusters |
++----------+
+.fi
+
+Each cluster is made of a number of consecutive sectors, from 1 to 128.
+Clusters have all the same size except the first one in a FAT12 and FAT16.
+
+The sectors are further segmented in three parts: the reserved sectors, the
+first and the second file allocation table (FAT).
+
+.nf
++-----------+
+| reserved  |
+| sectors   |
++-----------+
+|   first   |
+|    FAT    |
++-----------+
+|   second  |
+|    FAT    |
++===========+
+|   first   |
+|  cluster  |
++-----------+
+|   other   |
+| clusters  |
++-----------+
+.fi
+
+The FATs could be one or more than two, but are almost always two. The first of
+the reserved sectors is the boot sector, which contains global data about the
+filesystem, such as the size of each sector in bytes, of each cluster in
+sectors, and the first cluster of the root directory. On a FAT32, the second
+sector may also contain some information.
+
+The content of the directories and the files are all stored in clusters. More
+precisely, every file and directory has an associated \fIchain of clusters\fP
+that hold its content. The file or directory only points to the first cluster
+of the chain, the successor of it and of every following cluster in the chain 
+is stored in the file allocation tables (FATs).
+
+Apart from the first cluster of the root directory in a FAT12 or FAT16,
+clusters are numbered from 2 up.
+.
+.
+.
+.SH FILESYSTEM CONTENT
+Starting from the root, the filesystem content is:
+.IP "   * " 5
+the first cluster of the root directory is the starting point; its number can
+be found from the boot sector; the FATs allows determining its successor (if
+any), the successor of its successor, etc; these clusters hold the content of
+the root directory
+.IP "   * "
+each cluster of this chain contains 32-bytes blocks called \fIdirectory
+entries\fP; each represents a file or subdirectory
+.IP "   * "
+each of these entries contain the shortname of the file/directory, its
+attributes and and its first cluster
+.IP "   * "
+the first cluster may have a successor, which may have its successor, etc.
+(the successor of each cluster is again stored in the FATs); they form a chain
+that hold the file content
+.IP "   * "
+if one of the attributes of the file is \fI0x10\fP, the file is a subdirectory;
+the chain contains other directory entries, each representing a file in this
+subdirectory
+.P
+Summarizing, each file or directory has an associated chain of clusters that
+holds its content. For directories, this content is a sequence of 32-byte
+directory entries, each representing a file or directory and containing its
+name and the first cluster of its chain.
+.
+.
+.
+.SH LONG FILENAMES
+A directory entry contains the \fIshort name\fP of a file, in the form 8
+uppercase characters - dot - 3 uppercase charcters, like EXAMPLES.TXT. The LFN
+hack allows such entries to be associated to a long name, an UCS2 string.
+
+This is realized by preceding the regular directory entry with a number of fake
+ones containing the long name. A checksum and a progressive number contained in
+each allows verifying that the long name is valid and really belonging to the
+following regular directory entry.
+.
+.
+.
+.SH libllfat
+This library has functions for accessing the basic building blocks of a FAT
+filesystem:
+.IP "   * " 5
+getting and setting the successor of a cluster
+.IP "   * "
+obtain and change the information in a directory entry
+.IP "   * "
+accessing the global information in the boot sector
+.P
+It also provides a number of higher-level functions. An overview is in
+\fBlibllfat.txt\fP, a programming guide in \fBfat_lib\fP(3) and a description
+of all functions in \fBfat_functions\fP(3).
+
