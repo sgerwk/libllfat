@@ -309,7 +309,7 @@ int32_t fatentrygetfirstcluster(unit *directory, int index, int bits) {
 
 	n = le16toh(_unit16uint(directory, index * 32 + 26));
 	if (bits == 32)
-		n |= le16toh(_unit16int(directory, index * 32 + 20) << 16);
+		n |= le16toh(_unit16int(directory, index * 32 + 20)) << 16;
 
 	return n;
 }
