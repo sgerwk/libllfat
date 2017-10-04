@@ -1,6 +1,11 @@
 TODO
 ====
 
+the first four bits of each fat entry in a FAT32 are arbitrary; they should not
+be used when reading the filesystem, but should not be changed either; the
+library currently read them as zero and write them as zero; instead, it should
+read the entire 32 bits, but the higher levels ignore the first 4
+
 the first character of a file is allowed to be 0x05 to represent 0xE5; this
 should be included in the conversion from string to shortname and vice versa
 
@@ -62,10 +67,6 @@ changes to an image or device without actually changing it
 simulated errors: also include a probability for the error to occur (default:
 1) and allow intervals of sectors/clusters;
 for example: READ 20-25 CLUSTER -1 0.2
-
-the first four bit of each entry in a FAT32 should not be changed; this
-requires reading before writing the new value; the library currently just sets
-them to zero
 
 graphical filesystem browser (maybe with a web browser and local-cgi)
 
