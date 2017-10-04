@@ -97,7 +97,7 @@ dsttype *funcname(dsttype *dst, srctype *src, int len, int *err) {	\
 	dstscan = dst;							\
 									\
 	cd = iconv_open(dstname "//TRANSLIT", srcname );		\
-	res = iconv(cd, (char **) &src, (unsigned *) &srclen,		\
+	res = iconv(cd, (char **) &src, (size_t *) &srclen,		\
 			(char **) &dstscan, &dstlen);			\
 	if (res > 0) {							\
 		printf("%d characters not converted\n", res);		\
