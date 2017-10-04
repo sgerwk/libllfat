@@ -492,10 +492,10 @@ void printcluster(fat *f, int32_t cl, fatinverse *rev, int run) {
 	sector = offset / fatgetbytespersector(f);
 
 	printf("cluster %d:", cl);
-	printf(" offset %llu", offset);
+	printf(" offset %" PRIu64, offset);
 	printf(" offset 0x%" PRIx64, offset);
-	printf(" sectors %llu", sector);
-	printf("-%llu", sector + (size - 1) / fatgetbytespersector(f));
+	printf(" sectors %" PRIu64, sector);
+	printf("-%" PRIu64, sector + (size - 1) / fatgetbytespersector(f));
 	printf(" size %d\n", size);
 
 	if (rev) {
@@ -529,7 +529,7 @@ void printcluster(fat *f, int32_t cl, fatinverse *rev, int run) {
 		}
 	}
 
-	printf("hexdump -C -s %llu -n %d %s\n",
+	printf("hexdump -C -s %" PRIu64 " -n %d %s\n",
 		f->offset + origin + cl * size, size, f->devicename);
 	buf = malloc(100 + strlen(f->devicename));
 	sprintf(buf, "bvi -s 0x%" PRIx64 " -n %d %s",

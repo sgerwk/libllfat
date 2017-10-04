@@ -112,9 +112,9 @@ dsttype *funcname(dsttype *dst, srctype *src, int len, int *err) {	\
 	iconv_close(cd);						\
 									\
 	if (srclen != 0)						\
-		printf("%d characters not converted\n", srclen);	\
+		printf("%zu characters not converted\n", srclen);	\
 	if (dstlen != 0)						\
-		printf("%d characters not filled\n", dstlen);		\
+		printf("%zu characters not filled\n", dstlen);		\
 									\
 	return dst;							\
 }

@@ -20,6 +20,7 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -227,7 +228,7 @@ int _fatunitseek(unit *u) {
 	off_t res, pos;
 
 	pos = u->origin + ((uint64_t) u->n) * u->size;
-	dprintf("lseek %lld\n", pos);
+	dprintf("lseek %" PRIu64 "\n", pos);
 
 	res = lseek(u->fd, pos, SEEK_SET);
 	SIMULATE_ERROR(FAT_SEEK, u);
@@ -236,7 +237,7 @@ int _fatunitseek(unit *u) {
 			printf("unspecified origin of unit %d\n", u->n);
 		else {
 			printf("error in lseek to unit %d, ", u->n);
-			printf("position %lld, ", pos);
+			printf("position %" PRId64 ", ", pos);
 			printf("description: %s\n", strerror(errno));
 		}
 		u->error |= FAT_SEEK;
@@ -248,7 +249,7 @@ int _fatunitseek(unit *u) {
 
 int _fatunitread(unit *u) {
 	off_t res;
-	dprintf("reading unit %d, origin %lld\n", u->n, u->origin);
+	dprintf("reading unit %d, origin %" PRId64 "\n", u->n, u->origin);
 
 	if (_fatunitseek(u))
 		return -1;
@@ -259,7 +260,7 @@ int _fatunitread(unit *u) {
 		if (res == -1)
 			printf("error in read: %s\n", strerror(errno));
 		else
-			printf("short read: %lld < %d\n", res, u->size);
+			printf("short read: %" PRId64 " < %d\n", res, u->size);
 		u->error |= FAT_READ;
 		return -1;
 	}
@@ -269,7 +270,7 @@ int _fatunitread(unit *u) {
 
 int _fatunitwrite(unit *u) {
 	off_t res;
-	dprintf("writing unit %d, origin %lld\n", u->n, u->origin);
+	dprintf("writing unit %d, origin %" PRId64 "\n", u->n, u->origin);
 
 	if (_fatunitseek(u))
 		return -1;
@@ -280,7 +281,7 @@ int _fatunitwrite(unit *u) {
 		if (res == -1)
 			printf("error in write: %s\n", strerror(errno));
 		else
-			printf("short write: %lld < %d\n", res, u->size);
+			printf("short write: %" PRId64 " < %d\n", res, u->size);
 		u->error |= FAT_WRITE;
 		return -1;
 	}

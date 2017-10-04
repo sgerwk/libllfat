@@ -104,7 +104,7 @@ int fatstringtoshortname(unsigned char dst[11], char src[13]) {
 		printf("invalid shortname: %s\n", src);
 		return -1;
 	}
-	printf("%d\n", strlen(pos));
+	printf("%zu\n", strlen(pos));
 	memcpy(dst + 8, pos, strlen(pos));
 
 	return 0;

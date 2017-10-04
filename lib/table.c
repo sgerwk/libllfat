@@ -25,6 +25,7 @@
 #define _FILE_OFFSET_BITS 64
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -770,7 +771,7 @@ unit *fatclustercreate(fat *f, int32_t cl) {
 	unit *cluster;
 
 	fatclusterposition(f, cl, &origin, &size);
-	dprintf("origin: %lld, size: %d\n", origin, size);
+	dprintf("origin: %" PRId64 ", size: %d\n", origin, size);
 
 	cluster = fatunitget(&f->clusters, f->offset + origin, size, cl,
 			f->fd);
@@ -794,7 +795,7 @@ unit *fatclusterread(fat *f, int32_t cl) {
 	int size;
 
 	fatclusterposition(f, cl, &origin, &size);
-	dprintf("origin: %lld, size: %d\n", origin, size);
+	dprintf("origin: %" PRId64 ", size: %d\n", origin, size);
 	return fatunitget(&f->clusters, f->offset + origin, size, cl, f->fd);
 }
 
