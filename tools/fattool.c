@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <stdio.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -909,15 +910,36 @@ int fatformat(char *devicename, off_t offset,
 	int fd;
 	fat *f;
 	int sectorsize = 512;
+	unsigned long int ul;
 	uint32_t sectors, sectpercl;
 	unsigned maxentries;
 	struct stat ss;
 
-	sectors = strtoul(option1, NULL, 10);
-	sectpercl = strtoul(option2, NULL, 10);
-	maxentries = option3[0] == '\0' ? 0 : strtoul(option3, NULL, 10);
+	errno = 0;
+	ul = strtoul(option1, NULL, 10);
+	if (ul == ULONG_MAX && errno == ERANGE) {
+		printf("overflow: %s\n", option1);
+		return -1;
+	}
+	sectors = ul;
 
-	if (option1[0] == '\0' || sectors == 0 || sectors == ULONG_MAX) {
+	errno = 0;
+	ul = strtoul(option2, NULL, 10);
+	if (ul == ULONG_MAX && errno == ERANGE) {
+		printf("overflow: %s\n", option2);
+		return -1;
+	}
+	sectpercl = ul;
+
+	errno = 0;
+	ul = strtoul(option3, NULL, 10);
+	if (ul == ULONG_MAX && errno == ERANGE) {
+		printf("overflow: %s\n", option3);
+		return -1;
+	}
+	maxentries = ul;
+
+	if (option1[0] == '\0' || sectors == 0) {
 		if (stat(devicename, &ss)) {
 			perror(devicename);
 			return -1;
@@ -949,7 +971,7 @@ int fatformat(char *devicename, off_t offset,
 	fatsetnumsectors(f, sectors);
 	fatsetbytespersector(f, sectorsize);
 
-	if (option2[0] == '\0' || sectpercl == 0 || sectpercl == ULONG_MAX) {
+	if (option2[0] == '\0' || sectpercl == 0) {
 		printf("secXcl\troot\ttype\n");
 		for (sectpercl = 1; sectpercl < 256; sectpercl <<= 1) {
 			f->bits = 0;
