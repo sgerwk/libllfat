@@ -191,8 +191,7 @@ int main(int argn, char *argv[]) {
 
 		printf("\nexpect error on sectors on exit\n\n");
 
-		if (test)
-			break;
+		break;
 
 	case 2:
 		printf("\n********* fat loading test\n");
@@ -203,8 +202,7 @@ int main(int argn, char *argv[]) {
 		fatreadfat(f, FAT_ALL);
 		fattabledebug = 0;
 
-		if (test)
-			break;
+		break;
 
 	case 3:
 		printf("\n********* fat test\n");
@@ -233,8 +231,7 @@ int main(int argn, char *argv[]) {
 
 		printf("\nfilesystem now contains errors\n\n");
 
-		if (test)
-			break;
+		break;
 
 	case 4:
 		printf("\n********* cluster test\n");
@@ -255,8 +252,7 @@ int main(int argn, char *argv[]) {
 			printf("error deleting cluster 4\n");
 		fatunitdumpcache("clusters", f->clusters);
 
-		if (test)
-			break;
+		break;
 
 	case 5:
 		printf("\n********* free clusters map\n");
@@ -268,8 +264,7 @@ int main(int argn, char *argv[]) {
 				printf("   . ");
 		printf("\n");
 
-		if (test)
-			break;
+		break;
 
 	case 6:
 		printf("\n********* free cluster test\n");
@@ -292,8 +287,7 @@ int main(int argn, char *argv[]) {
 			printf("free clusters: %d %d\n",
 				f->free, fatclusternumfree(f));
 
-		if (test)
-			break;
+		break;
 
 	case 7:
 		printf("\n********* cluster zone test\n");
@@ -341,8 +335,7 @@ int main(int argn, char *argv[]) {
 		printf("free between 3 and 8 starting at -1: %d\n\n",
 			fatclusterfindfreebetween(f, 3, 8, -1));
 
-		if (test)
-			break;
+		break;
 
 	case 8:
 		printf("\n********* cluster free area test\n");
@@ -360,16 +353,14 @@ int main(int argn, char *argv[]) {
 			);
 
 
-		if (test)
-			break;
+		break;
 
 	case 9:
 		printf("\n********* fat dump test\n");
 
 		fatdump(f, NULL, 0, -1, 1, 1);
 
-		if (test)
-			break;
+		break;
 
 	case 10:
 		printf("\n********* directory test\n");
@@ -399,8 +390,7 @@ int main(int argn, char *argv[]) {
 
 		printf("\nnote: filesystem has errors now\n\n");
 
-		if (test)
-			break;
+		break;
 
 	case 11:
 		printf("\n********* directory lookup test\n");
@@ -467,8 +457,7 @@ int main(int argn, char *argv[]) {
 			fatlookuppathfirstcluster(f, r, path));
 		printf("\n");
 
-		if (test)
-			break;
+		break;
 
 	case 12:
 		printf("\n********* directory entry creation test\n");
@@ -493,8 +482,7 @@ int main(int argn, char *argv[]) {
 			fatentrysetsize(root, index, 0);
 		}
 
-		if (test)
-			break;
+		break;
 
 	case 13:
 	case 14:
@@ -527,8 +515,7 @@ int main(int argn, char *argv[]) {
 
 		fatflush(f);
 
-		if (test)
-			break;
+		break;
 
 	case 40:
 		printf("\n********* cd test\n");
@@ -589,8 +576,7 @@ int main(int argn, char *argv[]) {
 		printf("\n");
 
 
-		if (test)
-			break;
+		break;
 
 	case 41:
 		printf("\n********* path following test\n");
@@ -672,16 +658,14 @@ int main(int argn, char *argv[]) {
 		fatreferenceprint(directory, index, previous);
 		printf(" left: |%s|\n", left);
 
-		if (test)
-			break;
+		break;
 
 	case 15:
 		printf("\n********* file execute test\n");
 
 		fatfileexecute(f, NULL, 0, -1, fatprintentry, NULL);
 
-		if (test)
-			break;
+		break;
 
 	case 16:
 		printf("\n********* fix dot files test\n");
@@ -689,8 +673,7 @@ int main(int argn, char *argv[]) {
 		fatreferencedebug = 1;
 		fatfixdot(f);
 
-		if (test)
-			break;
+		break;
 
 	case 17:
 		printf("\n********* move area test\n");
@@ -698,16 +681,14 @@ int main(int argn, char *argv[]) {
 		fatreferencedebug = 1;
 		fatmovearea(f, 2, 50, 100, 150);
 
-		if (test)
-			break;
+		break;
 
 	case 18:
 		printf("\n********* filesystem compaction test\n");
 
 		fatcompact(f);
 
-		if (test)
-			break;
+		break;
 
 	case 19:
 		printf("\n********* filesystem truncation test\n");
@@ -715,8 +696,7 @@ int main(int argn, char *argv[]) {
 		fatreferencedebug = 1;
 		fattruncate(f, 140);
 
-		if (test)
-			break;
+		break;
 
 	case 20:
 		printf("\n********* file creation test\n");
@@ -757,8 +737,7 @@ int main(int argn, char *argv[]) {
 			(i + 1) * fatgetbytespersector(f) *
 			fatgetsectorspercluster(f));
 
-		if (test)
-			break;
+		break;
 
 	case 21:
 	case 22:
@@ -784,8 +763,7 @@ int main(int argn, char *argv[]) {
 			fatunitdumpcache("clusters", f->clusters);
 		}
 
-		if (test)
-			break;
+		break;
 
 	case 24:
 		printf("\n********* cluster to entry test\n");
@@ -808,8 +786,7 @@ int main(int argn, char *argv[]) {
 			printf("cluster %d is part of the root dir\n", cl);
 
 		free(rev);
-		if (test)
-			break;
+		break;
 
 	case 25:
 		printf("\n********* inverse fat update test\n");
@@ -895,8 +872,7 @@ int main(int argn, char *argv[]) {
 		fatinversecheck(f, rev, 0);
 
 		free(rev);
-		if (test)
-			break;
+		break;
 
 	case 26:
 		printf("\n********* inverse fat move and swap test\n");
@@ -924,8 +900,7 @@ int main(int argn, char *argv[]) {
 		fatinversecheck(f, rev, 0);
 
 		free(rev);
-		if (test)
-			break;
+		break;
 
 	case 27:
 		printf("\n********* defragment test\n");
@@ -934,8 +909,7 @@ int main(int argn, char *argv[]) {
 		fatinversedebug = 1;
 		fatdefragment(f, 0, NULL);
 
-		if (test)
-			break;
+		break;
 
 	case 28:
 	case 29:
@@ -961,8 +935,7 @@ int main(int argn, char *argv[]) {
 			printf("\n");
 		}
 
-		if (test)
-			break;
+		break;
 
 	case 31:
 		printf("\n********* long filename lookup test\n");
@@ -981,8 +954,7 @@ int main(int argn, char *argv[]) {
 		else
 			printf("found: %d,%d\n", directory->n, index);
 
-		if (test)
-			break;
+		break;
 
 	case 32:
 		printf("\n********* long directory name lookup test\n");
@@ -996,8 +968,7 @@ int main(int argn, char *argv[]) {
 		else
 			printf("found: %d,%d\n", directory->n, index);
 
-		if (test)
-			break;
+		break;
 
 	case 33:
 		printf("\n********* long name free entry test\n");
@@ -1018,8 +989,7 @@ int main(int argn, char *argv[]) {
 		else
 			printf("found: %d,%d\n", longdirectory->n, longindex);
 
-		if (test)
-			break;
+		break;
 
 	case 34:
 		printf("\n********* long name creation test\n");
@@ -1070,16 +1040,14 @@ int main(int argn, char *argv[]) {
 			}
 		}
 
-		if (test)
-			break;
+		break;
 
 	case 35:
 		printf("\n********* fatfilelong test\n");
 
 		fatfileexecutelong(f, NULL, 0, -1, fatprintentrylong, NULL);
 
-		if (test)
-			break;
+		break;
 
 	case 36:
 		printf("\n********* fat long inverse test\n");
@@ -1175,8 +1143,7 @@ int main(int argn, char *argv[]) {
 
 		fatinversedelete(f, rev);
 
-		if (test)
-			break;
+		break;
 	}
 
 	printf("===========================================\n");
