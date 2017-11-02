@@ -544,7 +544,7 @@ int32_t fatclusterfindfreebetween(fat *f,
 
 int32_t fatclusterfindfree(fat *f) {
 	return fatclusterfindfreebetween(f,
-		FAT_FIRST, fatlastcluster(f), FAT_FIRST);
+		FAT_FIRST, fatlastcluster(f), -1);
 }
 
 /*
