@@ -1795,11 +1795,13 @@ int main(int argn, char *argv[]) {
 		cl = 0;
 		size = 0;
 		max = option2[0] == '\0' ? -1 : atoi(option2);
+		printf("max: %d\n", max);
 
 		fatreferencesettarget(f, directory, index, cl, FAT_UNUSED);
 
 		do {
 			next = fatclusterfindfree(f);
+			printf("next: %d max: %d\r", next, max);
 			if (next == FAT_ERR) {
 				printf("filesystem full\n");
 				exit(1);
@@ -1820,6 +1822,8 @@ int main(int argn, char *argv[]) {
 						cluster->n);
 					break;
 				}
+				cluster->dirty = 1;
+				fatunitwriteback(cluster);
 			}
 			else {
 				res = max > cluster->size ?
@@ -1830,9 +1834,6 @@ int main(int argn, char *argv[]) {
 			fatreferencesettarget(f, directory, index, cl,
 				cluster->n);
 			fatsetnextcluster(f, cluster->n, FAT_EOF);
-
-			cluster->dirty = 1;
-			fatunitwriteback(cluster);
 			fatunitdelete(&f->clusters, cluster->n);
 
 			directory = NULL;
@@ -1843,6 +1844,7 @@ int main(int argn, char *argv[]) {
 
 		fatentrysetsize(startdirectory, startindex, size);
 		fatentrysetattributes(startdirectory, startindex, 0x20);
+		printf("\n");
 	}
 	else if (! strcmp(operation, "deletefile")) {
 		if (option1[0] == '\0') {
