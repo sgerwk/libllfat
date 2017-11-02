@@ -1794,6 +1794,7 @@ int main(int argn, char *argv[]) {
 		startindex = index;
 		cl = 0;
 		size = 0;
+		max = option2[0] == '\0' ? -1 : atoi(option2);
 
 		fatreferencesettarget(f, directory, index, cl, FAT_UNUSED);
 
@@ -1811,10 +1812,19 @@ int main(int argn, char *argv[]) {
 				exit(1);
 			}
 
-			res = read(0, fatunitgetdata(cluster), cluster->size);
-			if (res <= 0) {
-				fatunitdelete(&f->clusters, cluster->n);
-				break;
+			if (max == -1) {
+				res = read(0, fatunitgetdata(cluster),
+					cluster->size);
+				if (res <= 0) {
+					fatunitdelete(&f->clusters,
+						cluster->n);
+					break;
+				}
+			}
+			else {
+				res = max > cluster->size ?
+					cluster->size : max;
+				max -= res;
 			}
 
 			fatreferencesettarget(f, directory, index, cl,

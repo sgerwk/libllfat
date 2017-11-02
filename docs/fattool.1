@@ -275,8 +275,10 @@ that is over the file size; this allows printing a directory as if it were a
 regular file; this is done anyway if \fIfile\fP is in the form
 \fIcluster:num\fP
 .TP
-\fBwritefile\fP \fIfile\fP
-copy stdin to file
+\fBwritefile\fP \fIfile\fP [\fIlength\fP]
+copy stdin to file; if the optional argument \fIlength\fP is given, stdin is
+not used; rather, a file of that length is created with a correct chain of
+clusters, but their content are uninitialized
 .TP
 \fBdeletefile\fP \fIfile\fP
 delete the given file
