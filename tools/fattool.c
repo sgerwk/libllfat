@@ -1814,21 +1814,24 @@ int main(int argn, char *argv[]) {
 				exit(1);
 			}
 
-			if (max == -1) {
+			if (max == -1)
 				res = read(0, fatunitgetdata(cluster),
 					cluster->size);
-				if (res <= 0) {
-					fatunitdelete(&f->clusters,
-						cluster->n);
-					break;
-				}
-				cluster->dirty = 1;
-				fatunitwriteback(cluster);
-			}
 			else {
 				res = max > cluster->size ?
 					cluster->size : max;
 				max -= res;
+			}
+
+
+			if (res <= 0) {
+				fatunitdelete(&f->clusters, cluster->n);
+				break;
+			}
+
+			if (max == -1) {
+				cluster->dirty = 1;
+				fatunitwriteback(cluster);
 			}
 
 			fatreferencesettarget(f, directory, index, cl,
