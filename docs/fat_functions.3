@@ -499,6 +499,30 @@ of some (possibly none) of the constants \fIFAT_UNCLEAN\fP and
 for these bits in the file allocation table can set via
 \fBfatsetfatdirtybits()\fP.
 .TP
+.BI "int fatgetextendedbootsignature(fat *" f )
+Return whether an extended boot signature exists.
+.TP
+.BI "int fataddextendedbootsignature(fat *" f )
+Set the existence of the extended boot signature. The application is
+responsible of filling its fields.
+.TP
+.BI "int fataddextendedbootsignature(fat *" f )
+Remove the extended boot signature. This function only remove the marker that
+denotes the existence of the extended boot signature in the filesystem, it does
+not touch any of its fields.
+.TP
+.BI "uint32_t fatgetserialnumber(fat *" f )
+Return the serial number of the filesystem. The return value should only be
+considered correct if \fIfatgetextendedbootsignature(f)\fP returns 1.
+.TP
+.BI "int fatsetserialnumber(fat *" f ", uint32_t " serial )
+Set the serial number of the filesystem. This value should be ignored by
+operating systems and applications if the filesystem has no extended boot
+signature, which can be checked or changed by
+\fIfatgetextendedbootsignature(f)\fP,
+\fIfataddextendedbootsignature(f)\fP and
+\fIfataddextendedbootsignature(f)\fP.
+.TP
 .BI "int fatgetbackupsector(fat *" f )
 The number of the sector containing the backup copy of the boot sector. While
 the boot sector is always 0, the backup is always 6. This field only exists

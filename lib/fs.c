@@ -569,6 +569,55 @@ int fatsetdirtybits(fat *f, int dirty) {
 }
 
 /*
+ * extended boot signature
+ */
+
+int fatgetextendedbootsignature(fat *f) {
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		return _unit8uint(f->boot, 0x26) == 0x29;
+	else if (fatbits(f) == 32)
+		return _unit8uint(f->boot, 0x42) == 0x29;
+	else
+		return FAT_ERR;
+}
+int fataddextendedbootsignature(fat *f) {
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		_unit8uint(f->boot, 0x26) = 0x29;
+	else if (fatbits(f) == 32)
+		_unit8uint(f->boot, 0x42) = 0x29;
+	else
+		return FAT_ERR;
+	return 0;
+}
+int fatdeleteextendedbootsignaturp(fat *f) {
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		_unit8uint(f->boot, 0x26) = 0x0;
+	else if (fatbits(f) == 32)
+		_unit8uint(f->boot, 0x42) = 0x0;
+	else
+		return FAT_ERR;
+	return 0;
+}
+
+uint32_t fatgetserialnumber(fat *f) {
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		return _unit32uint(f->boot, 0x27);
+	else if (fatbits(f) == 32)
+		return _unit32uint(f->boot, 0x43);
+	else
+		return FAT_ERR;
+}
+int fatsetserialnumber(fat *f, uint32_t serial) {
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		_unit32uint(f->boot, 0x27) = serial;
+	else if (fatbits(f) == 32)
+		_unit32uint(f->boot, 0x43) = serial;
+	else
+		return FAT_ERR;
+	return 0;
+}
+
+/*
  * backup sector
  */
 
@@ -756,6 +805,10 @@ void fatsummary(fat *f) {
 	printf("number of data clusters: %d\n", fatnumdataclusters(f));
 	printf("data clusters: %d - %d\n", 2, fatlastcluster(f));
 	printf("signature: %s\n", fatgetbootsignature(f) ? "yes" : "no");
+	if (fatgetextendedbootsignature(f)) {
+		printf("extended boot signature present\n");
+		printf("serial number: 0x%04X\n", fatgetserialnumber(f));
+	}
 	if (f->info != NULL) {
 		printf("information sector present\n");
 		printf("information sector signature: %s\n",

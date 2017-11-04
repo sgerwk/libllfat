@@ -94,6 +94,11 @@ int fatisvalidcluster(fat *f, int32_t n);
 #define FAT_IOERROR 0x02
 int fatgetdirtybits(fat *f);
 int fatsetdirtybits(fat *f, int dirty);
+int fatgetextendedbootsignature(fat *f);
+int fataddtextendedbootsignature(fat *f);
+int fatdeletetextendedbootsignature(fat *f);
+uint32_t fatgetserialnumber(fat *f);
+int fatsetserialnumber(fat *f, uint32_t serial);
 int fatgetbackupsector(fat *f);
 int fatcopyboottobackup(fat *f);
 int fatgetinfopos(fat *f);
