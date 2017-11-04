@@ -512,8 +512,8 @@ denotes the existence of the extended boot signature in the filesystem, it does
 not touch any of its fields.
 .TP
 .BI "uint32_t fatgetserialnumber(fat *" f )
-Return the serial number of the filesystem. The return value should only be
-considered correct if \fIfatgetextendedbootsignature(f)\fP returns 1.
+Return the serial number of the filesystem. This number should be considered
+valid only if \fIfatgetextendedbootsignature(f)\fP returns 1.
 .TP
 .BI "int fatsetserialnumber(fat *" f ", uint32_t " serial )
 Set the serial number of the filesystem. This value should be ignored by
@@ -522,6 +522,24 @@ signature, which can be checked or changed by
 \fIfatgetextendedbootsignature(f)\fP,
 \fIfataddextendedbootsignature(f)\fP and
 \fIfataddextendedbootsignature(f)\fP.
+.TP
+.BI "char* fatgetvolumelabel(fat *" f )
+Return the volume label as a dynamically-allocated array of 12 character, the
+label followed by \fI\\0\fP. The caller is responsible to free it with
+\fIfree(3)\fP.
+.TP
+.BI "int fatsetvolumelabel(fat *" f ", const char " l[11] )
+Set the volume label. The argument needs not to be \fI\\0\fP-terminated.
+.TP
+.BI "char* fatgetfilesystemtype(fat *" f )
+Return the filesystem type as a dynamically-allocated array of 11 character,
+the type followed by \fI\\0\fP. This string is usually \fI"FAT12   "\fP,
+\fI"FAT16   "\fP or \fI"FAT32   "\fP, but the type of the filesystem is what
+returned by \fIfatbits(f)\fP, not the content of this string.
+The caller is responsible to free it with \fIfree(3)\fP.
+.TP
+.BI "int fatsetfilesystemtype(fat *" f ", char " t[8] )
+Set the filesystem type. The argument needs not to be \fI\\0\fP-terminated.
 .TP
 .BI "int fatgetbackupsector(fat *" f )
 The number of the sector containing the backup copy of the boot sector. While

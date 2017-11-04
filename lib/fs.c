@@ -617,6 +617,52 @@ int fatsetserialnumber(fat *f, uint32_t serial) {
 	return 0;
 }
 
+char* fatgetvolumelabel(fat *f) {
+	char *l = malloc(12);
+	l[11] = '\0';
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		memcpy(l, fatunitgetdata(f->boot) + 0x2b, 11);
+	else if (fatbits(f) == 32)
+		memcpy(l, fatunitgetdata(f->boot) + 0x47, 11);
+	else {
+		free(l);
+		return NULL;
+	}
+	return l;
+}
+int fatsetvolumelabel(fat *f, const char l[11]) {
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		memcpy(fatunitgetdata(f->boot) + 0x2b, l, 11);
+	else if (fatbits(f) == 32)
+		memcpy(fatunitgetdata(f->boot) + 0x47, l, 11);
+	else
+		return -1;
+	return 0;
+}
+
+char* fatgetfilesystemtype(fat *f) {
+	char *t = malloc(9);
+	t[8] = '\0';
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		memcpy(t, fatunitgetdata(f->boot) + 0x36, 8);
+	else if (fatbits(f) == 32)
+		memcpy(t, fatunitgetdata(f->boot) + 0x52, 8);
+	else {
+		free(t);
+		return NULL;
+	}
+	return t;
+}
+int fatsetfilesystemtype(fat *f, char t[8]) {
+	if (fatbits(f) == 12 || fatbits(f) == 16)
+		memcpy(fatunitgetdata(f->boot) + 0x36, t, 8);
+	else if (fatbits(f) == 32)
+		memcpy(fatunitgetdata(f->boot) + 0x52, t, 8);
+	else
+		return -1;
+	return 0;
+}
+
 /*
  * backup sector
  */
@@ -806,16 +852,18 @@ void fatsummary(fat *f) {
 	printf("data clusters: %d - %d\n", 2, fatlastcluster(f));
 	printf("signature: %s\n", fatgetbootsignature(f) ? "yes" : "no");
 	if (fatgetextendedbootsignature(f)) {
-		printf("extended boot signature present\n");
-		printf("serial number: 0x%04X\n", fatgetserialnumber(f));
+		printf("extended boot signature:\n");
+		printf("  serial number: 0x%04X\n", fatgetserialnumber(f));
+		printf("  volume label: \"%s\"\n", fatgetvolumelabel(f));
+		printf("  filesystem type: \"%s\"\n", fatgetfilesystemtype(f));
 	}
 	if (f->info != NULL) {
-		printf("information sector present\n");
-		printf("information sector signature: %s\n",
+		printf("information sector:\n");
+		printf("  information sector signature: %s\n",
 			fatgetinfosignatures(f) ? "yes" : "no");
-		printf("last known allocated cluster: %d\n",
+		printf("  last known allocated cluster: %d\n",
 			fatgetlastallocatedcluster(f));
-		printf("free clusters, maybe: %d\n", fatgetfreeclusters(f));
+		printf("  free clusters, maybe: %d\n", fatgetfreeclusters(f));
 	}
 }
 
