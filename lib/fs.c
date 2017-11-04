@@ -853,7 +853,7 @@ void fatsummary(fat *f) {
 	printf("signature: %s\n", fatgetbootsignature(f) ? "yes" : "no");
 	if (fatgetextendedbootsignature(f)) {
 		printf("extended boot signature:\n");
-		printf("  serial number: 0x%04X\n", fatgetserialnumber(f));
+		printf("  serial number: 0x%08X\n", fatgetserialnumber(f));
 		printf("  volume label: \"%s\"\n", fatgetvolumelabel(f));
 		printf("  filesystem type: \"%s\"\n", fatgetfilesystemtype(f));
 	}
