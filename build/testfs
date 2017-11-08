@@ -48,7 +48,7 @@ do
 		::alongdirectoryname/oneinsideit/alongfilename.text
 
 	echo "libllfat.txt -> ::"
-	mcopy -i $FAT ../doc/libllfat.txt -D o ::
+	mcopy -i $FAT ../docs/libllfat.txt -D o ::
 
 	if [ $FAT == fat32long ]
 	then
