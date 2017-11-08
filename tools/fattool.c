@@ -1903,10 +1903,12 @@ int main(int argn, char *argv[]) {
 		size = cluster == NULL ? 0 : cluster->size;
 		buf = malloc(size);
 		printf(testonly ? "differing clusters:" : "writing clusters:");
+		fflush(stdout);
 
 		while (cluster && 0 < (res = read(0, buf, cluster->size))) {
 			if (memcmp(fatunitgetdata(cluster), buf, res)) {
 				printf(" %d", cl);
+				fflush(stdout);
 				memcpy(fatunitgetdata(cluster), buf, res);
 				if (! testonly)
 					cluster->dirty = 1;
