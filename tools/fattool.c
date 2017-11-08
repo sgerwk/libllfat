@@ -1127,7 +1127,7 @@ int main(int argn, char *argv[]) {
 	int fatnum;
 	int32_t previous, target, r, cl, next, start, end, last, len;
 	unit *directory, *startdirectory, *longdirectory, *cluster;
-	int index, startindex, longindex, max, size, pos;
+	int index, startindex, longindex, max, size, csize, pos;
 	uint32_t sector, spos;
 	int res, finalres, recur, chain, all, over, startdir, nchanges;
 	char dummy, *buf;
@@ -1806,44 +1806,43 @@ int main(int argn, char *argv[]) {
 				printf("filesystem full\n");
 				exit(1);
 			}
-			cluster = fatclustercreate(f, next);
-			if (cluster == NULL)
-				cluster = fatclusterread(f, next);
-			if (cluster == NULL) {
-				printf("error creating cluster %d\n", next);
-				exit(1);
-			}
 
-			if (max == -1)
-				res = read(0, fatunitgetdata(cluster),
-					cluster->size);
+			if (max == -1) {
+				cluster = fatclustercreate(f, next);
+				if (cluster == NULL)
+					cluster = fatclusterread(f, next);
+				if (cluster == NULL) {
+					printf("error creating cluster %d\n",
+						next);
+					exit(1);
+				}
+
+				csize = cluster->size;
+				res = read(0, fatunitgetdata(cluster), csize);
+
+				if (res > 0) {
+					cluster->dirty = 1;
+					fatunitwriteback(cluster);
+				}
+				fatunitdelete(&f->clusters, cluster->n);
+			}
 			else {
-				res = max > cluster->size ?
-					cluster->size : max;
+				csize = fatbytespercluster(f);
+				res = max > csize ? csize : max;
 				max -= res;
 			}
 
-
-			if (res <= 0) {
-				fatunitdelete(&f->clusters, cluster->n);
+			if (res <= 0)
 				break;
-			}
 
-			if (max == -1) {
-				cluster->dirty = 1;
-				fatunitwriteback(cluster);
-			}
-
-			fatreferencesettarget(f, directory, index, cl,
-				cluster->n);
-			fatsetnextcluster(f, cluster->n, FAT_EOF);
-			fatunitdelete(&f->clusters, cluster->n);
+			fatreferencesettarget(f, directory, index, cl, next);
+			fatsetnextcluster(f, next, FAT_EOF);
 
 			directory = NULL;
 			index = 0;
 			cl = next;
 			size += res;
-		} while (res == cluster->size);
+		} while (res == csize);
 
 		fatentrysetsize(startdirectory, startindex, size);
 		fatentrysetattributes(startdirectory, startindex, 0x20);
