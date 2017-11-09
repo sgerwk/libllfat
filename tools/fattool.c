@@ -1801,7 +1801,7 @@ int main(int argn, char *argv[]) {
 
 		do {
 			next = fatclusterfindfree(f);
-			printf("next: %d max: %d\r", next, max);
+			printf("next: %d max: %d       \r", next, max);
 			if (next == FAT_ERR) {
 				printf("filesystem full\n");
 				exit(1);
