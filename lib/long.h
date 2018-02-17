@@ -108,6 +108,11 @@ int fatcreatefilelongpath(fat *f, int32_t dir, wchar_t *path,
 		unit **directory, int *index);
 
 /*
+ * free a long file name (does not free its short name entry)
+ */
+int fatdeletelong(fat *f, unit *directory, int index);
+
+/*
  * fatreferenceexecute(), longname version
  */
 typedef int(* refrunlong)(fat *f,

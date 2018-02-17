@@ -942,7 +942,17 @@ int fatcreatefilelongpath(fat *f, int32_t dir, wchar_t *path,
 	return fatcreatefilelongbothpath(f, dir, path, directory, index,
 		&startdirectory, &startindex);
 }
-	
+
+/*
+ * free a long file name (does not free its short name entry)
+ */
+int fatdeletelong(fat *f, unit *directory, int index) {
+	(void) f;
+	printf("UNIMPLEMENTED: long file not deleted from %d,%d\n",
+		directory->n, index);
+	return -1;
+}
+
 /*
  * fatreferenceexecute(), longname version
  */
