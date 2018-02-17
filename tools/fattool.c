@@ -1870,8 +1870,10 @@ int main(int argn, char *argv[]) {
 			printf("missing argument: file\n");
 			exit(1);
 		}
-		if (fileoptiontoreference(f, option1,
-				&directory, &index, &previous, &target)) {
+		if (fileoptiontoreferenceboth(f, option1,
+				&directory, &index,
+				&longdirectory, &longindex,
+				&previous, &target)) {
 			printf("file %s does not exists\n", option1);
 			exit(1);
 		}
@@ -1889,7 +1891,10 @@ int main(int argn, char *argv[]) {
 			next = fatgetnextcluster(f, cl);
 			fatsetnextcluster(f, cl, FAT_UNUSED);
 		}
+
 		fatentrydelete(directory, index);
+		printf("UNIMPLEMENTED: long file not deleted from %d,%d\n",
+			longdirectory->n, longindex);
 	}
 	else if (! strcmp(operation, "overwrite")) {
 		if (option1[0] == '\0') {
