@@ -189,6 +189,9 @@ wchar_t *_fatshorttowide(unit *directory, int index) {
  *
  * if res also contains FAT_LONG_ALL then the name derives from some longname
  * directory entries, not from the short entry
+ *
+ * res is FAT_LONG_SOME if the entries read so far are a correct beginning of a
+ * long name
  */
 
 void fatlonginit(struct fatlongscan *scan) {
