@@ -90,8 +90,10 @@ void printlongname(char *before, wchar_t *name, char *after) {
  * turns it into a cluster reference; in some cases like "cluster:103", the
  * target is filled but the reference is void
  */
-int fileoptiontoreference(fat *f, char *option,
-	unit **directory, int *index, int32_t *previous, int32_t *target) {
+int fileoptiontoreferenceboth(fat *f, char *option,
+		unit **directory, int *index,
+		unit **longdirectory, int *longindex,
+		int32_t *previous, int32_t *target) {
 	int32_t r, dir;
 	char dummy;
 	char *path;
@@ -163,12 +165,27 @@ int fileoptiontoreference(fat *f, char *option,
 		converted = fatstoragepathlong(pathlong);
 	}
 
-	res = fatlookuppathlong(f, r, converted, directory, index);
+	res = fatlookuppathlongboth(f, r, converted, directory, index,
+		longdirectory, longindex);
 	*target = res ? fatlookuppathfirstclusterlong(f, r, converted) :
 		fatreferencegettarget(f, *directory, *index, *previous);
 	if (! nostoragepaths)
 		free(converted);
 	return res && *target == FAT_ERR;
+}
+
+/*
+ * same as fileoptiontoreferenceboth, but discard the long entry
+ */
+int fileoptiontoreference(fat *f, char *option,
+		unit **directory, int *index,
+		int32_t *previous, int32_t *target) {
+	unit *longdirectory;
+	int longindex;
+
+	return fileoptiontoreferenceboth(f, option,
+		directory, index, &longdirectory, &longindex,
+		previous, target);
 }
 
 /*
