@@ -1892,9 +1892,10 @@ int main(int argn, char *argv[]) {
 			fatsetnextcluster(f, cl, FAT_UNUSED);
 		}
 
-		fatentrydelete(directory, index);
 		if (! useshortnames)
-			fatdeletelong(f, longdirectory, longindex);
+			if (fatdeletelong(f, longdirectory, longindex))
+				printf("error while deleting long name\n");
+		fatentrydelete(directory, index);
 	}
 	else if (! strcmp(operation, "overwrite")) {
 		if (option1[0] == '\0') {
