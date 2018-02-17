@@ -79,6 +79,7 @@ fat *fatopen(char *filename, off_t offset) {
 	f->fd = open(filename, O_RDWR);
 	if (f->fd == -1) {
 		perror(filename);
+		free(f);
 		return NULL;
 	}
 	f->offset = offset;
