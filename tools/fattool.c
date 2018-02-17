@@ -773,7 +773,7 @@ int clusterscore(unit *cluster) {
 				c = ENTRYPOS(cluster, entry, pos);
 				if (isupper(c) || isdigit(c) || c == ' ')
 					incr += 1;
-				else if (memchr("_-%~", c, 4))
+				else if (strchr("_-%~", c))
 					incr += 1;
 				else if (c == 0xE5 && pos == 0)
 					incr += 10;
