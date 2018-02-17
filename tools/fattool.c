@@ -1868,7 +1868,7 @@ int main(int argn, char *argv[]) {
 		}
 
 		next = fatentrygetfirstcluster(directory, index, fatbits(f));
-		for(cl = next; cl != FAT_EOF; cl = next) {
+		for(cl = next; cl != FAT_EOF && cl != FAT_UNUSED; cl = next) {
 			next = fatgetnextcluster(f, cl);
 			fatsetnextcluster(f, cl, FAT_UNUSED);
 		}
