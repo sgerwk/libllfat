@@ -1893,8 +1893,8 @@ int main(int argn, char *argv[]) {
 		}
 
 		fatentrydelete(directory, index);
-		printf("UNIMPLEMENTED: long file not deleted from %d,%d\n",
-			longdirectory->n, longindex);
+		if (! useshortnames)
+			fatdeletelong(f, longdirectory, longindex);
 	}
 	else if (! strcmp(operation, "overwrite")) {
 		if (option1[0] == '\0') {
