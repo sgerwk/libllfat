@@ -2188,6 +2188,14 @@ The shortname is derived from the longname, and can be read by
 In most cases, the program calls \fIfatinvalidpathlong()\fP and
 \fIfatstoragepathlong()\fP before this function
 (see \fIFILE NAMES\fP, below).
+.TP
+.BI "int fatdeletelong(fat *" f ", unit * " directory ", int " index )
+Delete the long file name starting at \fIdirectory,index\fP. Do not delete the
+short name entry. Do not check whether the entries from \fIdirectory,index\fP
+form a complete long file name; delete entries until either the long name is
+complete or an entry is not part of the long file name. Return \fI0\fP on a
+long name followed by its short name, \fI-1\fP for a long name not followed by
+a short name, and \fI-2\fP otherwise.
 .
 .P
 A function similar to \fBfatreferenceexecute()\fP exists for long names. The

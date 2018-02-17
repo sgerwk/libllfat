@@ -950,10 +950,21 @@ int fatcreatefilelongpath(fat *f, int32_t dir, wchar_t *path,
  * free a long file name (does not free its short name entry)
  */
 int fatdeletelong(fat *f, unit *directory, int index) {
-	(void) f;
-	printf("UNIMPLEMENTED: long file not deleted from %d,%d\n",
-		directory->n, index);
-	return -1;
+	struct fatlongscan scan;
+	int res, lastn;
+
+	lastn = -1;
+	for (fatlonginit(&scan);
+	     (res = fatlongscan(directory, index, &scan)) == FAT_LONG_SOME;
+	     fatnextentry(f, &directory, &index)) {
+		dprintf("delete entry %d,%d ", directory->n, index);
+		dprintf("(num %d)\n", scan.n);
+		fatentrydelete(directory, index);
+		lastn = scan.n;
+	}
+	fatlongend(&scan);
+
+	return res & FAT_LONG_ALL ? 0 : lastn == 1 ? -1 : -2;
 }
 
 /*
