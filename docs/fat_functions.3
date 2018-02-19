@@ -2189,7 +2189,7 @@ In most cases, the program calls \fIfatinvalidpathlong()\fP and
 \fIfatstoragepathlong()\fP before this function
 (see \fIFILE NAMES\fP, below).
 .TP
-.BI "int fatdeletelong(fat *" f ", unit * " directory ", int " index )
+.BI "int fatdeletelong(fat *" f ", unit *" directory ", int " index )
 Delete the long file name starting at \fIdirectory,index\fP. Do not delete the
 short name entry. Do not check whether the entries from \fIdirectory,index\fP
 form a complete long file name; delete entries until either the long name is
