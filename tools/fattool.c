@@ -1146,12 +1146,13 @@ int main(int argn, char *argv[]) {
 	unit *directory, *startdirectory, *longdirectory, *cluster;
 	int index, startindex, longindex, max, size, csize, pos;
 	uint32_t sector, spos;
-	int res, finalres, recur, chain, all, over, startdir, nchanges;
+	int res, diff, finalres, recur, chain, all, over, startdir, nchanges;
 	char dummy, *buf;
 	int nfat;
 	char *timeformat;
 	struct tm tm;
-	int first, clusterdump, insensitive, memcheck, immediate, testonly;
+	int first, clusterdump, insensitive, memcheck;
+	int immediate, testonly, try;
 	fatinverse *rev;
 	char *simerrfile;
 	int dirty;
@@ -1920,6 +1921,10 @@ int main(int argn, char *argv[]) {
 		if (! strcmp(option2, "test"))
 			testonly = 1;
 
+		max = 1;
+		if (option3[0] != '\0')
+			max = atoi(option3);
+
 		cl = target;
 		cluster = cl < FAT_FIRST ? NULL : fatclusterread(f, cl);
 		size = cluster == NULL ? 0 : cluster->size;
@@ -1928,7 +1933,15 @@ int main(int argn, char *argv[]) {
 		fflush(stdout);
 
 		while (cluster && 0 < (res = read(0, buf, cluster->size))) {
-			if (memcmp(fatunitgetdata(cluster), buf, res)) {
+			for (try = 0; try < max; try++) {
+				diff = memcmp(fatunitgetdata(cluster),
+					buf, res);
+				if (diff == 0)
+					break;
+				fatunitfree(cluster);
+			}
+
+			if (diff) {
 				printf(" %d", cl);
 				fflush(stdout);
 				memcpy(fatunitgetdata(cluster), buf, res);

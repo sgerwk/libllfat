@@ -284,13 +284,16 @@ clusters, but their content are uninitialized
 delete the given file
 (see \fIFILE NAMES\fP, below)
 .TP
-\fBoverwrite\fP \fIfile\fP [\fIimmediate\fP|\fItest\fP]
+\fBoverwrite\fP \fIfile\fP [(\fI""\fP|\fIimmediate\fP|\fItest\fP) [\fItries\fP]]
 write stdin to an existing file; no cluster is deleted or appended to the
-chain; clusters that already identical to their new content are not written;
-this command is intended for re-writing a file whose content is corrupted; the
-argument \fIimmediate\fP makes writing to happen immediately, but the default
-is actually write the clusters only at the end; argument \fItest\fP makes the
-program run doing everything but writing
+chain; clusters that already identical to their new content are not written
+unless \fItries\fP is zero; this command is intended for re-writing a file
+whose content is corrupted; with argument \fIimmediate\fP writing is done
+immediately for each cluster, while the default is to write all clusters at the
+end; argument \fItest\fP makes the program run doing everything but writing; if
+\fItries\fP is given, reading the previous content of each cluster for
+comparing it to the new is attempted this number of times before overwriting
+(default is 1)
 .TP
 \fBgetsize\fP \fIfile\fP
 print the size of an existing file
