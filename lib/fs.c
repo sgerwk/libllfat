@@ -839,6 +839,8 @@ void fatsetfreeclusters(fat *f, int32_t last) {
  * summary of fs
  */
 void fatsummary(fat *f) {
+	uint64_t space;
+
 	printf("filesystem: FAT%d\n", fatbits(f));
 	printf("bytes per sector: %d\n", fatgetbytespersector(f));
 	printf("sectors per cluster: %d\n", fatgetsectorspercluster(f));
@@ -865,6 +867,11 @@ void fatsummary(fat *f) {
 		printf("  last known allocated cluster: %d\n",
 			fatgetlastallocatedcluster(f));
 		printf("  free clusters, maybe: %d\n", fatgetfreeclusters(f));
+		space = fatgetfreeclusters(f) * fatbytespercluster(f);
+		printf("  free space, maybe: %lu", space);
+		printf(" = %luk", space /= 1024);
+		printf(" = %luM", space /= 1024);
+		printf(" = %luG\n", space /= 1024);
 	}
 }
 
