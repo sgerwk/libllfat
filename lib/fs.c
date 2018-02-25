@@ -34,6 +34,11 @@
 int fatdebug = 0;
 #define dprintf if (fatdebug) printf
 
+#ifdef O_DIRECT
+#else
+#define O_DIRECT 0
+#endif
+
 /*
  * sector size, used only to read the boot sector
  * that sector contains the size of the other sectors
@@ -67,7 +72,7 @@ fat *fatcreate() {
 }
 
 /*
- * open a fat (also reads the boot sector)
+ * open a fat (also read the boot sector)
  */
 fat *fatopen(char *filename, off_t offset) {
 	fat *f;
@@ -76,7 +81,7 @@ fat *fatopen(char *filename, off_t offset) {
 	f = fatcreate();
 	f->devicename = filename;
 
-	f->fd = open(filename, O_RDWR);
+	f->fd = open(filename, O_RDWR | O_DIRECT);
 	if (f->fd == -1) {
 		perror(filename);
 		free(f);
