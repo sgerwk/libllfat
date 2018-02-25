@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <endian.h>
 #include <search.h>
 #include <ctype.h>
@@ -873,10 +874,10 @@ void fatsummary(fat *f) {
 			fatgetlastallocatedcluster(f));
 		printf("  free clusters, maybe: %d\n", fatgetfreeclusters(f));
 		space = fatgetfreeclusters(f) * fatbytespercluster(f);
-		printf("  free space, maybe: %lu", space);
-		printf(" = %luk", space /= 1024);
-		printf(" = %luM", space /= 1024);
-		printf(" = %luG\n", space /= 1024);
+		printf("  free space, maybe: %" PRIu64, space);
+		printf(" = %" PRIu64 "k", space /= 1024);
+		printf(" = %" PRIu64 "M", space /= 1024);
+		printf(" = %" PRIu64 "G\n", space /= 1024);
 	}
 }
 
