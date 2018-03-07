@@ -873,7 +873,8 @@ void fatsummary(fat *f) {
 		printf("  last known allocated cluster: %d\n",
 			fatgetlastallocatedcluster(f));
 		printf("  free clusters, maybe: %d\n", fatgetfreeclusters(f));
-		space = fatgetfreeclusters(f) * fatbytespercluster(f);
+		space = fatgetfreeclusters(f) *
+			(uint64_t) fatbytespercluster(f);
 		printf("  free space, maybe: %" PRIu64, space);
 		printf(" = %" PRIu64 "k", space /= 1024);
 		printf(" = %" PRIu64 "M", space /= 1024);
