@@ -1448,6 +1448,38 @@ int main(int argn, char *argv[]) {
 			}
 		}
 	}
+	else if (! strcmp(operation, "crop")) {
+		if (fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &start)) {
+			printf("not found: %s\n", option1);
+			exit(1);
+		}
+		if (! strcmp(option2, "free"))
+			chain = 1;
+		else if (! strcmp(option2, "leave"))
+			chain = 0;
+		else {
+			printf("wrong argument: ");
+			printf("should be either \"free\" or \"leave\"\n");
+			exit(EXIT_FAILURE);
+		}
+		size = option3[0] == '\0' ? 
+			fatentrygetsize(directory, index) :
+			(unsigned) atoi(option3);
+
+		for (cl = start;
+		     cl >= FAT_FIRST && size > 0;
+		     cl = fatreferencegettarget(f,
+		                                directory, index, previous)) {
+			size -= fatbytespercluster(f);
+			directory = NULL;
+			index = 0;
+			previous = cl;
+		}
+		fatreferencesettarget(f, directory, index, previous, FAT_EOF);
+		if (chain)
+			fatclusterfreechain(f, cl);
+	}
 	else if (! strcmp(operation, "position")) {
 		if (option1[0] == '\0') {
 			printf("number of cluster missing\n");

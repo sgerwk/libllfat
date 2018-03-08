@@ -163,6 +163,19 @@ some time to be copied even if that is only needed for splitting or cropping
 them
 
 .TP
+\fBcrop\fP \fIfile\fP (\fIleave\fP|\fIfree\fP) [\fIsize\fP]
+cut the chain of cluster of \fIfile\fP so that it is just long enough for a
+file of the given \fIsize\fP; if \fIsize\fP is omitted, it is the length of the
+file; with \fIfree\fP, the clusters after the cut are freed; with \fIleave\fP,
+they are not
+
+with \fIlink\fP and \fIdelete\fP, this function allows to split a file
+in-place: first, create links to the sections of the file with \fIlink\fP;
+second, terminate their chains with \fIcrop\fP; third, delete the original file
+with \fIdelete\fP (not \fIdeletefile\fP); this works only for splitting points
+that are at cluster boundaries
+
+.TP
 \fBposition\fP (\fIn\fP|\fIsector:s\fP|\fIfile:name\fP) \
 [\fIfile\fP|\fIbvi\fP|\fIrecur\fP]
 print the position of cluster \fIn\fP in the filesystem; with argument
