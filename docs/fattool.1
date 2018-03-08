@@ -93,7 +93,7 @@ order all clusters in the filesystem so that the root directory is in the first
 clusters in order, followed by its first entry, etc.; is the same as \fIfattool
 linear / recur 2\fP; this operation is \fBdangerous\fP: if the program at some
 point cannot allocate enough memory, the filesystem is left with some clusters
-moved but the file allocation tables not updated; running \fBfatbackup\fP
+moved but the file allocation tables not updated; running \fBfatbackup\fP(1)
 before is of no use
 .TP
 \fBlast\fP [\fIn\fP]
@@ -343,8 +343,8 @@ show, set or clean the dirty bits in the filesystem
 .TP
 \fBdotcase\fP
 clean the case byte in the directory entries of the dot (.) and dotdot (..)
-files; \fImtools(1)\fP may set these to something different than zero, causing
-\fIdosfsck(8)\fP not to recognize them and to signal their names as erroneous
+files; \fImtools\fP(1) may set these to something different than zero, causing
+\fIdosfsck\fP(8) not to recognize them and to signal their names as erroneous
 .TP
 \fBdir\fP [\fIdirectory\fP [\fIstart\fP|\fIall\fP|\fIover\fP]]
 list the entries in the given directory; if \fIstart\fP is also given, the
