@@ -128,14 +128,14 @@ this way can be later reclaimed by \fIfattool filesystem unused\fP or
 reattached to some other file via \fIfattool filesystem setfirst ...\fP or
 \fIfattool filesystem setnext ...\fP
 .TP
-\fBlink\fP \fItarget new\fP
+\fBlink\fP \fItarget new\fP [\fIncluster\fP [\fIsize\fP]]
 create an hard link; the target is an existing file or directory (see
 FILE NAMES, below); the new file file will be created with the same attributes
 and first cluster of the first, so that it looks like a copy of the first
 
-the resulting filesystem is incorrect and does not work for every driver;
+the resulting filesystem is incorrect and does not work for all drivers;
 furthermore, the size of the new file is correct upon creation but is not
-updated if the source is changed; if the target is a directory and the new file
+updated if the target is changed; if the target is a directory and the new file
 is in different directory, its dotdot file is incorrect
 
 deleting any of the two files with anythigh other than "\fIfattol filesystem
@@ -149,6 +149,18 @@ like for example:
 	fattool filename link AAA/CCC AAA/CCC/.
 	fattool filename link AAA AAA/CCC/..
 .fi
+
+if the parameter \fIncluster\fP is provided, it is the number of clusters of
+the target to skip; if this is for example 3, the first cluster of the new file
+will be the fourth cluster of the target
+
+if the parameter \fIsize\fP is provided, it is the size of the new file; the
+default is the size of the target minus the total size of the skipped cluster
+
+the two optional parameters allow creating "chapters" of a file without copying
+its content; this may be useful for large multimedia files, which would take
+some time to be copied even if that is only needed for splitting or cropping
+them
 
 .TP
 \fBposition\fP (\fIn\fP|\fIsector:s\fP|\fIfile:name\fP) \

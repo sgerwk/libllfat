@@ -354,23 +354,33 @@ void fatzero(fat *f) {
 /*
  * create an hard link
  */
-int fatlink(fat *f, char *target, char *new) {
+int fatlink(fat *f, char *target, char *new, int ncluster, uint32_t size) {
 	unit *targetdir, *newdir;
 	int targetind, newind;
-	int32_t targetprev, targetfirst;
-	uint32_t size;
+	int32_t targetprev, targetcluster;
 	uint8_t attributes;
+	int i;
 
 	// fatdirectorydebug = 1;
 
 	if (fileoptiontoreference(f, target,
-			&targetdir, &targetind, &targetprev, &targetfirst)) {
+			&targetdir, &targetind, &targetprev, &targetcluster)) {
 		printf("cannot determine location of source file\n");
 		return -1;
 	}
 	printf("source: ");
 	fatreferenceprint(targetdir, targetind, targetprev);
-	printf(" cluster %d\n", targetfirst);
+	for (i = 0; i < ncluster; i++) {
+		targetcluster = fatgetnextcluster(f, targetcluster);
+		if (targetcluster == FAT_EOF || targetcluster == FAT_UNUSED)
+			break;
+	}
+	printf(" cluster %d\n", targetcluster);
+	if (ncluster != 0 &&
+	    (targetcluster == FAT_EOF || targetcluster == FAT_UNUSED)) {
+		printf("cluster number too large\n");
+		return -1;
+	}
 
 	if (createfile(f, fatgetrootbegin(f), new, 1, &newdir, &newind)) {
 		printf("cannot create destination file\n");
@@ -378,11 +388,11 @@ int fatlink(fat *f, char *target, char *new) {
 	}
 	printf("\ndestination: %d,%d\n", newdir->n, newind);
 
-	fatentrysetfirstcluster(newdir, newind, f->bits, targetfirst);
+	fatentrysetfirstcluster(newdir, newind, f->bits, targetcluster);
 
 	if (fatreferenceisvoid(targetdir, targetind, targetprev)) {
 		size = fatbytespercluster(f) *
-			fatcountclusters(f, NULL, 0, targetfirst, 0);
+			fatcountclusters(f, NULL, 0, targetcluster, 0);
 		attributes = 0x20;
 	}
 	else if (fatreferenceisboot(targetdir, targetind, targetprev)) {
@@ -390,7 +400,9 @@ int fatlink(fat *f, char *target, char *new) {
 		attributes = 0x10;
 	}
 	else {
-		size = fatentrygetsize(targetdir, targetind);
+		if (size == 0)
+			size = fatentrygetsize(targetdir, targetind) -
+				ncluster * fatbytespercluster(f);
 		attributes = fatentrygetattributes(targetdir, targetind);
 	}
 
@@ -1136,7 +1148,7 @@ void usage() {
 }
 
 int main(int argn, char *argv[]) {
-	char *name, *operation, *option1, *option2, *option3;
+	char *name, *operation, *option1, *option2, *option3, *option4;
 	off_t offset;
 	size_t wlen;
 	wchar_t *longname, *longpath;
@@ -1144,7 +1156,7 @@ int main(int argn, char *argv[]) {
 	int fatnum;
 	int32_t previous, target, r, cl, next, start, end, last, len;
 	unit *directory, *startdirectory, *longdirectory, *cluster;
-	int index, startindex, longindex, max, size, csize, pos;
+	int index, startindex, longindex, max, size, csize, pos, ncluster;
 	uint32_t sector, spos;
 	int res, diff, finalres, recur, chain, all, over, startdir, nchanges;
 	char dummy, *buf;
@@ -1241,6 +1253,7 @@ int main(int argn, char *argv[]) {
 	option1 = argn - 1 >= 3 ? argv[3] : "";
 	option2 = argn - 1 >= 4 ? argv[4] : "";
 	option3 = argn - 1 >= 5 ? argv[5] : "";
+	option4 = argn - 1 >= 6 ? argv[6] : "";
 
 				/* find location of the boot sector */
 
@@ -1424,7 +1437,11 @@ int main(int argn, char *argv[]) {
 			printf("WARNING: the resulting filesystem will be ");
 			printf("out-of-spec and may not work properly\n");
 			check();
-			if (! fatlink(f, option1, option2)) {
+			ncluster = atoi(option3);
+			size = atoi(option4);
+			if (fatlink(f, option1, option2, ncluster, size))
+				printf("error creating link\n");
+			else {
 				printf("\ndo not delete with the OS\n");
 				printf("ONLY delete with:\n\t fattool ");
 				printf("%s delete %s\n", name, option2);
