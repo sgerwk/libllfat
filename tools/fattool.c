@@ -1097,7 +1097,14 @@ void usage() {
 	printf("\t\tzero\t\treset to empty filesystem\n");
 	printf("\t\tunused\t\tmark free all unused clusters\n");
 	printf("\t\tdelete\t\tforce deletion of a file or directory\n");
-	printf("\t\tlink target new\tcreate an hard link\n");
+	printf("\t\tlink target new [n [size]]\n");
+	printf("\t\t\t\tcreate an hard link\n");
+	printf("\t\t\t\tnew file points to the n-th cluster of target\n");
+	printf("\t\t\t\toptionally specify size of new file\n");
+	printf("\t\tcrop file (leave|free) [size]\n");
+	printf("\t\t\t\tcut the chain of clusters of a file\n");
+	printf("\t\t\t\toptionally free the subsequence clusters\n");
+	printf("\t\t\t\tchain left long enough for a file of given size\n");
 	printf("\t\tposition (n|sector:s|file:name) [file|bvi|recur]\n");
 	printf("\t\t\t\tprint position of cluster n\n");
 	printf("\t\t\t\tor cluster that contains sector s\n");
