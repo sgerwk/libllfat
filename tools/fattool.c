@@ -1425,15 +1425,20 @@ int main(int argn, char *argv[]) {
 		printf("cleaned up %d unused clusters\n", fatcleanunused(f));
 	}
 	else if (! strcmp(operation, "delete")) {
-		if (fileoptiontoreference(f, option1,
-				&directory, &index, &previous, &target)) {
-			printf("not found\n");
+		if (fileoptiontoreferenceboth(f, option1,
+				&directory, &index,
+				&longdirectory, &longindex,
+				&previous, &target)) {
+			printf("file %s does not exists\n", option1);
 			exit(1);
 		}
 		if (directory == NULL) {
 			printf("cannot delete %s\n", option1);
 			exit(1);
 		}
+		if (! useshortnames)
+			if (fatdeletelong(f, longdirectory, longindex))
+				printf("error while deleting long name\n");
 		fatentrydelete(directory, index);
 		printf("filesystem may be unclean, fix with:\n");
 		printf("fattool %s unused\n", name);
