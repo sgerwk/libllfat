@@ -176,11 +176,16 @@ with \fIdelete\fP (not \fIdeletefile\fP); this works only for splitting points
 that are at cluster boundaries
 
 .TP
-\fBconcat\fP \fIfirst\fP \fIsecond\fP
+\fBconcat\fP \fIfirst\fP \fIsecond\fP [\fIpad\fP]
 pad the first file with 0 to the next cluster boundary and then append the
 chain of clusters of the second file to its; update the size of the first file
 accordingly; the second file is not deleted, and remains as a link (see
 \fIlink\fP above), which can be deleted by \fIdelete\fP
+
+if the \fIpad\fP argument is given, it is used in place of 0 to pad the first
+file to the next cluster boundary; the special value \fI-\fP is for leaving the
+rest of cluster as it is: the first file is still enlarged to fill the last
+cluster of its chain, but the new content is not cleared
 
 if the size of the first file is a multiple of the cluster size in bytes, and
 the second file is deleted by \fIdelete\fP after this operation, the effect is

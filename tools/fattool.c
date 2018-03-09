@@ -1169,7 +1169,7 @@ int main(int argn, char *argv[]) {
 	int max, size, csize, pos, ncluster;
 	uint32_t sector, spos;
 	int res, diff, finalres, recur, chain, all, over, startdir, nchanges;
-	char dummy, *buf;
+	char dummy, pad, *buf;
 	int nfat;
 	char *timeformat;
 	struct tm tm;
@@ -1523,11 +1523,12 @@ int main(int argn, char *argv[]) {
 		}
 
 		pos = size - fatentrygetsize(startdirectory, startindex);
-		if (pos > 0) {
+		if (pos > 0 && ! ! strcmp(option3, "-")) {
+			pad = strtol(option3, NULL, 0);
 			cluster = fatclusterread(f, previous);
 			if (cluster) {
 				memset(fatunitgetdata(cluster) +
-					fatbytespercluster(f) - pos, 0, pos);
+					fatbytespercluster(f) - pos, pad, pos);
 				cluster->dirty = 1;
 				fatunitwriteback(cluster);
 			}
