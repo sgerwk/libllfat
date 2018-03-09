@@ -1460,7 +1460,7 @@ int main(int argn, char *argv[]) {
 	}
 	else if (! strcmp(operation, "crop")) {
 		if (fileoptiontoreference(f, option1,
-				&directory, &index, &previous, &start)) {
+				&directory, &index, &previous, &target)) {
 			printf("not found: %s\n", option1);
 			exit(1);
 		}
@@ -1477,7 +1477,7 @@ int main(int argn, char *argv[]) {
 			fatentrygetsize(directory, index) :
 			(unsigned) atoi(option3);
 
-		for (cl = start;
+		for (cl = target;
 		     cl >= FAT_FIRST && size > 0;
 		     cl = fatreferencegettarget(f,
 		                                directory, index, previous)) {
