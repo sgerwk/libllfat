@@ -177,13 +177,15 @@ that are at cluster boundaries
 
 .TP
 \fBconcat\fP \fIfirst\fP \fIsecond\fP
-append the chain of the second file to the first, and update the size of the
-first file accordingly; if the size of the first file is an exact multiple of
-the cluster size, the effect is that the first file is concatenated the second
-without clusters being changed or moved; otherwise, the last cluster of the
-first file is padded with 0 before concatenation; the second file is not
-deleted, and remains as a link (see \fIlink\fP above); it can be deleted by the
-function \fIdelete\fP
+pad the first file with 0 to the next cluster boundary and then append the
+chain of clusters of the second file to its; update the size of the first file
+accordingly; the second file is not deleted, and remains as a link (see
+\fIlink\fP above), which can be deleted by \fIdelete\fP
+
+if the size of the first file is a multiple of the cluster size in bytes, and
+the second file is deleted by \fIdelete\fP after this operation, the effect is
+that the first file becomes the concatenation of the first and the second and
+the second is deleted, all of this without copying clusters
 
 .TP
 \fBposition\fP (\fIn\fP|\fIsector:s\fP|\fIfile:name\fP) \
