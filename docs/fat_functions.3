@@ -180,7 +180,7 @@ an IO error, however.
 .TP
 .BI "void fatunitfree(unit *" u )
 deallocate the \fIu->data\fP part of a unit, if \fIu->dirty\fP and
-\fIu->refer\fP are not zero
+\fIu->refer\fP are zero
 .TP
 .BI "void fatunitfreecache(unit *" cache )
 call \fBfatunitfree(\fP\fIu\fP\fB)\fP for every unit \fIu\fP in cache
