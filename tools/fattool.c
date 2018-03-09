@@ -1161,9 +1161,12 @@ int main(int argn, char *argv[]) {
 	wchar_t *longname, *longpath;
 	fat *f;
 	int fatnum;
-	int32_t previous, target, r, cl, next, start, end, last, len;
-	unit *directory, *startdirectory, *longdirectory, *cluster;
-	int index, startindex, longindex, max, size, csize, pos, ncluster;
+	int32_t previous, target, r, cl, next, start;
+	int32_t secondprevious, secondtarget, end, last, len;
+	unit *directory, *startdirectory, *longdirectory, *seconddirectory;
+	int index, startindex, longindex, secondindex;
+	unit *cluster;
+	int max, size, csize, pos, ncluster;
 	uint32_t sector, spos;
 	int res, diff, finalres, recur, chain, all, over, startdir, nchanges;
 	char dummy, *buf;
@@ -1486,6 +1489,49 @@ int main(int argn, char *argv[]) {
 		fatreferencesettarget(f, directory, index, previous, FAT_EOF);
 		if (chain)
 			fatclusterfreechain(f, cl);
+	}
+	else if (! strcmp(operation, "concat")) {
+		if (fileoptiontoreference(f, option1,
+				&startdirectory, &startindex,
+				&previous, &target)) {
+			printf("not found: %s\n", option1);
+			exit(1);
+		}
+		if (fileoptiontoreference(f, option2,
+				&seconddirectory, &secondindex,
+				&secondprevious, &secondtarget)) {
+			printf("not found: %s\n", option2);
+			exit(1);
+		}
+
+		size = 0;
+		directory = startdirectory;
+		index = startindex;
+		for (cl = target;
+		     cl >= FAT_FIRST;
+		     cl = fatreferencegettarget(f,
+				directory, index, previous)) {
+			size += fatbytespercluster(f);
+			directory = NULL;
+			index = 0;
+			previous = cl;
+		}
+
+		pos = size - fatentrygetsize(startdirectory, startindex);
+		if (pos > 0) {
+			cluster = fatclusterread(f, previous);
+			if (cluster) {
+				memset(fatunitgetdata(cluster) +
+					fatbytespercluster(f) - pos, 0, pos);
+				cluster->dirty = 1;
+				fatunitwriteback(cluster);
+			}
+		}
+
+		fatreferencesettarget(f, directory, index, previous,
+			secondtarget);
+		size += fatentrygetsize(seconddirectory, secondindex);
+		fatentrysetsize(startdirectory, startindex, size);
 	}
 	else if (! strcmp(operation, "position")) {
 		if (option1[0] == '\0') {
