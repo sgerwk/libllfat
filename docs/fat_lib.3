@@ -368,14 +368,14 @@ references.
 \fIdirectory!=NULL,index,previous\fP
 The file \fIdirectory,index\fP; its target is the first cluster of the file.
 .TP
-\fIcluster==NULL,index,previous>=2\fP
+\fIdirectory==NULL,index,previous>=2\fP
 A cluster; its target is the successor of "\fIprevious\fP".
 .TP
-\fIcluster==NULL,index,previous=-1\fP
+\fIdirectory==NULL,index,previous=-1\fP
 The boot sector; it points to the first cluster of the root directory in a
 FAT32 volume, and this is pretended to be the case also in FAT12/16.
 .TP
-\fIcluster==NULL,index,previous=0\fP
+\fIdirectory==NULL,index,previous=0\fP
 The null reference is considered a pointer to all unused clusters.
 .
 .
