@@ -1951,9 +1951,8 @@ int main(int argn, char *argv[]) {
 			fatreferencesettarget(f, directory, index, cl, next);
 			fatsetnextcluster(f, next, FAT_EOF);
 
-			directory = NULL;
-			index = 0;
-			cl = next;
+			fatreferencenext(f, &directory, &index, &cl);
+
 			size += res;
 		} while (res == csize);
 
