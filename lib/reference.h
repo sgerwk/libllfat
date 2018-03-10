@@ -41,6 +41,14 @@ int fatreferenceisboot(unit *directory, int index, int32_t previous);
 int fatreferenceisvoid(unit *directory, int index, int32_t previous);
 
 /*
+ * advance a cluster reference
+ */
+int32_t fatreferencenext(fat *f,
+		unit **directory, int *index, int32_t *previous);
+int fatreferencelast(fat *f,
+		unit **directory, int *index, int32_t *previous);
+
+/*
  * check if a cluster reference points to the directory entry of a directory
  */
 int fatreferenceisdirectory(unit *directory, int index, int32_t previous);

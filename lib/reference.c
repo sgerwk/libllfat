@@ -131,6 +131,33 @@ int fatreferenceisdotfile(unit *directory, int index,
 }
 
 /*
+ * advance a cluster reference
+ */
+int32_t fatreferencenext(fat *f,
+		unit **directory, int *index, int32_t *previous) {
+	*previous = fatreferencegettarget(f, *directory, *index, *previous);
+	*directory = NULL;
+	*index = 0;
+	return fatreferencegettarget(f, *directory, *index, *previous);
+}
+
+/*
+ * follow a chain of clusters to its end; return lenght of chain in clusters
+ */
+int fatreferencelast(fat *f,
+		unit **directory, int *index, int32_t *previous) {
+	int32_t cl;
+	int n;
+
+	n = 0;
+	for (cl = fatreferencegettarget(f, *directory, *index, *previous);
+	     cl >= FAT_FIRST;
+	     cl = fatreferencenext(f, directory, index, previous))
+		n++;
+	return n;
+}
+
+/*
  * print a cluster reference
  */
 

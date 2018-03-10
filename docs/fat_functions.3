@@ -1278,6 +1278,20 @@ int " index ", int32_t " previous )
 Print a representation of the cluster reference to stdout.
 .
 .P
+A cluster reference can be advanced in the chain of clusters of one step or
+until the end of the chain. The latter function is useful for appending data to
+the end of a file.
+.TP
+.BI "int32_t fatreferencenext(fat *" f ", \
+unit **" directory ", int *" index ", int32_t *" previous)
+Make the cluster reference point to its target.
+.TP
+.BI "int fatreferencelast(fat *" f ", \
+unit **" directory ", int *" index ", int32_t *" previous)
+Traverse the chain of clusters starting from the cluster reference until its
+end. Return the number of clusters in the chain.
+.
+.P
 The point of using a cluster reference rather than the cluster itself is that a
 cluster can be moved to another position without changing the content of its
 chain. While \fIfatunitmove()\fP only copies the content of a cluster to
