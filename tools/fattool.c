@@ -1484,13 +1484,8 @@ int main(int argn, char *argv[]) {
 
 		for (cl = target;
 		     cl >= FAT_FIRST && size > 0;
-		     cl = fatreferencegettarget(f,
-		                                directory, index, previous)) {
+		     cl = fatreferencenext(f, &directory, &index, &previous))
 			size -= fatbytespercluster(f);
-			directory = NULL;
-			index = 0;
-			previous = cl;
-		}
 		fatreferencesettarget(f, directory, index, previous, FAT_EOF);
 		if (chain)
 			fatclusterfreechain(f, cl);
