@@ -1504,18 +1504,10 @@ int main(int argn, char *argv[]) {
 			exit(1);
 		}
 
-		size = 0;
 		directory = startdirectory;
 		index = startindex;
-		for (cl = target;
-		     cl >= FAT_FIRST;
-		     cl = fatreferencegettarget(f,
-				directory, index, previous)) {
-			size += fatbytespercluster(f);
-			directory = NULL;
-			index = 0;
-			previous = cl;
-		}
+		ncluster = fatreferencelast(f, &directory, &index, &previous);
+		size = fatbytespercluster(f) * ncluster;
 
 		pos = size - fatentrygetsize(startdirectory, startindex);
 		if (pos > 0 && ! ! strcmp(option3, "-")) {
