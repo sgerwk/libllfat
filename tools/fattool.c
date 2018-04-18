@@ -57,12 +57,13 @@ int nostoragepaths;
  */
 void check() {
 	char line[10] = " ";
+	char *res;
 
 	printf("continue (y/N)? ");
 
-	fgets(line, 5, stdin);
+	res = fgets(line, 5, stdin);
 
-	if (line[0] == 'y')
+	if (res != NULL && res[0] == 'y')
 		return;
 	printf("not continuing\n");
 	exit(1);
@@ -511,6 +512,7 @@ void printcluster(fat *f, int32_t cl, fatinverse *rev, int run) {
 	int32_t previous;
 	char *path;
 	wchar_t *longpath;
+	int ret;
 
 	fatclusterposition(f, cl, &origin, &size);
 	if (size == 0) {
@@ -566,8 +568,11 @@ void printcluster(fat *f, int32_t cl, fatinverse *rev, int run) {
 		f->offset + origin + cl * size, size, f->devicename);
 	puts(buf);
 
-	if (run)
-		system(buf);
+	if (run) {
+		ret = system(buf);
+		if (ret == -1 || ! WIFEXITED(ret))
+			printf("cannot execute hexdump\n");
+	}
 	free(buf);
 }
 
@@ -943,6 +948,7 @@ int fatformat(char *devicename, off_t offset,
 	uint32_t sectors, sectpercl;
 	unsigned maxentries;
 	struct stat ss;
+	int res;
 
 	errno = 0;
 	ul = strtoul(option1, NULL, 10);
@@ -1050,8 +1056,10 @@ int fatformat(char *devicename, off_t offset,
 			return -1;
 		}
 	}
-	ftruncate(f->fd,
+	res = ftruncate(f->fd,
 		f->offset + fatgetnumsectors(f) * fatgetbytespersector(f));
+	if (res == -1)
+		return -1;
 	f->boot->fd = f->fd;
 
 	fatsetmedia(f, 0xF8);
@@ -1876,7 +1884,7 @@ int main(int argn, char *argv[]) {
 			cluster = fatclusterread(f, cl);
 			if (cluster == NULL)
 				break;
-			write(1, fatunitgetdata(cluster),
+			res = write(1, fatunitgetdata(cluster),
 				chain || size > cluster->size ?
 					cluster->size : size);
 			size -= cluster->size;
@@ -2027,6 +2035,7 @@ int main(int argn, char *argv[]) {
 		fflush(stdout);
 
 		while (cluster && 0 < (res = read(0, buf, cluster->size))) {
+			diff = 1;
 			for (try = 0; try < max; try++) {
 				diff = memcmp(fatunitgetdata(cluster),
 					buf, res);

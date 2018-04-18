@@ -2,7 +2,7 @@ LIBS=libllfat.so
 HEADERS=llfat.h
 
 CC=gcc
-CFLAGS+=-Wall -Wextra
+CFLAGS+=-g -O2 -Wall -Wextra
 CFLAGS+=-I.
 CFLAGS+=-fPIC
 # CFLAGS+=-g

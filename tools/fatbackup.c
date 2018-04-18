@@ -48,12 +48,13 @@ int diffonly = 1;
  */
 int check(char *message) {
 	char line[10] = " ";
+	char *res;
 
 	printf("%scontinue (y/N)? ", message);
 
-	fgets(line, 5, stdin);
+	res = fgets(line, 5, stdin);
 
-	return line[0] != 'y';
+	return res != NULL && res[0] != 'y';
 }
 
 /*

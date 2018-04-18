@@ -2,7 +2,7 @@ PROGS=fattest fatexample fatview fatshrink fattool fatbackup
 VPATH=../tools
 
 CC=gcc
-CFLAGS+=-Wall -Wextra
+CFLAGS+=-g -O2 -Wall -Wextra -D_FORTIFY_SOURCE=2
 CFLAGS+=-I../lib
 CFLAGS+=-g
 LDFLAGS+=-L../lib -Wl,-rpath,'$$ORIGIN/../lib'
