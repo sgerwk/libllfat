@@ -1,6 +1,6 @@
 Summary: a library for low-level access to a FAT12/16/32 filesystem
 Name: libllfat
-Version: 0.1.2
+Version: 0.1.3
 Release: 1
 License: GPLv3
 Group: System/Filesystems
