@@ -326,7 +326,7 @@ int32_t fatgetnextcluster(fat *f, int32_t n) {
 		next = (entry & 0x0FF8) == 0x0FF8 ? FAT_EOF : next;
 		break;
 	case 16:
-		next = (entry & 0x0FF7) == 0x0FF7 ? FAT_BAD : next;
+		next = (entry & 0xFFF7) == 0xFFF7 ? FAT_BAD : next;
 		next = (entry & 0xFFF8) == 0xFFF8 ? FAT_EOF : next;
 		break;
 	case 32:
