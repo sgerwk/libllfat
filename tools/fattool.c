@@ -1142,6 +1142,10 @@ void usage() {
 	printf("\t\tdeletefile name\tdelete a file\n");
 	printf("\t\toverwrite name [test]\t\n\t\t\t\toverwrite the ");
 	printf("differing clusters of a file\n");
+	printf("\t\tgetsize file\tget size of file\n");
+	printf("\t\tsetsize file size\n\t\t\t\tchange file size; ");
+	printf("directory entry only, see man\n");
+	printf("\t\tmkdir directory\tcreate a directory\n");
 	printf("\t\tdirectoryclean\tclean unused directory clusters\n");
 	printf("\t\tcountclusters file\n");
 	printf("\t\t\t\tcount clusters used by file or directory\n");
