@@ -2112,6 +2112,48 @@ int main(int argn, char *argv[]) {
 		else
 			fatentrysetsize(directory, index, atoi(option2));
 	}
+	else if (! strcmp(operation, "mkdir")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: directory\n");
+			exit(1);
+		}
+		if (! fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			if (fatreferenceisvoid(directory, index, previous))
+				printf("cannot create directory by cluster\n");
+			else  {
+				printf("file %s exists, ", option1);
+				printf("not overwriting\n");
+			}
+			exit(1);
+		}
+
+		if (createfile(f, r, option1, 0, &directory, &index)) {
+			printf("cannot create directory %s\n", option1);
+			exit(1);
+		}
+		fatentrysetattributes(directory, index, 0x10);
+		next = fatclusterfindfree(f);
+		if (next == FAT_ERR) {
+			printf("filesystem full\n");
+			exit(1);
+		}
+		fatentrysetfirstcluster(directory, index, fatbits(f), next);
+		fatsetnextcluster(f, next, FAT_EOF);
+
+		cluster = fatclustercreate(f, next);
+		for (index = 0; index < cluster->size / 32; index++)
+			fatentryzero(cluster, index);
+
+		fatentrysetshortname(cluster, 0, ".");
+		fatentrysetfirstcluster(cluster, 0, fatbits(f), next);
+		fatentrysetattributes(cluster, 0, 0x10);
+
+		fatentrysetshortname(cluster, 1, "..");
+		fatentrysetfirstcluster(cluster, 1, fatbits(f),
+			directory->n == fatgetrootbegin(f) ? 0 : directory->n);
+		fatentrysetattributes(cluster, 1, 0x10);
+	}
 	else if (! strcmp(operation, "directoryclean")) {
 		directoryclean(f, strcmp(option1, "test"));
 		directorylast(f, strcmp(option1, "test"));
