@@ -67,12 +67,13 @@ print a summary of the filesystem data, such as the number of clusters, etc.
 \fBfree\fP/\fBused\fP/\fBclusters\fP
 print a map of the clusters that tells which are free and which are used
 .TP
-\fBview\fP [\fIpath\fP [\fIall\fP]]
+\fBview\fP [\fIpath\fP [\fIall\fP] [\fIchains\fP]]
 recusively show the content of a file or directory, by default '/' (see \fIFILE
 NAMES\fP, below); for directories, each entry is shown on a line; for files,
 its sequence of cluster numbers is printed; argument "\fIall\fP" makes long
 name parts to be printed, and if also \fI-s\fP is given then also the deleted
-directory entries are shown
+directory entries are shown; argument "\fIchains\fP" makes chains of
+consecutive clusters to be printed as \fIfirst-last\fP
 .TP
 \fBcalls\fP [\fIall\fP]
 print the arguments of the calls \fIfatreferenceexecute()\fP performs on the

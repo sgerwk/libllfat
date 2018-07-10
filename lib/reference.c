@@ -597,6 +597,7 @@ struct fatdumpstruct {
 	int level;
 	int recur;
 	int all;
+	int32_t chain;
 };
 
 int _fatdump(fat __attribute__((unused)) *f,
@@ -630,8 +631,25 @@ int _fatdump(fat __attribute__((unused)) *f,
 			for (i = 0; i < s->level; i++)
 				printf("    ");
 		}
-		fatreferenceprint(directory, index, previous);
+
 		target = fatreferencegettarget(f, directory, index, previous);
+
+		if (directory == NULL) {
+			if (s->chain == FAT_ROOT || s->chain == previous)
+				fatreferenceprint(directory, index, previous);
+			else if (target != previous + 1) {
+				if (previous != s->chain)
+					printf("-%d", previous);
+				if (previous != FAT_ROOT)
+					s->chain = previous;
+			}
+		}
+		else {
+			fatreferenceprint(directory, index, previous);
+			if (s->chain != FAT_ROOT)
+				s->chain = target;
+		}
+
 		if (target == FAT_EOF ||
 		    target == FAT_UNUSED ||
 		    target == FAT_ERR ||
@@ -645,12 +663,13 @@ int _fatdump(fat __attribute__((unused)) *f,
 }
 
 void fatdump(fat *f, unit* directory, int index, int32_t previous,
-		int recur, int all) {
+		int recur, int all, int chains) {
 	struct fatdumpstruct s;
 
 	s.level = 0;
 	s.recur = recur;
 	s.all = all;
+	s.chain = chains ? FAT_EOF : FAT_ROOT;
 	fatreferenceexecute(f, directory, index, previous, _fatdump, &s);
 }
 

@@ -1030,6 +1030,7 @@ struct fatdumplong {
 	int level;
 	int recur;
 	int all;
+	int32_t chain;
 };
 
 int _fatdumplong(fat __attribute__((unused)) *f,
@@ -1063,13 +1064,22 @@ int _fatdumplong(fat __attribute__((unused)) *f,
 	target = fatreferencegettarget(f, directory, index, previous);
 
 	if (directory == NULL) {
-		fatreferenceprint(directory, index, previous);
+		if (s->chain == FAT_ROOT || s->chain == previous)
+			fatreferenceprint(directory, index, previous);
+		else if (target != previous + 1) {
+			if (previous != s->chain)
+				printf("-%d", previous);
+			if (previous != FAT_ROOT)
+				s->chain = previous;
+		}
 		if (target == FAT_EOF ||
 		    target == FAT_UNUSED ||
 		    target == FAT_ERR)
 			printf("\n");
 		return FAT_REFERENCE_COND(s->recur);
 	}
+	else if (s->chain != FAT_ROOT)
+		s->chain = target;
 
 	scandirectory = s->all ? longdirectory : directory;
 	scanindex = s->all ? longindex : index;
@@ -1091,11 +1101,12 @@ int _fatdumplong(fat __attribute__((unused)) *f,
 }
 
 void fatdumplong(fat *f, unit *directory, int index, int32_t previous,
-		int recur, int all) {
+		int recur, int all, int chains) {
 	struct fatdumplong s;
 	s.level = 0;
 	s.recur = recur;
 	s.all = all;
+	s.chain = chains ? FAT_EOF : FAT_ROOT;
 	fatreferenceexecutelong(f, directory, index, previous,
 		_fatdumplong, &s);
 }

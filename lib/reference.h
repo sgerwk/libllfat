@@ -141,7 +141,7 @@ int fatfileexecute(fat *f,
  * print a summary of the filesystem
  */
 void fatdump(fat *f, unit* directory, int index, int32_t previous,
-		int recur, int all);
+		int recur, int all, int chains);
 void fatcalls(fat *f, int all);
 
 /*

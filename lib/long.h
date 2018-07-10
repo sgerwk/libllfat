@@ -126,7 +126,7 @@ int fatreferenceexecutelong(fat *f,
 		refrunlong act, void *user);
 
 void fatdumplong(fat *f, unit* directory, int index, int32_t previous,
-		int recur, int all);
+		int recur, int all, int chains);
 
 /*
  * fatfileexexcute(), longname version

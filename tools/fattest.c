@@ -358,7 +358,7 @@ int main(int argn, char *argv[]) {
 	case 9:
 		printf("\n********* fat dump test\n");
 
-		fatdump(f, NULL, 0, -1, 1, 1);
+		fatdump(f, NULL, 0, -1, 1, 1, 0);
 
 		break;
 
@@ -379,13 +379,13 @@ int main(int argn, char *argv[]) {
 		printf("\n");
 		printf("------------------------\n");
 
-		fatdump(f, NULL, 0, -1, 1, 1);
+		fatdump(f, NULL, 0, -1, 1, 1, 0);
 		printf("------------------------\n");
 
 		fatentrysetfirstcluster(root, 6, fatbits(f), 0x2AB00);
 		printf("first cluster: set %X, get %X\n", 0x2AB00,
 			fatentrygetfirstcluster(root, 6, fatbits(f)));
-		fatdump(f, NULL, 0, -1, 1, 1);
+		fatdump(f, NULL, 0, -1, 1, 1, 0);
 		printf("------------------------\n");
 
 		printf("\nnote: filesystem has errors now\n\n");
@@ -489,7 +489,7 @@ int main(int argn, char *argv[]) {
 		printf("\n********* cluster move test\n");
 
 		root = fatclusterread(f, r);
-		fatdump(f, NULL, 0, -1, 1, 1);
+		fatdump(f, NULL, 0, -1, 1, 1, 0);
 
 		index = 0;
 		while (! fatentryexists(root, index))
@@ -509,7 +509,7 @@ int main(int argn, char *argv[]) {
 		}
 
 		printf("----------------\n");
-		fatdump(f, NULL, 0, -1, 1, 1);
+		fatdump(f, NULL, 0, -1, 1, 1, 0);
 
 		printf("the filesystem may have errors\n");
 

@@ -3,7 +3,7 @@
 fatview \- show the structure of a FAT12/16/32 filesystem
 .SH SYNOPSIS
 .B fatview
-filesystem [all]
+filesystem [all] [chains]
 .SH DESCRIPTION
 Show the directory and cluster structure of a FAT filesystem: in addition to
 recursively showing file, it prints the chain of clusters of each.
@@ -14,6 +14,9 @@ the name of the device or image containing the filesystem
 .TP
 all
 also show deleted directory entries and long filename parts
+.TP
+chains
+collapse chains of consecutive clusters as first-last
 .SH SEE ALSO
 fattool(1)
 

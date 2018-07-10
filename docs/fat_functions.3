@@ -1331,8 +1331,8 @@ unused cluster does not make much sense, and can still be made by
 swapped. The return value is also -1 if the cluster cannot be moved because it
 is the cluster of the root directory of FAT12 or FAT16.
 
-The return value is -2 if if the current target cluster cannot be read because
-of an IO error and -5 if it cannot be moved to the destination because of an IO
+The return value is -2 if the current target cluster cannot be read because of
+an IO error and -5 if it cannot be moved to the destination because of an IO
 error (in this case the move is rolled back). The last error is -5 for
 uniformity with the following function.
 .TP
@@ -1551,13 +1551,14 @@ passed the path of the file (including its name).
 .TP
 .BI "void fatdump(fat *" f ", \
 unit *" directory ", int " index ", int32_t " previous ", \
-int " recur ", int " all )
+int " recur ", int " all ", int " chains )
 Print an indented summary of the filesystem starting from the cluster reference
-\fIdirectory,index,previous\fP. The dump is recursive if if \fIrecur\fP is
+\fIdirectory,index,previous\fP. The dump is recursive if \fIrecur\fP is
 non-zero. To dump the whole filesystem pass \fINULL,0,-1\fP and \fIrecur=1\fP.
 This includes the chain of clusters of each file and directory. If \fIall=1\fP,
 also the directory entries of the deleted files and long file names parts are
-printed.
+printed. If \fIchains=1\fP, print chains of consecutive clusters as
+\fIfirst-last\fP.
 .TP
 .BI "void fatcalls(fat *" f ", int " all )
 This function helps testing. It prints the sequence of calls
@@ -2252,12 +2253,13 @@ entries that contain the long name of a file.
 .TP
 .BI "void fatdumplong(fat *" f ", \
 unit *" directory ", int " index ", int32_t " previous ", \
-int " recur ", int " all )
+int " recur ", int " all ", int " chains )
 Print an indented summary of the filesystem starting from the cluster reference
-\fIdirectory,index,previous\fP. The dump is recursive if if \fIrecur\fP is
+\fIdirectory,index,previous\fP. The dump is recursive if \fIrecur\fP is
 non-zero. To dump the whole filesystem pass \fINULL,0,-1\fP and \fIrecur=1\fP.
 This includes the chain of clusters of each file and directory. If \fIall\fP is
-not zero, also the directory entries of the long file names are printed.
+not zero, also the directory entries of the long file names are printed. If
+\fIchains=1\fP, print chains of consecutive clusters as \fIfirst-last\fP.
 .TP
 .PD 0
 .BI "typedef void (*" longrun ")(fat *" f ", wchar_t *"path ", \

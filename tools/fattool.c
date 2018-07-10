@@ -539,7 +539,7 @@ void printcluster(fat *f, int32_t cl, fatinverse *rev, int run) {
 				&index, &previous))
 			if (previous == -1) {
 				printf("/\n");
-				fatdump(f, directory, index, previous, 0, 0);
+				fatdump(f, directory, index, previous, 0, 0, 0);
 			}
 			else
 				printf("not in a file\n");
@@ -557,7 +557,7 @@ void printcluster(fat *f, int32_t cl, fatinverse *rev, int run) {
 				free(longpath);
 			}
 
-			fatdump(f, directory, index, previous, 0, 0);
+			fatdump(f, directory, index, previous, 0, 0, 0);
 		}
 	}
 
@@ -1180,7 +1180,8 @@ int main(int argn, char *argv[]) {
 	unit *cluster;
 	int max, size, csize, pos, ncluster;
 	uint32_t sector, spos;
-	int res, diff, finalres, recur, chain, all, over, startdir, nchanges;
+	int res, diff, finalres, recur, chain, all, chains;
+	int over, startdir, nchanges;
 	char dummy, pad, *buf;
 	int nfat;
 	char *timeformat;
@@ -1359,11 +1360,14 @@ int main(int argn, char *argv[]) {
 		}
 		if (fatreferenceisvoid(directory, index, previous))
 			previous = target;
-		all = ! strcmp(option2, "all");
+		all = ! strcmp(option2, "all") || ! strcmp(option3, "all");
+		chains = ! strcmp(option2, "chains") || \
+		         ! strcmp(option3, "chains");
 		if (useshortnames)
-			fatdump(f, directory, index, previous, 1, all);
+			fatdump(f, directory, index, previous, 1, all, chains);
 		else
-			fatdumplong(f, directory, index, previous, 1, all);
+			fatdumplong(f, directory, index, previous,
+				1, all, chains);
 	}
 	else if (! strcmp(operation, "calls"))
 		fatcalls(f, ! strcmp(option1, "all"));

@@ -26,10 +26,10 @@
 int main(int argn, char *argv[]) {
 	char *filename;
 	fat *f;
-	int all = 0;
+	int all = 0, chains = 0;
 
 	if (argn - 1 < 1) {
-		printf("usage:\n\tfattest filename [test] [all]\n");
+		printf("usage:\n\tfattest filename [test] [all] [chains]\n");
 		exit(1);
 	}
 	filename = argv[1];
@@ -53,12 +53,14 @@ int main(int argn, char *argv[]) {
 		}
 		else if (! strcmp(argv[2], "all"))
 			all = 1;
+		else if (! strcmp(argv[2], "chains"))
+			chains = 1;
 		argn--;
 		argv++;
 	}
 
 	printf("=========================\n");
-	fatdumplong(f, NULL, 0, -1, 1, all);
+	fatdumplong(f, NULL, 0, -1, 1, all, chains);
 	printf("=========================\n");
 
 	fatclose(f);

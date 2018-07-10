@@ -753,7 +753,8 @@ fatcalls()
 
 fatdump()
 	show the filesystem; pass all=1 to also print the deleted directory
-	entries and the long filename parts
+	entries and the long filename parts: pass chains=1 to print chains as
+	first-last
 
 fatfilexecute()
 	runs a callback on every file in the filesystem
