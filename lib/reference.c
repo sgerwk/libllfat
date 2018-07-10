@@ -641,7 +641,7 @@ int _fatdump(fat __attribute__((unused)) *f,
 				if (previous != s->chain)
 					printf("-%d", previous);
 				if (previous != FAT_ROOT)
-					s->chain = previous;
+					s->chain = target;
 			}
 		}
 		else {

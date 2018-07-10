@@ -1070,7 +1070,7 @@ int _fatdumplong(fat __attribute__((unused)) *f,
 			if (previous != s->chain)
 				printf("-%d", previous);
 			if (previous != FAT_ROOT)
-				s->chain = previous;
+				s->chain = target;
 		}
 		if (target == FAT_EOF ||
 		    target == FAT_UNUSED ||
