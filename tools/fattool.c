@@ -1090,8 +1090,9 @@ void usage() {
 	printf("\t\tfree\t\tmap of free clusters\n");
 	printf("\t\tmap\t\tmap of all clusters, with\n");
 	printf("\t\t\t\tthe free ones bracketed like [21]\n");
-	printf("\t\tview [all]\tshow the filesystem\n");
+	printf("\t\tview [path [all] [chains]]\tshow the filesystem\n");
 	printf("\t\t\t\tall: include the deleted entries\n");
+	printf("\t\t\t\tchains: print chains of clusters as first-last\n");
 	printf("\t\tcalls [all]\targuments of calls to ");
 	printf("filereferenceexecute()\n");
 	printf("\t\t\t\tall: also on deleted entries\n");
