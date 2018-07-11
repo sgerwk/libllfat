@@ -1063,23 +1063,31 @@ int _fatdumplong(fat __attribute__((unused)) *f,
 	
 	target = fatreferencegettarget(f, directory, index, previous);
 
-	if (directory == NULL) {
-		if (s->chain == FAT_ROOT || s->chain == previous)
+	if (fatreferenceiscluster(directory, index, previous)) {
+		if (s->chain == FAT_ERR - 1)
 			fatreferenceprint(directory, index, previous);
 		else if (target != previous + 1) {
-			if (previous != s->chain)
-				printf("-%d", previous);
-			if (previous != FAT_ROOT)
-				s->chain = target;
+			if (previous == s->chain)
+				printf(" %d", previous);
+			else
+				printf(" %d-%d", s->chain, previous);
+			s->chain = target;
 		}
+	}
+	else {
+		if (! fatreferenceisentry(directory, index, previous))
+			fatreferenceprint(directory, index, previous);
+		if (s->chain != FAT_ERR - 1)
+			s->chain = target;
+	}
+
+	if (! fatreferenceisentry(directory, index, previous)) {
 		if (target == FAT_EOF ||
 		    target == FAT_UNUSED ||
 		    target == FAT_ERR)
 			printf("\n");
 		return FAT_REFERENCE_COND(s->recur);
 	}
-	else if (s->chain != FAT_ROOT)
-		s->chain = target;
 
 	scandirectory = s->all ? longdirectory : directory;
 	scanindex = s->all ? longindex : index;
@@ -1094,9 +1102,9 @@ int _fatdumplong(fat __attribute__((unused)) *f,
 	} while ((scandirectory->n != directory->n || scanindex != index) &&
 		 ! fatnextentry(f, &scandirectory, &scanindex));
 	printf("  %-15ls %s", name, err == 0 ? "" : "ERR ");
+
 	if (target == FAT_EOF || target == FAT_UNUSED || target == FAT_ERR)
 		printf("\n");
-
 	return FAT_REFERENCE_COND(s->recur);
 }
 
@@ -1106,7 +1114,7 @@ void fatdumplong(fat *f, unit *directory, int index, int32_t previous,
 	s.level = 0;
 	s.recur = recur;
 	s.all = all;
-	s.chain = chains ? FAT_EOF : FAT_ROOT;
+	s.chain = chains ? FAT_EOF : FAT_ERR - 1;
 	fatreferenceexecutelong(f, directory, index, previous,
 		_fatdumplong, &s);
 }

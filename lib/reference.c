@@ -634,20 +634,20 @@ int _fatdump(fat __attribute__((unused)) *f,
 
 		target = fatreferencegettarget(f, directory, index, previous);
 
-		if (directory == NULL) {
-			if (s->chain == FAT_ROOT || s->chain == previous)
-				fatreferenceprint(directory, index, previous);
-			else if (target != previous + 1) {
-				if (previous != s->chain)
-					printf("-%d", previous);
-				if (previous != FAT_ROOT)
-					s->chain = target;
+		if (s->chain == FAT_ERR - 1)
+			fatreferenceprint(directory, index, previous);
+		else if (fatreferenceiscluster(directory, index, previous)) {
+			if (target != previous + 1) {
+				if (previous == s->chain)
+					printf(" %d", previous);
+				else
+					printf(" %d-%d", s->chain, previous);
+				s->chain = target;
 			}
 		}
 		else {
 			fatreferenceprint(directory, index, previous);
-			if (s->chain != FAT_ROOT)
-				s->chain = target;
+			s->chain = target;
 		}
 
 		if (target == FAT_EOF ||
@@ -669,7 +669,7 @@ void fatdump(fat *f, unit* directory, int index, int32_t previous,
 	s.level = 0;
 	s.recur = recur;
 	s.all = all;
-	s.chain = chains ? FAT_EOF : FAT_ROOT;
+	s.chain = chains ? FAT_EOF : FAT_ERR - 1;
 	fatreferenceexecute(f, directory, index, previous, _fatdump, &s);
 }
 
