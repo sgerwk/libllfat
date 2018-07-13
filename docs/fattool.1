@@ -64,8 +64,12 @@ read simulated errors from file; see \fISIMULATED ERRORS\fP, below
 \fBsummary\fP
 print a summary of the filesystem data, such as the number of clusters, etc.
 .TP
-\fBfree\fP/\fBused\fP/\fBclusters\fP
+\fBfree\fP/\fBused\fP/\fBmap\fP
 print a map of the clusters that tells which are free and which are used
+.TP
+\fBchains\fP
+print the chains of consecutive clusters, regardless of whether they are
+actually used by files or not
 .TP
 \fBview\fP [\fIpath\fP [\fIall\fP] [\fIchains\fP]]
 recusively show the content of a file or directory, by default '/' (see \fIFILE

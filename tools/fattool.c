@@ -1090,6 +1090,7 @@ void usage() {
 	printf("\t\tfree\t\tmap of free clusters\n");
 	printf("\t\tmap\t\tmap of all clusters, with\n");
 	printf("\t\t\t\tthe free ones bracketed like [21]\n");
+	printf("\t\tchains\t\tshow the chains of consecutive clusters\n");
 	printf("\t\tview [path [all] [chains]]\n");
 	printf("\t\t\t\tshow the filesystem\n");
 	printf("\t\t\t\tall: include the deleted entries\n");
@@ -1354,6 +1355,25 @@ int main(int argn, char *argv[]) {
 		fatmap(f, "     .", "%d", "BAD");
 	else if (! strcmp(operation, "map"))
 		fatmap(f, "[%d]", "%6d", "B-%d");
+	else if (! strcmp(operation, "chains")) {
+		start = FAT_FIRST;
+		for (cl = FAT_FIRST; cl <= fatlastcluster(f); cl++) {
+			next = fatgetnextcluster(f, cl);
+			if (next == cl + 1)
+				continue;
+
+			target = fatgetnextcluster(f, start);
+
+			if (target == FAT_UNUSED || target == FAT_BAD) {
+			}
+			else if (cl == start)
+				printf("%d\n", cl);
+			else
+				printf("%d-%d\n", start, cl);
+
+			start = cl + 1;
+		}
+	}
 	else if (! strcmp(operation, "view")) {
 		if (fileoptiontoreference(f, option1,
 				&directory, &index, &previous, &target)) {
