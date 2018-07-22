@@ -53,6 +53,11 @@ int useshortnames;
 int nostoragepaths;
 
 /*
+ * legalize paths or not
+ */
+int legalize;
+
+/*
  * ask the used whether to proceed
  */
 void check() {
@@ -99,7 +104,7 @@ int fileoptiontoreferenceboth(fat *f, char *option,
 	char dummy;
 	char *path;
 	size_t len;
-	wchar_t *pathlong, *converted;
+	wchar_t *pathlong, *legalized, *converted;
 	int res;
 
 	r = fatgetrootbegin(f);
@@ -158,12 +163,19 @@ int fileoptiontoreferenceboth(fat *f, char *option,
 	if (nostoragepaths)
 		converted = pathlong;
 	else {
-		if (fatinvalidpathlong(pathlong) < 0) {
+		if (legalize) {
+			legalized = fatlegalizepathlong(pathlong);
+			converted = fatstoragepathlong(legalized);
+			free(legalized);
+		}
+		else if (fatinvalidpathlong(pathlong) < 0) {
 			printf("invalid path: %s\n", option);
 			free(pathlong);
 			return -1;
 		}
-		converted = fatstoragepathlong(pathlong);
+		else
+			converted = fatstoragepathlong(pathlong);
+		free(pathlong);
 	}
 
 	res = fatlookuppathlongboth(f, r, converted, directory, index,
@@ -195,7 +207,7 @@ int fileoptiontoreference(fat *f, char *option,
 int createfile(fat *f, int32_t dir, char *path, int dot,
 		unit **directory, int *index) {
 	size_t len;
-	wchar_t *pathlong, *convertedlong;
+	wchar_t *pathlong, *legalized, *convertedlong;
 	char *converted;
 	int res;
 	
@@ -232,6 +244,12 @@ int createfile(fat *f, int32_t dir, char *path, int dot,
 
 	if (nostoragepaths)
 		convertedlong = pathlong;
+	else if (legalize) {
+		legalized = fatlegalizepathlong(pathlong);
+		convertedlong = fatstoragepathlong(legalized);
+		printlongname("filesystem name: |", convertedlong, "|\n");
+		free(legalized);
+	}
 	else {
 		res = fatinvalidpathlong(pathlong);
 		if (res < 0 || (res == 1 && ! dot)) {
@@ -1079,6 +1097,7 @@ void usage() {
 	printf("\t\t-f num\t\tuse the specified file allocation table\n");
 	printf("\t\t-l\t\tload the first FAT in cache immediately\n");
 	printf("\t\t-s\t\tuse shortnames\n");
+	printf("\t\t-t\t\tlegalize paths: convert invalid characters\n");
 	printf("\t\t-n\t\tdo not check or convert names\n");
 	printf("\t\t-m\t\tmemory check at the end\n");
 	printf("\t\t-c\t\tcheck: show cluster cache at the end\n");
@@ -1204,6 +1223,7 @@ int main(int argn, char *argv[]) {
 	first = 0;
 	insensitive = 0;
 	useshortnames = 0;
+	legalize = 0;
 	nostoragepaths = 0;
 	memcheck = 0;
 	clusterdump = 0;
@@ -1245,6 +1265,9 @@ int main(int argn, char *argv[]) {
 			break;
 		case 's':
 			useshortnames = 1;
+			break;
+		case 't':
+			legalize = 1;
 			break;
 		case 'n':
 			nostoragepaths = 1;

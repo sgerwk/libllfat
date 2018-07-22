@@ -85,6 +85,8 @@ int fatfindfreelongpath(fat *f, int32_t dir, wchar_t *path, int len,
  */
 int fatinvalidnamelong(const wchar_t *name);
 int fatinvalidpathlong(const wchar_t *path);
+wchar_t *fatlegalizenamelong(const wchar_t *path);
+wchar_t *fatlegalizepathlong(const wchar_t *path);
 wchar_t *fatstoragenamelong(const wchar_t *name);
 wchar_t *fatstoragepathlong(const wchar_t *path);
 

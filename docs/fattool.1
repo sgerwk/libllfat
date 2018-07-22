@@ -4,7 +4,7 @@ fattool \- several operations on a FAT12/16/32 filesystem
 .SH SYNOPSIS
 .TP 8
 .B fattool 
-[\fI-f num\fP] [\fI-l\fP] [\fI-i\fP] [\fI-s\fP] [\fI-n\fP]
+[\fI-f num\fP] [\fI-l\fP] [\fI-i\fP] [\fI-s\fP] [\fI-t\fP] [\fI-n\fP]
 .br
 [\fI-m\fP] [\fI-c\fP] [\fI-o offset\fP] [\fI-e simerr.txt\fP]
 .br
@@ -38,6 +38,13 @@ short names, like:
 	\fIfattool /dev/sda1 gettime '/ADIR/SOMENA~1.TXT'\fP
 .fi
 
+.TP
+\fB-t\fP
+make path and file names valid by escaping its invalid characters as
+\fI[HH]\fP, where \fIHH\fP is the hexadecimal representation of the invalid
+character; for example, attempting to write to file \fIab:cd.txt\fP results
+into the operation being performed to \fIab[3A]cd.txt\fP instead; this option
+has no effect on short names
 .TP
 \fB-n\fP
 use file names passed to the program without checking their validity and

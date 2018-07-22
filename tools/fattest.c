@@ -99,7 +99,7 @@ int main(int argn, char *argv[]) {
 	fatinverse *rev;
 	int res;
 	struct fatlongscan scan;
-	wchar_t longname[1000];
+	wchar_t longname[1000], *in, *out;
 
 	if (argn - 1 < 1) {
 		printf("usage:\n\tfattest filename [test]\n");
@@ -1142,6 +1142,14 @@ int main(int argn, char *argv[]) {
 		}
 
 		fatinversedelete(f, rev);
+
+		break;
+
+	case 37:
+		printf("\n********* filename legalize test\n");
+		in = L"a file : name <> with some \t special characters.txt";
+		out = fatlegalizepathlong(in);
+		printf("original:  %ls\nlegalized: %ls\n", in, out);
 
 		break;
 	}

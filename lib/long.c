@@ -582,6 +582,36 @@ int fatinvalidpathlong(const wchar_t *path) {
 }
 
 /*
+ * legalize a path by escaping forbidden characters as [HH]
+ */
+wchar_t *_fatlegalize(const wchar_t *path, const wchar_t *illegal) {
+	wchar_t *dst, *dscan, *scan;
+
+	dst = malloc(wcslen(path) * sizeof(wchar_t) * 4);
+	dscan = dst;
+
+	for (scan = (wchar_t *) path; *scan; scan++)
+		if (wcschr(illegal, *scan) || *scan < 32) {
+			*dscan++ = L'[';
+			swprintf(dscan, 4, L"%X", *scan);
+			dscan += wcslen(dscan);
+			*dscan++ = L']';
+		}
+		else {
+			*dscan++ = *scan;
+		}
+	*dscan = '\0';
+
+	return dst;
+}
+wchar_t *fatlegalizenamelong(const wchar_t *path) {
+	return _fatlegalize(path, L"\"*:<>?\\|[]/");
+}
+wchar_t *fatlegalizepathlong(const wchar_t *path) {
+	return _fatlegalize(path, L"\"*:<>?\\|[]");
+}
+
+/*
  * convert part of a string into the form that is used for a longname
  */
 wchar_t *_fatstoragepartlong(wchar_t **dst, const wchar_t **src) {

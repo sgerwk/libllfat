@@ -2016,7 +2016,7 @@ when done with it.
 .
 .P
 The following functions are for looking up a file given its name or full path,
-and the first cluster of the directory where to start the search. The all use
+and the first cluster of the directory where to start the search. They all use
 the \fIdirectory,index\fP, \fIlongdirectory,longindex\fP and \fIname\fP as
 output-only parameters: the directory entry that contains the file data and the
 one where the long name begins. They do not check the validity of the name or
@@ -2114,6 +2114,17 @@ Return -1 if the name is not valid, 1 if it is either \fI.\fP or
 Check whether a long path name is valid.
 Return -1 if the path is not valid, 1 if it ends with either \fI.\fP or
 \fI..\fP, and 0 otherwise.
+.TP
+.BI "wchar_t *fatlegalizenamelong(const wchar_t *" path )
+Make a long file name valid but escaping forbidden characters as \fI[HH]\fP
+where \fIHH\fP is the hexadecimal representation of the character. For example,
+\fI"ab:cd.txt"\fP is turned into \fI"ab[3A]cd.txt"\fP.
+.TP
+.BI "wchar_t *fatlegalizepathlong(const wchar_t *" path )
+Make a long path name valid but escaping forbidden characters as \fI[HH]\fP
+where \fIHH\fP is the hexadecimal representation of the character. This is the
+same as \fIfatlegalizenamelong()\fP with the only exception that \fI'/'\fP is
+not escaped because it is a valid character in a path.
 .TP
 .BI "wchar_t *fatstoragenamelong(const wchar_t *" name )
 Turn the string into the form that is actually stored as a long file name in
