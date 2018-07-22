@@ -1091,9 +1091,9 @@ int fatformat(char *devicename, off_t offset,
  * usage
  */
 void usage() {
-	printf("usage:\n\tfattool [-f num] [-l] [-s] [-n] ");
-	printf("[-m] [-c] [-o offset] [-e simerr.txt]\n");
-	printf("\tdevice operation\n");
+	printf("usage:\n\tfattool [-f num] [-l] [-s] [-t] [-n] ");
+	printf("[-m] [-c] [-o offset]\n");
+	printf("\t\t[-e simerr.txt] device operation\n");
 	printf("\t\t-f num\t\tuse the specified file allocation table\n");
 	printf("\t\t-l\t\tload the first FAT in cache immediately\n");
 	printf("\t\t-s\t\tuse shortnames\n");
