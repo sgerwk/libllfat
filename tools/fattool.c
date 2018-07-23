@@ -1167,6 +1167,8 @@ void usage() {
 	printf("\t\tgetsize file\tget size of file\n");
 	printf("\t\tsetsize file size\n\t\t\t\tchange file size; ");
 	printf("directory entry only, see man\n");
+	printf("\t\tisvalid filename\n");
+	printf("\t\t\t\tcheck whether the filename is legal\n");
 	printf("\t\tlegalize filename\n\t\t\t\tmake the filename legal\n");
 	printf("\t\tmkdir directory\tcreate a directory\n");
 	printf("\t\tdirectoryclean\tclean unused directory clusters\n");
