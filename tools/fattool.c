@@ -104,6 +104,8 @@ void printpath(fat *f, wchar_t *path, unit *directory, int index,
 	(void) longdirectory;
 	(void) longindex;
 	(void) user;
+	if (fatentryisdirectory(directory, index) && user)
+		return;
 	printlongname("", path, "");
 	printlongname("", name, "\n");
 }
@@ -2231,7 +2233,13 @@ int main(int argn, char *argv[]) {
 			fatentrysetsize(directory, index, atoi(option2));
 	}
 	else if (! strcmp(operation, "find")) {
-		fatfileexecutelong(f, NULL, 0, -1, printpath, NULL);
+		if (fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			printf("file %s does not exists\n", option1);
+			exit(1);
+		}
+		fatfileexecutelong(f, directory, index, previous, printpath,
+			! strcmp(option2, "dir") ? (void *) 0 : (void *) 1);
 	}
 	else if (! strcmp(operation, "mkdir")) {
 		if (option1[0] == '\0') {

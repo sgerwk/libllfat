@@ -365,8 +365,10 @@ to this operation)
 print the legalized version of a filename; this is the file name that is
 actually used when passing the \fI-t\fP option
 .TP
-\fBfind\fP
-print the complete path of all files in the volume
+\fBfind\fP [\fIdirectory\fP [\fIdir\fP]]
+print the complete path of all files under the directory (by default, the
+root); if the second argument is the word \fIdir\fP, directories are also
+printed
 .TP
 \fBmkdir\fP \fIdirectory\fP
 create a directory
