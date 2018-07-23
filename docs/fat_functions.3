@@ -2119,12 +2119,16 @@ Return -1 if the path is not valid, 1 if it ends with either \fI.\fP or
 Make a long file name valid but escaping forbidden characters as \fI[HH]\fP
 where \fIHH\fP is the hexadecimal representation of the character. For example,
 \fI"ab:cd.txt"\fP is turned into \fI"ab[3A]cd.txt"\fP.
+The returned string is dynamically allocated:
+deallocate with \fBfree\fP(3) when done with it.
 .TP
 .BI "wchar_t *fatlegalizepathlong(const wchar_t *" path )
 Make a long path name valid but escaping forbidden characters as \fI[HH]\fP
 where \fIHH\fP is the hexadecimal representation of the character. This is the
 same as \fIfatlegalizenamelong()\fP with the only exception that \fI'/'\fP is
 not escaped because it is a valid character in a path.
+The returned string is dynamically allocated:
+deallocate with \fBfree\fP(3) when done with it.
 .TP
 .BI "wchar_t *fatstoragenamelong(const wchar_t *" name )
 Turn the string into the form that is actually stored as a long file name in
