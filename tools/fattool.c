@@ -92,6 +92,23 @@ void printlongname(char *before, wchar_t *name, char *after) {
 }
 
 /*
+ * print the complete path of a file
+ */
+void printpath(fat *f, wchar_t *path, unit *directory, int index,
+		wchar_t *name, int err, unit *longdirectory, int longindex,
+		void *user) {
+	(void) f;
+	(void) directory;
+	(void) index;
+	(void) err;
+	(void) longdirectory;
+	(void) longindex;
+	(void) user;
+	printlongname("", path, "");
+	printlongname("", name, "\n");
+}
+
+/*
  * process an option that is a file (either "directory,index" or "path") and
  * turns it into a cluster reference; in some cases like "cluster:103", the
  * target is filled but the reference is void
@@ -1170,6 +1187,7 @@ void usage() {
 	printf("\t\tisvalid filename\n");
 	printf("\t\t\t\tcheck whether the filename is legal\n");
 	printf("\t\tlegalize filename\n\t\t\t\tmake the filename legal\n");
+	printf("\t\tfind\t\tlist all files in the volume\n");
 	printf("\t\tmkdir directory\tcreate a directory\n");
 	printf("\t\tdirectoryclean\tclean unused directory clusters\n");
 	printf("\t\tcountclusters file\n");
@@ -2211,6 +2229,9 @@ int main(int argn, char *argv[]) {
 			printf("missing argument: new size\n");
 		else
 			fatentrysetsize(directory, index, atoi(option2));
+	}
+	else if (! strcmp(operation, "find")) {
+		fatfileexecutelong(f, NULL, 0, -1, printpath, NULL);
 	}
 	else if (! strcmp(operation, "mkdir")) {
 		if (option1[0] == '\0') {
