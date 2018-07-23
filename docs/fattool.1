@@ -357,6 +357,10 @@ make the file to be large \fInum\fP bytes; the resulting filesystem is
 incorrect if the new size it too small or too large for the chain of clusters
 of the file
 .TP
+\fBisvalid\fP \fIpath\fP
+check whether \fIpath\fP is a valid path (the filesystem argument is irrelevant
+to this operation)
+.TP
 \fBlegalize\fP \fIpathname\fP
 print the legalized version of a filename; this is the file name that is
 actually used when passing the \fI-t\fP option
@@ -412,10 +416,6 @@ list the entries in the given directory; if \fIstart\fP is also given, the
 start point of each long file name is also printed; with option \fB-s\fP, long
 part names are printed individually, deleted entries are also printed with
 \fIall\fP and entries over the end of the directory with \fIover\fP
-.TP
-\fBvalid\fP \fIpath\fP
-check whether \fIpath\fP is a valid path (the filesystem argument is irrelevant
-to this operation)
 .TP
 \fBdirfind\fP [\fInum\fP]
 try to detect which clusters are used for directories; the intended usage is to
