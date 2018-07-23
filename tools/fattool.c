@@ -1133,7 +1133,7 @@ void usage() {
 	printf("\t\t\t\toptionally specify size of new file\n");
 	printf("\t\tcrop file (leave|free) [size]\n");
 	printf("\t\t\t\tcut the chain of clusters of a file\n");
-	printf("\t\t\t\toptionally free the subsequence clusters\n");
+	printf("\t\t\t\toptionally free the subsequent clusters\n");
 	printf("\t\t\t\tchain left long enough for a file of given size\n");
 	printf("\t\tposition (n|sector:s|file:name) [file|bvi|recur]\n");
 	printf("\t\t\t\tprint position of cluster n\n");
