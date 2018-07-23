@@ -1167,6 +1167,7 @@ void usage() {
 	printf("\t\tgetsize file\tget size of file\n");
 	printf("\t\tsetsize file size\n\t\t\t\tchange file size; ");
 	printf("directory entry only, see man\n");
+	printf("\t\tlegalize filename\n\t\t\t\tmake the filename legal\n");
 	printf("\t\tmkdir directory\tcreate a directory\n");
 	printf("\t\tdirectoryclean\tclean unused directory clusters\n");
 	printf("\t\tcountclusters file\n");
@@ -1192,7 +1193,7 @@ int main(int argn, char *argv[]) {
 	char *name, *operation, *option1, *option2, *option3, *option4;
 	off_t offset;
 	size_t wlen;
-	wchar_t *longname, *longpath;
+	wchar_t *longname, *longpath, *legalized;
 	fat *f;
 	int fatnum;
 	int32_t previous, target, r, cl, next, start;
@@ -1318,6 +1319,21 @@ int main(int argn, char *argv[]) {
 
 	if (! strcmp(operation, "format"))
 		return fatformat(name, offset, option1, option2, option3);
+
+				/* legalize a file name */
+
+	if (! strcmp(operation, "legalize")) {
+		wlen = mbstowcs(NULL, option1, 0);
+		if (wlen == (size_t) -1)
+			return -1;
+		longpath = malloc((wlen + 1) * sizeof(wchar_t));
+		mbstowcs(longpath, option1, wlen + 1);
+		legalized = fatlegalizepathlong(longpath);
+		printf("%ls\n", legalized);
+		free(legalized);
+		free(longpath);
+		return 0;
+	}
 
 				/* open and check */
 
