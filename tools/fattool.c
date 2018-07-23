@@ -2115,7 +2115,8 @@ int main(int argn, char *argv[]) {
 			fatsetnextcluster(f, cl, FAT_UNUSED);
 		}
 
-		if (! useshortnames)
+		if (! useshortnames &&
+		    (longdirectory != directory || longindex != index))
 			if (fatdeletelong(f, longdirectory, longindex))
 				printf("error while deleting long name\n");
 		fatentrydelete(directory, index);
