@@ -1322,9 +1322,38 @@ int main(int argn, char *argv[]) {
 	if (! strcmp(operation, "format"))
 		return fatformat(name, offset, option1, option2, option3);
 
-				/* legalize a file name */
+				/* validity of a path */
 
-	if (! strcmp(operation, "legalize")) {
+	if (! strcmp(operation, "isvalid")) {
+		if (useshortnames) {
+			if ((finalres = fatinvalidpath(option1))) 
+				printf("invalid\n");
+			else {
+				name = fatstoragepath(option1);
+				printf("valid: |%s|\n", name);
+				free(name);
+			}
+		}
+		else {
+			wlen = mbstowcs(NULL, option1, 0);
+			if (wlen == (size_t) -1) {
+				printf("invalid string: %s\n", option1);
+				return -1;
+			}
+			longpath = malloc((wlen + 1) * sizeof(wchar_t));
+			mbstowcs(longpath, option1, wlen + 1);
+
+			if ((finalres = fatinvalidpathlong(longpath))) 
+				printf("invalid\n");
+			else {
+				longname = fatstoragepathlong(longpath);
+				printf("valid: |%ls|\n", longname);
+				free(longname);
+			}
+		}
+		return 0;
+	}
+	else if (! strcmp(operation, "legalize")) {
 		wlen = mbstowcs(NULL, option1, 0);
 		if (wlen == (size_t) -1)
 			return -1;
@@ -2460,34 +2489,6 @@ int main(int argn, char *argv[]) {
 						longdirectory->n, longindex);
 				printf("%s\n",
 					res & FAT_LONG_ERR ? "ERR" : "");
-				free(longname);
-			}
-		}
-	}
-	else if (! strcmp(operation, "isvalid")) {
-		if (useshortnames) {
-			if ((finalres = fatinvalidpath(option1))) 
-				printf("invalid\n");
-			else {
-				name = fatstoragepath(option1);
-				printf("valid: |%s|\n", name);
-				free(name);
-			}
-		}
-		else {
-			wlen = mbstowcs(NULL, option1, 0);
-			if (wlen == (size_t) -1) {
-				printf("invalid string: %s\n", option1);
-				return -1;
-			}
-			longpath = malloc((wlen + 1) * sizeof(wchar_t));
-			mbstowcs(longpath, option1, wlen + 1);
-
-			if ((finalres = fatinvalidpathlong(longpath))) 
-				printf("invalid\n");
-			else {
-				longname = fatstoragepathlong(longpath);
-				printf("valid: |%ls|\n", longname);
 				free(longname);
 			}
 		}
