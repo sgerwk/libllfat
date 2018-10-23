@@ -354,6 +354,11 @@ Read a filesystem from file \fIfilename\fP, starting at position \fIoffset\fP.
 Return the fat structure if the file can be open and the boot sector can be
 read, otherwise return NULL. In most cases \fIoffset\fP is zero.
 .TP
+.BI "fat *fatsignatureopen(char *" filename ", off_t " offset )
+Same as the previous function but use the filesystem signature ("FAT12",
+"FAT16" or "FAT32") to determine the number of fat bits. This is wrong
+according to the official specification, but is sometimes needed.
+.TP
 .BI "int fatcheck(fat *" f )
 Checks that a filesystem really looks like a FAT12/16/32; return 0 if it does,
 a number less than zero measuring the number of invalid field in the sector

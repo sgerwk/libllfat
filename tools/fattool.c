@@ -1214,6 +1214,7 @@ void usage() {
 int main(int argn, char *argv[]) {
 	char *name, *operation, *option1, *option2, *option3, *option4;
 	off_t offset;
+	int signature;
 	size_t wlen;
 	wchar_t *longname, *longpath, *legalized;
 	fat *f;
@@ -1242,6 +1243,7 @@ int main(int argn, char *argv[]) {
 				/* arguments */
 
 	offset = 0;
+	signature = 0;
 	fatnum = -1;
 	first = 0;
 	insensitive = 0;
@@ -1261,6 +1263,9 @@ int main(int argn, char *argv[]) {
 				argn--;
 				argv++;
 			}
+			break;
+		case 'd':
+			signature = 1;
 			break;
 		case 'l':
 			first = 1;
@@ -1388,7 +1393,7 @@ int main(int argn, char *argv[]) {
 
 				/* open and check */
 
-	f = fatopen(name, offset);
+	f = signature ? fatsignatureopen(name, offset) : fatopen(name, offset);
 	if (f == NULL) {
 		printf("cannot open %s as a FAT filesystem\n", name);
 		exit(1);

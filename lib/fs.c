@@ -75,7 +75,7 @@ fat *fatcreate() {
 /*
  * open a fat (also read the boot sector)
  */
-fat *fatopen(char *filename, off_t offset) {
+fat *_fatopen(char *filename, off_t offset, int (*fatbits)(fat *f)) {
 	fat *f;
 	int32_t info;
 
@@ -96,6 +96,8 @@ fat *fatopen(char *filename, off_t offset) {
 		return NULL;
 	}
 	f->boot->refer = 1;
+
+	f->bits = fatbits(f);
 
 	if (fatbits(f) == -1) {
 		printf("cannot determine bits of FAT\n");
@@ -127,6 +129,12 @@ fat *fatopen(char *filename, off_t offset) {
 		f->free = -1;
 
 	return f;
+}
+fat *fatopen(char *filename, off_t offset) {
+	return _fatopen(filename, offset, fatbits);
+}
+fat *fatsignatureopen(char *filename, off_t offset) {
+	return _fatopen(filename, offset, fatsignaturebits);
 }
 
 /*

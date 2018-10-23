@@ -64,6 +64,12 @@ testing to check whether clusters are correctly deallocated
 \fB-o\fP \fIoffset\fP
 the filesystem is assumed to start at this offset in the device
 .TP
+\fB-d\fP
+use the signature to determine the number of bits of the fat; this is a string
+"FAT12", "FAT16" or "FAT32" in the first sector of the media; using it to
+determine the number of bits is wrong according to the official filesystem
+specification, but is sometimes necessary on media formatted incorrectly
+.TP
 \fB-e\fP \fIsimerr.txt\fP
 read simulated errors from file; see \fISIMULATED ERRORS\fP, below
 .SH COMMANDS

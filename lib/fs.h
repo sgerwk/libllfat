@@ -59,6 +59,7 @@ typedef struct {
  */
 fat *fatcreate();
 fat *fatopen(char *filename, off_t offset);
+fat *fatsignatureopen(char *filename, off_t offset);
 int fatcheck(fat *f);
 int fatflush(fat *f);
 int fatquit(fat *f);
