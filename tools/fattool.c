@@ -1121,6 +1121,7 @@ void usage() {
 	printf("\t\t-m\t\tmemory check at the end\n");
 	printf("\t\t-c\t\tcheck: show cluster cache at the end\n");
 	printf("\t\t-o offset\tfilesystem starts at this offset in device\n");
+	printf("\t\t-d\t\tdetermine number of bits from signature\n");
 	printf("\t\t-e simerr.txt\tread simulated errors from file\n");
 	printf("\n\toperations:\n");
 	printf("\t\tsummary\t\tbasic characteristics of the filesystem\n");
