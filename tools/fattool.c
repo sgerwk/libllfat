@@ -1461,9 +1461,11 @@ int main(int argn, char *argv[]) {
 			printf("= no serial number\n");
 			return 1;
 		}
-		serial = strtol(option1, &buf, 0);
-		if (buf == option1)
+		serial = strtoul(option1, &buf, 0);
+		if (buf == option1) {
 			printf("not a number: %s\n", option1);
+			return 1;
+		}
 		printf("new serial number: 0x%08X\n", serial);
 		fatsetserialnumber(f, serial);
 	}
