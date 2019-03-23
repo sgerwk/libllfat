@@ -1472,6 +1472,7 @@ int main(int argn, char *argv[]) {
 		}
 		printf("new serial number: 0x%08X\n", serial);
 		fatsetserialnumber(f, serial);
+		fatcopyboottobackup(f);
 	}
 	else if (! strcmp(operation, "free"))
 		fatmap(f, "%d", "     .", "BAD");
