@@ -1466,6 +1466,10 @@ int main(int argn, char *argv[]) {
 			printf("not a number: %s\n", option1);
 			return 1;
 		}
+		if (serial == ULONG_MAX && errno == ERANGE) {
+			printf("number too big: %s\n", option1);
+			return 1;
+		}
 		printf("new serial number: 0x%08X\n", serial);
 		fatsetserialnumber(f, serial);
 	}
