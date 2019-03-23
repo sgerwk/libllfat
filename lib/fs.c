@@ -333,6 +333,7 @@ int fatsetbytespersector(fat *f, int bytes) {
 	if (f == NULL || f->boot == NULL)
 		return -1;
 	_unit16int(f->boot, 0x0B) = htole16(bytes);
+	f->boot->dirty = 1;
 	return 0;
 }
 
@@ -349,6 +350,7 @@ int fatsetsectorspercluster(fat *f, int sectors) {
 	if (sectors >= 256 || sectors < 0 || ! _onebit(sectors))
 		return -1;
 	_unit8int(f->boot, 0x0D) = sectors & 0xFF;
+	f->boot->dirty = 1;
 	return 0;
 }
 
@@ -370,6 +372,7 @@ int fatsetreservedsectors(fat *f, int sectors) {
 	if (f == NULL || f->boot == NULL)
 		return -1;
 	_unit16int(f->boot, 0x0E) = htole16(sectors);
+	f->boot->dirty = 1;
 	return 0;
 }
 
@@ -385,6 +388,7 @@ int fatsetnumfats(fat *f, int nfat) {
 	if (f == NULL || f->boot == NULL)
 		return -1;
 	_unit8int(f->boot, 0x10) = nfat;
+	f->boot->dirty = 1;
 	return 0;
 }
 
@@ -448,6 +452,7 @@ int fatsetfatsize(fat *f, int size) {
 		_unit16int(f->boot, 0x16) = htole16(0);
 		_unit32int(f->boot, 0x24) = htole32(size);
 	}
+	f->boot->dirty = 1;
 	return 0;
 }
 
@@ -495,6 +500,7 @@ int fatsetrootentries(fat *f, int entries) {
 		_unit16int(f->boot, 0x11) = htole16(0);
 	else
 		_unit16int(f->boot, 0x11) = htole16(entries);
+	f->boot->dirty = 1;
 	return 0;
 }
 
@@ -623,10 +629,14 @@ uint32_t fatgetserialnumber(fat *f) {
 		return FAT_ERR;
 }
 int fatsetserialnumber(fat *f, uint32_t serial) {
-	if (fatbits(f) == 12 || fatbits(f) == 16)
+	if (fatbits(f) == 12 || fatbits(f) == 16) {
 		_unit32uint(f->boot, 0x27) = serial;
-	else if (fatbits(f) == 32)
+		f->boot->dirty = 1;
+	}
+	else if (fatbits(f) == 32) {
 		_unit32uint(f->boot, 0x43) = serial;
+		f->boot->dirty = 1;
+	}
 	else
 		return FAT_ERR;
 	return 0;
@@ -646,10 +656,14 @@ char* fatgetvolumelabel(fat *f) {
 	return l;
 }
 int fatsetvolumelabel(fat *f, const char l[11]) {
-	if (fatbits(f) == 12 || fatbits(f) == 16)
+	if (fatbits(f) == 12 || fatbits(f) == 16) {
 		memcpy(fatunitgetdata(f->boot) + 0x2b, l, 11);
-	else if (fatbits(f) == 32)
+		f->boot->dirty = 1;
+	}
+	else if (fatbits(f) == 32) {
 		memcpy(fatunitgetdata(f->boot) + 0x47, l, 11);
+		f->boot->dirty = 1;
+	}
 	else
 		return -1;
 	return 0;
@@ -669,10 +683,14 @@ char* fatgetfilesystemtype(fat *f) {
 	return t;
 }
 int fatsetfilesystemtype(fat *f, char t[8]) {
-	if (fatbits(f) == 12 || fatbits(f) == 16)
+	if (fatbits(f) == 12 || fatbits(f) == 16) {
 		memcpy(fatunitgetdata(f->boot) + 0x36, t, 8);
-	else if (fatbits(f) == 32)
+		f->boot->dirty = 1;
+	}
+	else if (fatbits(f) == 32) {
 		memcpy(fatunitgetdata(f->boot) + 0x52, t, 8);
+		f->boot->dirty = 1;
+	}
 	else
 		return -1;
 	return 0;
@@ -699,6 +717,7 @@ int fatsetbackupsector(fat *f, int sector) {
 		return -1;
 
 	_unit16int(f->boot, 0x32) = htole16(sector);
+	f->boot->dirty = 1;
 	return 0;
 }
 
