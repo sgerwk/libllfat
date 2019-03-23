@@ -1125,6 +1125,8 @@ void usage() {
 	printf("\t\t-e simerr.txt\tread simulated errors from file\n");
 	printf("\n\toperations:\n");
 	printf("\t\tsummary\t\tbasic characteristics of the filesystem\n");
+	printf("\t\tgetserial\tget the filesystem serial number\n");
+	printf("\t\tsetserial\tset the filesystem serial number\n");
 	printf("\t\tused\t\tmap of used clusters\n");
 	printf("\t\tfree\t\tmap of free clusters\n");
 	printf("\t\tmap\t\tmap of all clusters, with\n");
@@ -1226,7 +1228,7 @@ int main(int argn, char *argv[]) {
 	int index, startindex, longindex, secondindex;
 	unit *cluster;
 	int max, size, csize, pos, ncluster;
-	uint32_t sector, spos;
+	uint32_t sector, spos, serial;
 	int res, diff, finalres, recur, chain, all, chains;
 	int over, startdir, nchanges;
 	char dummy, pad, *buf;
@@ -1445,6 +1447,26 @@ int main(int argn, char *argv[]) {
 
 	if (! strcmp(operation, "summary"))
 		fatsummary(f);
+	else if (! strcmp(operation, "getserial")) {
+		if (fatgetextendedbootsignature(f) != 1) {
+			printf("no extended boot signature, ");
+			printf("= no serial number\n");
+			return 1;
+		}
+		printf("0x%08X\n", fatgetserialnumber(f));
+	}
+	else if (! strcmp(operation, "setserial")) {
+		if (fatgetextendedbootsignature(f) != 1) {
+			printf("no extended boot signature, ");
+			printf("= no serial number\n");
+			return 1;
+		}
+		serial = strtol(option1, &buf, 0);
+		if (buf == option1)
+			printf("not a number: %s\n", option1);
+		printf("new serial number: 0x%08X\n", serial);
+		fatsetserialnumber(f, serial);
+	}
 	else if (! strcmp(operation, "free"))
 		fatmap(f, "%d", "     .", "BAD");
 	else if (! strcmp(operation, "used"))

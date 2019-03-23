@@ -77,6 +77,12 @@ read simulated errors from file; see \fISIMULATED ERRORS\fP, below
 \fBsummary\fP
 print a summary of the filesystem data, such as the number of clusters, etc.
 .TP
+.B getserial
+print the serial number of the filesystem
+.TP
+.BI setserial " number
+change the serial number of the filesystem; an 8-bytes hex number is accepted
+.TP
 \fBfree\fP/\fBused\fP/\fBmap\fP
 print a map of the clusters that tells which are free and which are used
 .TP
