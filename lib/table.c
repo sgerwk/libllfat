@@ -163,7 +163,7 @@ int32_t fatgetfat(fat *f, int nfat, int32_t n) {
 		content = content & 0x0FFF;
 		return content;
 	case 16:
-		content = le16toh(_unit16int(fs, pcluster));
+		content = le16toh(_unit16int(fs, pcluster)) & 0xFFFF;
 		return content;
 	case 32:
 		content = le32toh(_unit32int(fs, pcluster)) & 0x0FFFFFFF;
