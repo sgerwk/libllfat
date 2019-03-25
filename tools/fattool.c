@@ -648,7 +648,17 @@ int dumpclusters(fat *f, unit *directory, int index, int32_t previous,
 }
 
 /*
- * free directory clusters that only contains deleted entries
+ * count the number of entries in a directory
+ */
+void dircount(fat *f, char *path, unit *directory, int index, void *user) {
+	(void) f;
+	(void) path;
+	if (! fatentryisdotfile(directory, index))
+		(*((int *) user))++;
+}
+
+/*
+ * free directory clusters that only contain deleted entries
  */
 
 struct _directorycleanstruct {
@@ -2139,9 +2149,32 @@ int main(int argn, char *argv[]) {
 			printf("cannot delete a file by cluster\n");
 			exit(1);
 		}
-		if (fatreferenceisdirectory(directory, index, previous)) {
-			printf("%s is a directory\n", option1);
+		if (fatreferenceisboot(directory, index, previous)) {
+			printf("cannot delete the root directory\n");
 			exit(1);
+		}
+		if (fatreferenceisdirectory(directory, index, previous)) {
+			if (! strcmp(option2, "dir")) {
+				size = 0;
+				fatfileexecute(f, directory, index, previous,
+					dircount, &size);
+				if (size > 1) {
+					printf("%s ", option1);
+					printf("is a non-empty directory, ");
+					printf("use \"force\" ");
+					printf("to delete it anyway\n");
+					printf("then \"fattool ");
+					printf("%s ", f->devicename);
+					printf("unused\" to fix ");
+					printf("the filesystem\n");
+					exit(1);
+				}
+			}
+			else if (! ! strcmp(option2, "force")) {
+				printf("%s is a directory, ", option1);
+				printf("add \"dir\" to delete it anyway\n");
+				exit(1);
+			}
 		}
 
 		next = fatentrygetfirstcluster(directory, index, fatbits(f));
