@@ -875,7 +875,7 @@ storing an invalid filename in a directory entry. This is avoided by calling
 See \fIFILE NAMES\fP, below.
 .TP
 .BI "void fatentryprintshortname(unit *" directory ", int " index )
-Prints the short name of the file to stdou.
+Print the short name of the file to stdout.
 .TP
 .BI "int fatentrycompareshortname(unit *" directory ", int " index ", \
 char " shortname " [13])
@@ -1552,7 +1552,7 @@ filerun " act ", void *" user )
 .PD
 Execute a function on every file. This is like \fBfatreferenceexecute\fP,
 except that the callback is only run on the directory entries, and it is also
-passed the path of the file (including its name).
+passed the path of the file (not including its name).
 .TP
 .BI "void fatdump(fat *" f ", \
 unit *" directory ", int " index ", int32_t " previous ", \

@@ -35,7 +35,7 @@ creations; beware that `~' may be special to the shell, so use quotes around
 short names, like:
 
 .nf
-	\fIfattool /dev/sda1 gettime '/ADIR/SOMENA~1.TXT'\fP
+	\fIfattool filesystem gettime '/ADIR/SOMENA~1.TXT'\fP
 .fi
 
 .TP
@@ -115,10 +115,10 @@ consecutive
 \fBdefragment\fP
 order all clusters in the filesystem so that the root directory is in the first
 clusters in order, followed by its first entry, etc.; is the same as \fIfattool
-linear / recur 2\fP; this operation is \fBdangerous\fP: if the program at some
-point cannot allocate enough memory, the filesystem is left with some clusters
-moved but the file allocation tables not updated; running \fBfatbackup\fP(1)
-before is of no use
+filesystem linear / recur 2\fP; this operation is \fBdangerous\fP: if the
+program at some point cannot allocate enough memory, the filesystem is left
+with some clusters moved but the file allocation tables not updated; running
+\fBfatbackup\fP(1) before is of no use
 .TP
 \fBlast\fP [\fIn\fP]
 set the last known free cluster indicator on a FAT32 to \fIn\fP; makes the
