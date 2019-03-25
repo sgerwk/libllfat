@@ -1193,8 +1193,8 @@ void usage() {
 	printf("\t\t\t\tread content of file to stdout\n");
 	printf("\t\t\t\tchain: dump the entire cluster chain\n");
 	printf("\t\twritefile name\twrite stdin to file\n");
-	printf("\t\tdeletefile name [dir|force]\tdelete a file\n");
-	printf("\t\toverwrite name [test]\t\n\t\t\t\toverwrite the ");
+	printf("\t\tdeletefile name [dir|force]\n\t\t\tdelete a file\n");
+	printf("\t\toverwrite name [test]\n\t\t\t\toverwrite the ");
 	printf("differing clusters of a file\n");
 	printf("\t\tgetsize file\tget size of file\n");
 	printf("\t\tsetsize file size\n\t\t\t\tchange file size; ");
