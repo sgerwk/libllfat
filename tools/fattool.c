@@ -1193,7 +1193,7 @@ void usage() {
 	printf("\t\t\t\tread content of file to stdout\n");
 	printf("\t\t\t\tchain: dump the entire cluster chain\n");
 	printf("\t\twritefile name\twrite stdin to file\n");
-	printf("\t\tdeletefile name [dir|force]\n\t\t\tdelete a file\n");
+	printf("\t\tdeletefile name [dir|force]\n\t\t\t\tdelete a file\n");
 	printf("\t\toverwrite name [test]\n\t\t\t\toverwrite the ");
 	printf("differing clusters of a file\n");
 	printf("\t\tgetsize file\tget size of file\n");
@@ -1239,6 +1239,7 @@ int main(int argn, char *argv[]) {
 	unit *cluster;
 	int max, size, csize, pos, ncluster;
 	uint32_t sector, spos, serial;
+	unsigned long readserial;
 	int res, diff, finalres, recur, chain, all, chains;
 	int over, startdir, nchanges;
 	char dummy, pad, *buf;
@@ -1471,12 +1472,14 @@ int main(int argn, char *argv[]) {
 			printf("= no serial number\n");
 			return 1;
 		}
-		serial = strtoul(option1, &buf, 0);
+		readserial = strtoul(option1, &buf, 0);
 		if (buf == option1) {
 			printf("not a number: %s\n", option1);
 			return 1;
 		}
-		if (serial == ULONG_MAX && errno == ERANGE) {
+		serial = readserial & 0xFFFFFFFF;
+		if (serial != readserial ||
+		    (readserial == ULONG_MAX && errno == ERANGE)) {
 			printf("number too big: %s\n", option1);
 			return 1;
 		}
