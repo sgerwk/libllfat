@@ -442,9 +442,11 @@ part names are printed individually, deleted entries are also printed with
 \fIall\fP and entries over the end of the directory with \fIover\fP
 .TP
 \fBrecover\fP [\fIfilename\fP|\fICLUSTER:n size\fP]
-try to recover the content of a deleted file; in the first form, the file is
-specified by its short name, as found by \fIfattool -s dir / all\fP or similar;
-otherwise, both the cluster number and the file size have to be given
+try to recover the content of a deleted file to stdout; this may work or not,
+depending on the order of creation and deletion of the files in the
+filesystem; in the first form, the file is specified by its short name, as
+found by \fIfattool -s filesystem dir / all\fP or similar; otherwise, both the
+cluster number and the file size have to be given
 .TP
 \fBdirfind\fP [\fInum\fP]
 try to detect which clusters are used for directories; the intended usage is to
