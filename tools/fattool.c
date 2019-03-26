@@ -2613,6 +2613,46 @@ int main(int argn, char *argv[]) {
 			}
 		}
 	}
+	else if (! strcmp(operation, "recover")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: file\n");
+			exit(1);
+		}
+		useshortnames = 1;
+		nostoragepaths = 1;
+		if (option1[0] == '?')
+			option1[0] = 0xE5;
+		if (fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			printf("file %s does not exists\n", option1);
+			exit(1);
+		}
+		if (fatreferenceisvoid(directory, index, previous)) {
+			if (option2[0] != '\0')
+				size = atoi(option2);
+			else {
+				printf("cannot recover by cluster ");
+				printf("only, provide a size\n");
+				exit(1);
+			}
+		}
+		else
+			size = fatentrygetsize(directory, index);
+		for (cl = previous > 0 ? previous : target;
+		     size > 0;
+		     cl = fatclusterfindfreebetween(f,
+				FAT_FIRST, fatlastcluster(f),
+				fatclusterintervalnext(f, cl,
+					FAT_FIRST, fatlastcluster(f)))) {
+			cluster = fatclusterread(f, cl);
+			if (cluster == NULL)
+				break;
+			fwrite(fatunitgetdata(cluster), 1,
+				size > cluster->size ? cluster->size : size,
+				stdout);
+			size -= cluster->size;
+		}
+	}
 	else {
 		printf("unknown operation: %s\n", operation);
 		exit(1);
