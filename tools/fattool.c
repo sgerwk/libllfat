@@ -2237,6 +2237,7 @@ int main(int argn, char *argv[]) {
 			}
 
 			if (diff) {
+				finalres = 64;
 				printf(" %d", cl);
 				fflush(stdout);
 				memcpy(fatunitgetdata(cluster), buf, res);

@@ -365,7 +365,8 @@ immediately for each cluster, while the default is to write all clusters at the
 end; argument \fItest\fP makes the program run doing everything but writing; if
 \fItries\fP is given, reading the previous content of each cluster for
 comparing it to the new is attempted this number of times before overwriting
-(default is 1)
+(default is 1); the return value is 64 if some cluster is or would have been
+overwritten, 0 otherwise
 .TP
 \fBgetsize\fP \fIfile\fP
 print the size of an existing file
