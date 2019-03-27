@@ -1170,6 +1170,8 @@ void usage() {
 	printf("\t\textend file size\n");
 	printf("\t\t\t\telongate or shorten a chain of cluster,\n");
 	printf("\t\t\t\tmaking it long enough for a file of that size\n");
+	printf("\t\tconcat file file [pad]\n");
+	printf("\t\t\t\tconcatenate two file, padding the first\n");
 	printf("\t\tcreatechain size [start]\n");
 	printf("\t\t\t\tcreate a new chain of cluster\n");
 	printf("\t\tposition (n|sector:s|file:name) [file|bvi|recur]\n");
