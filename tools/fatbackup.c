@@ -185,7 +185,7 @@ int main(int argn, char *argv[]) {
 		case 'a':
 			diffonly = 0;
 			break;
-		case 's':
+		case 'w':
 			whole = 1;
 			break;
 		}
@@ -200,7 +200,7 @@ int main(int argn, char *argv[]) {
 		printf("\t\t-u\tcopy only sectors of FAT that are used\n");
 		printf("\t\t-a\tcopy also sectors and clusters that ");
 		printf("already coincide\n");
-		printf("\t\t-s\tmake destination as large as ");
+		printf("\t\t-w\tmake destination as large as ");
 		printf("the whole filesystem\n");
 		exit(1);
 	}
