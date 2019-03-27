@@ -200,6 +200,14 @@ with \fIdelete\fP (not \fIdeletefile\fP); this works only for splitting points
 that are at cluster boundaries
 
 .TP
+\fBextend\fP \fIfile\fP \fIsize\fP
+enlongen or shorten the chain of clusters of \fIfile\fP so that it just long
+enough for a file of the given size; this is like \fIcrop\fP, but allows the
+chain to be extended; if the chain is shorten, the deleted clusters are
+deallocated; the actual size of the file is not changed: \fIsetsize\fP does
+that
+
+.TP
 \fBconcat\fP \fIfirst\fP \fIsecond\fP [\fIpad\fP]
 pad the first file with 0 to the next cluster boundary and then append the
 chain of clusters of the second file to its; update the size of the first file

@@ -1167,6 +1167,9 @@ void usage() {
 	printf("\t\t\t\tcut the chain of clusters of a file\n");
 	printf("\t\t\t\toptionally free the subsequent clusters\n");
 	printf("\t\t\t\tchain left long enough for a file of given size\n");
+	printf("\t\textend file size\n");
+	printf("\t\t\t\telongate or shorten a chain of cluster,\n");
+	printf("\t\t\t\tmaking it long enough for a file of that size\n");
 	printf("\t\tposition (n|sector:s|file:name) [file|bvi|recur]\n");
 	printf("\t\t\t\tprint position of cluster n\n");
 	printf("\t\t\t\tor cluster that contains sector s\n");
@@ -1665,6 +1668,35 @@ int main(int argn, char *argv[]) {
 		fatreferencesettarget(f, directory, index, previous, FAT_EOF);
 		if (chain)
 			fatclusterfreechain(f, cl);
+	}
+	else if (! strcmp(operation, "extend")) {
+		if (fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			printf("not found: %s\n", option1);
+			exit(1);
+		}
+		size = atol(option2);
+		for (cl = previous > 0 ? previous : target, next = FAT_UNUSED;
+		     size > 0 || next != FAT_EOF;
+		     cl = next) {
+			cluster = fatclusterread(f, cl);
+			if (cluster == NULL)
+				break;
+			size -= cluster->size;
+			next = fatgetnextcluster(f, cl);
+			if (size <= -cluster->size)
+				fatsetnextcluster(f, cl, FAT_UNUSED);
+			else if (size <= 0)
+				fatsetnextcluster(f, cl, FAT_EOF);
+			else if (next == FAT_EOF || next == FAT_UNUSED) {
+				next = fatclusterfindfree(f);
+				fatsetnextcluster(f, cl, next);
+				fatsetnextcluster(f, next, FAT_EOF);
+			}
+		}
+		if (atol(option2) == 0)
+			fatreferencesettarget(f,
+				directory, index, previous, FAT_EOF);
 	}
 	else if (! strcmp(operation, "concat")) {
 		if (fileoptiontoreference(f, option1,
