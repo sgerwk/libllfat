@@ -225,6 +225,16 @@ that the first file becomes the concatenation of the first and the second and
 the second is deleted, all of this without copying clusters
 
 .TP
+\fBcreatechain\fP \fIsize\fP [\fIstart\fP]
+create a new chain of clusters, presumably to be attached to a file entry or to
+the end of a file (the resulting filesystem is incorrect if neither is done);
+the chain is made long just enough to hold \fIsize\fP bytes; if the optional
+\fIstart\fP argument is not given, the first cluster of the newly created chain
+is printed; otherwise, the argument is the first cluster of the chain; this
+cluster may or may not be free; the latter case allows to extend an existing
+chain, but may also make the filesystem inconsistent
+
+.TP
 \fBposition\fP (\fIn\fP|\fIsector:s\fP|\fIfile:name\fP) \
 [\fIfile\fP|\fIbvi\fP|\fIrecur\fP]
 print the position of cluster \fIn\fP in the filesystem; with argument

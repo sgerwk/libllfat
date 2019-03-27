@@ -1170,6 +1170,8 @@ void usage() {
 	printf("\t\textend file size\n");
 	printf("\t\t\t\telongate or shorten a chain of cluster,\n");
 	printf("\t\t\t\tmaking it long enough for a file of that size\n");
+	printf("\t\tcreatechain size [start]\n");
+	printf("\t\t\t\tcreate a new chain of cluster\n");
 	printf("\t\tposition (n|sector:s|file:name) [file|bvi|recur]\n");
 	printf("\t\t\t\tprint position of cluster n\n");
 	printf("\t\t\t\tor cluster that contains sector s\n");
@@ -1733,6 +1735,29 @@ int main(int argn, char *argv[]) {
 			secondtarget);
 		size += fatentrygetsize(seconddirectory, secondindex);
 		fatentrysetsize(startdirectory, startindex, size);
+	}
+	else if (! strcmp(operation, "createchain")) {
+		size = atol(option1);
+		if (option2[0] == '\0') {
+			start = fatclusterfindfree(f);
+			printf("%d\n", start);
+		}
+		else {
+			start = atol(option2);
+			f->last = start + 1;
+		}
+		for (cl = start; size > 0; cl = next) {
+			next = fatclusterfindfree(f);
+			if (cl == FAT_ERR || next == FAT_ERR) {
+				printf("failed to allocate cluster\n");
+				exit(1);
+			}
+			fatsetnextcluster(f, cl, next);
+			fatsetnextcluster(f, next, FAT_EOF);
+			cluster = fatclustercreate(f, next);
+			size -= cluster->size;
+			fatunitdelete(&f->clusters, next);
+		}
 	}
 	else if (! strcmp(operation, "position")) {
 		if (option1[0] == '\0') {
