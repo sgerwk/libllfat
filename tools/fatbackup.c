@@ -194,7 +194,7 @@ int main(int argn, char *argv[]) {
 	}
 
 	if (argn - 1 < 2) {
-		printf("usage:\n\tfatbackup [-i] [-u] [-a] [-s] ");
+		printf("usage:\n\tfatbackup [-i] [-u] [-a] [-w] ");
 		printf("source destination\n");
 		printf("\t\t-i\toverwrite without asking\n");
 		printf("\t\t-u\tcopy only sectors of FAT that are used\n");
