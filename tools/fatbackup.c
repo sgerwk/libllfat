@@ -164,14 +164,16 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 int main(int argn, char *argv[]) {
 	char *srcname, *dstname;
 	fat *src, *dst;
-	int overwrite, usedonly;
+	int overwrite, usedonly, whole;
 	int sectors, size, s;
 	int nfat;
+	int res;
 
 			/* arguments */
 
 	overwrite = 0;
 	usedonly = 0;
+	whole = 0;
 	while (argn - 1 >= 1 && argv[1][0] == '-') {
 		switch(argv[1][1]) {
 		case 'i':
@@ -183,18 +185,23 @@ int main(int argn, char *argv[]) {
 		case 'a':
 			diffonly = 0;
 			break;
+		case 's':
+			whole = 1;
+			break;
 		}
 		argn--;
 		argv++;
 	}
 
 	if (argn - 1 < 2) {
-		printf("usage:\n\tfatbackup [-i] [-u] [-a] ");
+		printf("usage:\n\tfatbackup [-i] [-u] [-a] [-s] ");
 		printf("source destination\n");
 		printf("\t\t-i\toverwrite without asking\n");
 		printf("\t\t-u\tcopy only sectors of FAT that are used\n");
 		printf("\t\t-a\tcopy also sectors and clusters that ");
 		printf("already coincide\n");
+		printf("\t\t-s\tmake destination as large as ");
+		printf("the whole filesystem\n");
 		exit(1);
 	}
 
@@ -237,9 +244,19 @@ int main(int argn, char *argv[]) {
 		exit(1);
 	}
 
-			/* copy directory clusters */
+			/* size */
 
 	size = fatgetbytespersector(src);
+	if (whole) {
+		res = ftruncate(dst->fd, size * fatgetnumsectors(src));
+		if (res == -1) {
+			perror(dstname);
+			exit(1);
+		}
+	}
+
+			/* copy directory clusters */
+
 	dst->boot = fatunitget(&src->sectors, 0, size, 0, src->fd);
 	printf("copying clusters:");
 	fflush(stdout);

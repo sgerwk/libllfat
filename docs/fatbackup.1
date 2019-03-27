@@ -3,7 +3,7 @@
 fatbackup \- copy the essential parts of a FAT12/16/32 filesystem
 .SH SYNOPSIS
 .B fatbackup
-[\fI-i\fP] [\fI-u\fP] [\fI-a\fP] \fIsource destination\fP
+[\fI-i\fP] [\fI-u\fP] [\fI-a\fP] [\fI-s\fP] \fIsource destination\fP
 .
 .
 .
@@ -42,6 +42,9 @@ write sectors and clusters without checking whether they are already the same
 in the sources and in the destination; this is implicit if the destination file
 does not exists, otherwise the default is that sectors and clusters are written
 only if they do not coincide
+.TP
+\fB-w\fP
+make the destination file as large as whole source filesystem
 .
 .
 .
