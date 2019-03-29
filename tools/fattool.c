@@ -1239,7 +1239,7 @@ int main(int argn, char *argv[]) {
 	unsigned long readserial;
 	int res, diff, finalres, recur, chain, all, chains;
 	int over, startdir, nchanges;
-	char dummy, pad, *buf;
+	char dummy, pad, *buf, firstchar;
 	int nfat;
 	char *timeformat;
 	struct tm tm;
@@ -2669,21 +2669,19 @@ int main(int argn, char *argv[]) {
 		}
 		useshortnames = 1;
 		nostoragepaths = 1;
-		if (option1[0] == '?')
+		if (! strchr(option1, ':'))
 			option1[0] = 0xE5;
 		if (fileoptiontoreference(f, option1,
 				&directory, &index, &previous, &target)) {
 			printf("file %s does not exists\n", option1);
 			exit(1);
 		}
-		if (fatreferenceisvoid(directory, index, previous)) {
-			if (option2[0] != '\0')
-				size = atoi(option2);
-			else {
-				printf("cannot recover by cluster ");
-				printf("only, provide a size\n");
-				exit(1);
-			}
+		if (option2[0] != '\0')
+			size = atoi(option2);
+		else if (fatreferenceisvoid(directory, index, previous)) {
+			printf("cannot recover by cluster ");
+			printf("only, provide a size\n");
+			exit(1);
 		}
 		else
 			size = fatentrygetsize(directory, index);
@@ -2701,6 +2699,48 @@ int main(int argn, char *argv[]) {
 				stdout);
 			size -= cluster->size;
 		}
+	}
+	else if (! strcmp(operation, "undelete")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: file\n");
+			exit(1);
+		}
+		useshortnames = 1;
+		nostoragepaths = 1;
+		if (! strchr(option1, ':')) {
+			firstchar = option1[0];
+			option1[0] = 0xE5;
+		}
+		else
+			firstchar = 'X';
+		if (fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			printf("file %s does not exists\n", option1);
+			exit(1);
+		}
+		if (fatreferenceisvoid(directory, index, previous)) {
+			printf("cannot undelete by cluster\n");
+			exit(1);
+		}
+		seconddirectory = directory;
+		secondindex = index;
+		size = fatentrygetsize(directory, index);
+		for (next = target;
+		     size > 0;
+		     next = fatclusterfindfreebetween(f,
+				FAT_FIRST, fatlastcluster(f),
+				fatclusterintervalnext(f, target,
+					FAT_FIRST, fatlastcluster(f)))) {
+			cluster = fatclusterread(f, next);
+			if (cluster == NULL)
+				break;
+			size -= cluster->size;
+			fatreferencesettarget(f,
+				directory, index, previous, next);
+			fatreferencenext(f, &directory, &index, &previous);
+			fatsetnextcluster(f, next, FAT_EOF);
+		}
+		fatentryfirst(seconddirectory, secondindex, firstchar);
 	}
 	else {
 		printf("unknown operation: %s\n", operation);

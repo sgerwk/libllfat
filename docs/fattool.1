@@ -459,12 +459,30 @@ start point of each long file name is also printed; with option \fB-s\fP, long
 part names are printed individually, deleted entries are also printed with
 \fIall\fP and entries over the end of the directory with \fIover\fP
 .TP
-\fBrecover\fP [\fIfilename\fP|\fICLUSTER:n size\fP]
+\fBrecover\fP [\fIfile\fP [\fIsize\fP]]
 try to recover the content of a deleted file to stdout; this may work or not,
-depending on the order of creation and deletion of the files in the
-filesystem; in the first form, the file is specified by its short name, as
-found by \fIfattool -s filesystem dir / all\fP or similar; otherwise, both the
-cluster number and the file size have to be given
+depending on the order of creation and deletion of the files in the filesystem
+
+the file may be specified as a name, as a directory entry or as a cluster (see
+\fIFILE NAMES\fP, below); it can be specified by name only in its short form,
+as found by found by \fIfattool -s filesystem dir / all\fP or similar; its
+first character is ignored; only the first deleted file of that name is
+undeleted; the following with the same name are not (deleted file names are not
+unique); the \fIENTRY:dir,index\fP form is necessary in such cases; the file
+may also be specified as \fICLUSTER:num\fP, but then its size is mandatory
+
+.TP
+\fBundelete\fP [\fIfile\fP]
+try to undelete the given file; \fIrecover\fP may be a better solution because
+it does not change the filesystem; however, \fIundelete\fP may be the only way
+to recover a file if other files have been deleted after it: sometimes, the
+only way to correctly recover a file is to undelete the ones deleted after it
+in reverse order
+
+the file to be undeleted can only be specified by name or entry, not by
+cluster; if specified by entry, the first letter of the undeleted file is
+always \fIX\fP
+
 .TP
 \fBdirfind\fP [\fInum\fP]
 try to detect which clusters are used for directories; the intended usage is to
