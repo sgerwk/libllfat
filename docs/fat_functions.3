@@ -967,12 +967,12 @@ seconds, except that only the date of last read (not the time) is ever stored.
 The structure \fIstruct tm\fP is described in \fBctime\fP(3).
 .TP
 .BI "void fatentrydelete(unit *" directory ", int " index )
-Delete this directory entry. This is like deleting the file,
-except that the clusters with the file content are not deallocated.
+Delete this directory entry. Deleting a file amounts to doing that, but also
+to deallocating the clusters holding the file content.
 .TP
 .BI "void fatentryzero(unit *" directory ", int " index )
-Fill the 32-byte block with zero. This is necessary to intialize clusters that
-appended to directories.
+Fill the 32-byte block with zero. This is necessary to initialize clusters that
+are to be appended to directories.
 .TP
 .BI "void fatentryprint(unit *" directory ", int " index )
 Print some of the data associated to the file to stdout. This is mainly for

@@ -104,7 +104,7 @@ int fatstringtoshortname(unsigned char dst[11], char src[13]) {
 		printf("invalid shortname: %s\n", src);
 		return -1;
 	}
-	printf("%zu\n", strlen(pos));
+	dprintf("%zu\n", strlen(pos));
 	memcpy(dst + 8, pos, strlen(pos));
 
 	return 0;
@@ -154,8 +154,8 @@ int fatentryisdotfile(unit *directory, int index) {
 }
 
 void fatentrydelete(unit *directory, int index) {
-	fatentryzero(directory, index);
 	ENTRYPOS(directory, index, 0) = 0xE5;
+	directory->dirty = 1;
 }
 
 void fatentryzero(unit *directory, int index) {
