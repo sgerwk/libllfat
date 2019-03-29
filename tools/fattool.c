@@ -119,8 +119,7 @@ int fileoptiontoreferenceboth(fat *f, char *option,
 		unit **directory, int *index,
 		unit **longdirectory, int *longindex,
 		int32_t *previous, int32_t *target) {
-	int32_t r, dir;
-	char dummy;
+	int32_t r;
 	char *path;
 	size_t len;
 	wchar_t *pathlong, *legalized, *converted;
@@ -136,15 +135,6 @@ int fileoptiontoreferenceboth(fat *f, char *option,
 		*target = fatreferencegettarget(f,
 				*directory, *index, *previous);
 		return 0;
-	}
-
-	if (sscanf(option, "%d,%d%c", &dir, index, &dummy) == 2) {
-		if (dir == 0)
-			dir = fatgetrootbegin(f);
-		*directory = fatclusterread(f, dir);
-		*target = fatreferencegettarget(f,
-				*directory, *index, *previous);
-		return *directory == NULL;
 	}
 
 	if (! strcmp(option, "/")) {

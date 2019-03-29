@@ -522,10 +522,12 @@ requires \fI-n\fP. This form can also be given as the file name for some
 operations (like reading a file, where the size is taken to be given by the
 length of the chain).
 
-The pair \fIcluster,index\fP is number of cluster where the directory entry of
-the file is, and its progressive number within it. This specification can only
-be given for existing files and directories other than /. The root directory
-and a file to be created can only be specified by path.
+Another special form for the beginning of a path is \fIentry:cluster,index\fP.
+The two numbers are the cluster where the directory entry of the file is and
+its progressive number within it. This specification can only be given for
+existing or deleted files and directories other than /. The root directory and
+a file to be created can only be specified by path.
+
 .
 .
 .
