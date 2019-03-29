@@ -93,6 +93,7 @@ int fatentrysetreadtimenow(unit *directory, int index);
  * delete a directory entry
  * zeroing it is only for initialization and when no other entry follows
  */
+void fatentryfirst(unit *directory, int index, char first);
 void fatentrydelete(unit *directory, int index);
 void fatentryzero(unit *directory, int index);
 

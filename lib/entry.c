@@ -153,9 +153,13 @@ int fatentryisdotfile(unit *directory, int index) {
 		! fatentrycompareshortname(directory, index, "..");
 }
 
-void fatentrydelete(unit *directory, int index) {
-	ENTRYPOS(directory, index, 0) = 0xE5;
+void fatentryfirst(unit *directory, int index, char first) {
+	ENTRYPOS(directory, index, 0) = first;
 	directory->dirty = 1;
+}
+
+void fatentrydelete(unit *directory, int index) {
+	fatentryfirst(directory, index, 0xE5);
 }
 
 void fatentryzero(unit *directory, int index) {

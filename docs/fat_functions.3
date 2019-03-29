@@ -966,6 +966,10 @@ version set the date/time using the current system time. Granularity is two
 seconds, except that only the date of last read (not the time) is ever stored.
 The structure \fIstruct tm\fP is described in \fBctime\fP(3).
 .TP
+.BI "void fatentryfirst(unit *" directory ", int " index ", char " first )
+Change the first character of a file. This is intended to facilitate file
+undeletion.
+.TP
 .BI "void fatentrydelete(unit *" directory ", int " index )
 Delete this directory entry. Deleting a file amounts to doing that, but also
 to deallocating the clusters holding the file content.
