@@ -2350,10 +2350,13 @@ case-insensitive names). This is accomplished by converting all names via
 creating a new file. The same applies to long names, whose leading spaces and
 trailing periods and spaces are removed.
 
-At the beginning of a path, the special forms \fICLUSTER:num\fP (for short
-names) and \fIcluster:num\fP (for long names) mean to start from cluster
-\fInum\fP instead of the \fIdir\fP argument. Such path names are invalid since
+A path may begin with a special form that tells where lookup starts. For short
+names, \fIENTRY:dir,index\fP and \fICLUSTER:num\fP mean that lookup starts from
+the given directory entry or from the given cluster. The same for long names
+are \fIentry:dir,index\fP and \fIcluster:num\fP. A zero value for \fIdir\fP
+means the first cluster of the root directory. Such paths are invalid since
 they contain the character `:'.
+
 .
 .
 .

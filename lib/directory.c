@@ -74,8 +74,16 @@ int fatlookupfile(fat *f, int32_t dir,
 	char name[13];
 	unit *scandirectory;
 	int scanindex;
+	uint32_t cl;
 
 	dprintf("lookup file %s:", shortname);
+
+	if (sscanf(shortname, "ENTRY:%d,%d", &cl, index) == 2) {
+		if (cl == 0)
+			cl = fatgetrootbegin(f);
+		*directory = fatclusterread(f, cl);
+		return 0;
+	}
 
 	scandirectory = fatclusterread(f, dir);
 
