@@ -1909,7 +1909,7 @@ fatlongend(&scan);
 
 During the scan the return value of \fBfatlongscan()\fP is \fIFAT_LONG_PART\fP
 if the entries analyzed so far are the correct beginning of a long file name.
-If also includes \fIFAT_LONG_FIRST\fP it this entry is the very first of a long
+If also includes \fIFAT_LONG_FIRST\fP if this entry is the very first of a long
 file name. The field \fIscan.n\fP is the progression number of the last
 analyzed entry. It begins with the number of entries used to store the file
 name and decreases by one at each step; on the last entry, its value is
@@ -1963,12 +1963,20 @@ Find the short entry corresponding to a long name.
 The long name is passed as its first entry \fIlongdirectory,longindex\fP. The
 short name is returned as its entry \fIdirectory,index\fP.
 
-The return value is like in the next function, but should usually be either
+The return value is like in the next function, but should normally be either
 \fIFAT_SHORT\fP or \fIFAT_SHORT | FAT_LONG_ALL\fP, depending on whether the
 file has a long name or not. Otherwise, some kind of error occurred.
 
 The name of the file is returned in \fIname\fP, which points to a dynamically
 allocated wide string. The program is supposed to free it when no longer used.
+
+This function differs from the next because the input directory entry is
+supposed to be the first entry of a long directory name; otherwise, an error
+value is returned. The next function instead take the input directory entry as
+the starting point of a directory scan; it skips all empty and invalid entries
+and returns the first valid one. This is appropriate when scanning a directory
+or searching for a file by name, but is not when the location of the long file
+name is aready known.
 
 .TP
 .BI "int fatlongnext(fat *" f ", unit **" directory ", int *" index ", \
