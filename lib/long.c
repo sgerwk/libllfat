@@ -281,6 +281,39 @@ int fatlongscan(unit *directory, int index, struct fatlongscan *scan) {
 }
 
 /*
+ * from the beginning of a long file name to its short entry
+ *
+ * - input longdirectory,longindex is the start of the long entry
+ * - output directory,index is the short entry, if successful
+ * - return values as the next function
+ */
+int fatlongentrytoshort(fat *f, unit *longdirectory, int longindex,
+		unit **directory, int *index, wchar_t **name) {
+	int res, first;
+	struct fatlongscan scan;
+
+	*directory = longdirectory;
+	*index = longindex;
+
+	for (fatlonginit(&scan), first = 0;
+	     ((res = fatlongscan(*directory, *index, &scan)) & ~FAT_LONG_FIRST)
+		== FAT_LONG_SOME;
+	     fatnextentry(f, directory, index))
+		if (res & FAT_LONG_FIRST) {
+			if (first)
+				return FAT_LONG_ERR;
+			else
+				first = 1;
+		}
+
+	if (first && ! (res & FAT_LONG_ALL))
+		return FAT_LONG_ERR;
+
+	*name = scan.name;
+	return res | (scan.err == 0 ? 0 : FAT_LONG_ERR);
+}
+
+/*
  * find the next valid directory entry
  *
  * - updated directory,index points to the short name entry

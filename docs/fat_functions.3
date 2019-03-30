@@ -1953,6 +1953,22 @@ struct fatlongscan {
 };
 .fi
 .TP
+.BI "int fatlongentrytoshort(fat *" f ", \
+unit *" longdirectory ", int " longindex ", \
+unit **" directory ", int *" index ", wchar_t **" name )
+Find the short entry corresponding to a long name.
+
+The long name is passed as its first entry \fIlongdirectory,longindex\fP. The
+short name is returned as its entry \fIdirectory,index\fP.
+
+The return value is like in the next function, but should usually be either
+\fIFAT_SHORT\fP or \fIFAT_SHORT | FAT_LONG_ALL\fP, depending on whether the
+file has a long name or not. Otherwise, some kind of error occurred.
+
+The name of the file is returned in \fIname\fP, which points to a dynamically
+allocated wide string. The program is supposed to free it when no longer used.
+
+.TP
 .BI "int fatlongnext(fat *" f ", unit **" directory ", int *" index ", \
 unit **" longdirectory ", int *" longindex ", wchar_t **" name )
 Find the next file in a directory, including its longname.

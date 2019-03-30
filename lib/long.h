@@ -48,6 +48,8 @@ void fatlonginit(struct fatlongscan *scan);
 void fatlongend(struct fatlongscan *scan);
 int fatlongscan(unit *directory, int index, struct fatlongscan *scan);
 
+int fatlongentrytoshort(fat *f, unit *longdirectory, int longindex,
+		unit **directory, int *index, wchar_t **name);
 int fatlongnext(fat *f, unit **directory, int *index,
 		unit **longdirectory, int *longindex, wchar_t **name);
 int fatnextname(fat *f, unit **directory, int *index, wchar_t **name);
