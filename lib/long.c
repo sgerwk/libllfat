@@ -249,12 +249,11 @@ int fatlongscan(unit *directory, int index, struct fatlongscan *scan) {
 		scan->checksum = _unit8uint(directory, index * 32 + 13);
 		_fatscanstart(directory, index, scan);
 	}
-
-	if (scan->checksum != _unit8uint(directory, index * 32 + 13) ||
+	else if (scan->checksum != _unit8uint(directory, index * 32 + 13) ||
 	    scan->n <= 0 || 
 	    scan->n != (_unit8int(directory, index * 32) & 0x3F)) {
 		scan->n = -1;
-		_fatscanstart(directory, index, scan);
+		return 0;
 	}
 
 	scan->name = realloc(scan->name,
