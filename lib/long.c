@@ -306,11 +306,10 @@ int fatlongentrytoshort(fat *f, unit *longdirectory, int longindex,
 				first = 1;
 		}
 
-	if (first && ! (res & FAT_LONG_ALL))
-		return FAT_LONG_ERR;
-
 	*name = scan.name;
-	return res | (scan.err == 0 ? 0 : FAT_LONG_ERR);
+	return res |
+		(scan.err == 0 ? 0 : FAT_LONG_ERR) |
+		(first && ! (res & FAT_LONG_ALL) ? FAT_LONG_ERR : 0);
 }
 
 /*
