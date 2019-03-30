@@ -27,11 +27,12 @@
 /*
  * find next directory entry, possibly with long filename
  */
-#define FAT_END       0x8000
-#define FAT_SHORT     0x4000
-#define FAT_LONG_ALL  0x2000
-#define FAT_LONG_SOME 0x1000
-#define FAT_LONG_ERR  0x0800
+#define FAT_END        0x8000
+#define FAT_SHORT      0x4000
+#define FAT_LONG_ALL   0x2000
+#define FAT_LONG_SOME  0x1000
+#define FAT_LONG_FIRST 0x0800
+#define FAT_LONG_ERR   0x0400
 
 struct fatlongscan {
 	int n;

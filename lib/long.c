@@ -191,7 +191,8 @@ wchar_t *_fatshorttowide(unit *directory, int index) {
  * directory entries, not from the short entry
  *
  * res is FAT_LONG_SOME if the entries read so far are a correct beginning of a
- * long name
+ * long name; it is FAT_LONG_SOME | FAT_LONG_FIRST if it is the very first
+ * entry of a long name
  */
 
 void fatlonginit(struct fatlongscan *scan) {
@@ -220,6 +221,8 @@ void _fatscanstart(unit *directory, int index, struct fatlongscan *scan) {
 }
 
 int fatlongscan(unit *directory, int index, struct fatlongscan *scan) {
+	int first;
+
 	if (fatentryend(directory, index)) {
 		fatlongend(scan);
 		return FAT_END;
@@ -248,6 +251,7 @@ int fatlongscan(unit *directory, int index, struct fatlongscan *scan) {
 		scan->n = _unit8int(directory, index * 32) & 0x3F;
 		scan->checksum = _unit8uint(directory, index * 32 + 13);
 		_fatscanstart(directory, index, scan);
+		first = FAT_LONG_FIRST;
 	}
 	else if (scan->checksum != _unit8uint(directory, index * 32 + 13) ||
 	    scan->n <= 0 || 
@@ -255,6 +259,8 @@ int fatlongscan(unit *directory, int index, struct fatlongscan *scan) {
 		scan->n = -1;
 		return 0;
 	}
+	else
+		first = 0;
 
 	scan->name = realloc(scan->name,
 			(scan->len + 5 + 6 + 2) * sizeof(wchar_t));
@@ -271,7 +277,7 @@ int fatlongscan(unit *directory, int index, struct fatlongscan *scan) {
 			&scan->err);
 	scan->len += 5 + 6 + 2;
 
-	return FAT_LONG_SOME;
+	return FAT_LONG_SOME | first;
 }
 
 /*
