@@ -111,9 +111,9 @@ void printpath(fat *f, wchar_t *path, unit *directory, int index,
 }
 
 /*
- * process an option that is a file (either "directory,index" or "path") and
- * turns it into a cluster reference; in some cases like "cluster:103", the
- * target is filled but the reference is void
+ * process an option that is a file and turns it into a cluster reference; in
+ * some cases like "cluster:103", the target is filled but the reference is
+ * void
  */
 int fileoptiontoreferenceboth(fat *f, char *option,
 		unit **directory, int *index,
@@ -2353,6 +2353,35 @@ int main(int argn, char *argv[]) {
 			printf("missing argument: new size\n");
 		else
 			fatentrysetsize(directory, index, atoi(option2));
+	}
+	else if (! strcmp(operation, "getname")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: file name\n");
+			exit(1);
+		}
+		if (fileoptiontoreferenceboth(f, option1,
+				&directory, &index,
+				&longdirectory, &longindex,
+				&previous, &target)) {
+			printf("file %s does not exists\n", option1);
+			exit(1);
+		}
+		if (fatreferenceisvoid(directory, index, previous)) {
+			printf("cannot obtain name by cluster\n");
+			exit(1);
+		}
+		if (useshortnames || ! strcmp(option2, "short")) {
+			fatentryprintshortname(directory, index);
+			printf("\n");
+		}
+		else {
+			if (! (fatlongentrytoshort(f, longdirectory, longindex,
+					&directory, &index, &longname))) {
+				printf("error in file %ls\n", longname);
+				exit(1);
+			}
+			printf("%ls\n", longname);
+		}
 	}
 	else if (! strcmp(operation, "find")) {
 		if (fileoptiontoreference(f, option1,

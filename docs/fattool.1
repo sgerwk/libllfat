@@ -401,6 +401,13 @@ to this operation)
 \fBlegalize\fP \fIpathname\fP
 print the legalized version of a filename; this is the file name that is
 actually used when passing the \fI-t\fP option
+
+.TP
+\fBgetname\fP \fIfile\fP [\fIshort\fP]
+print the name of the file; this allows to obtain the name of a file specified
+as \fIentry:dir,index\fP or \fIENTRY:dir,index\fP; with the \fIshort\fP option,
+it allows to obtain the short name of a file from its long name
+
 .TP
 \fBfind\fP [\fIdirectory\fP [\fIdir\fP]]
 print the complete path of all files under the directory (by default, the
