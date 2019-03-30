@@ -1909,9 +1909,11 @@ fatlongend(&scan);
 
 During the scan the return value of \fBfatlongscan()\fP is \fIFAT_LONG_PART\fP
 if the entries analyzed so far are the correct beginning of a long file name.
-The field \fIscan.n\fP is the progression number of the last analyzed entry. It
-begins with the number of entries used to store the file name and decreases by
-one at each step; on the last entry, its value is \fI1\fP.
+If also includes \fIFAT_LONG_FIRST\fP it this entry is the very first of a long
+file name. The field \fIscan.n\fP is the progression number of the last
+analyzed entry. It begins with the number of entries used to store the file
+name and decreases by one at each step; on the last entry, its value is
+\fI1\fP.
 
 The return value is \fIFAT_END\fP if the directory is finished before a full
 sequence for a file was found. Otherwise, if the return value contains
