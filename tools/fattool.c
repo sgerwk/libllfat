@@ -1199,6 +1199,8 @@ void usage() {
 	printf("\t\tisvalid filename\n");
 	printf("\t\t\t\tcheck whether the filename is legal\n");
 	printf("\t\tlegalize filename\n\t\t\t\tmake the filename legal\n");
+	printf("\t\tgetname filename [short]\n");
+	printf("\t\t\t\tprint the name or short name of a file\n");
 	printf("\t\tfind\t\tlist all files in the volume\n");
 	printf("\t\tmkdir directory\tcreate a directory\n");
 	printf("\t\tdirectoryclean\tclean unused directory clusters\n");
