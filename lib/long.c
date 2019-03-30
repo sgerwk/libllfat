@@ -389,17 +389,17 @@ int fatlookupfilelongboth(fat *f, int32_t dir, wchar_t *name,
 		unit **directory, int *index,
 		unit **longdirectory, int *longindex) {
 	wchar_t *sname;
-	uint32_t cl;
+	int32_t cl;
 	int res;
 
 	dprintf("lookup file %ls:", name);
 
-	if (swscanf(name, L"entry:%d,%d", &cl, index) == 2) {
+	if (swscanf(name, L"entry:%d,%d", &cl, longindex) == 2) {
 		if (cl == 0)
 			cl = fatgetrootbegin(f);
-		*directory = fatclusterread(f, cl);
-		res = fatlongnext(f, directory, index,
-			longdirectory, longindex, &sname);
+		*longdirectory = fatclusterread(f, cl);
+		res = fatlongentrytoshort(f,
+			*longdirectory, *longindex, directory, index, &sname);
 		return ! (res & FAT_SHORT);
 	}
 
