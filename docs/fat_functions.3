@@ -1973,13 +1973,14 @@ allocated wide string. The program is supposed to free it when no longer used.
 unit **" longdirectory ", int *" longindex ", wchar_t **" name )
 Find the next file in a directory, including its longname.
 
-The input value of the parameters \fIdirectory,index\fP point to the start of a
-directory or to the previous directory entry; the output value point to the
-position of the short entry of the next file. It contains most of the file
-data, which can can be retrived or changed via the \fIentry.h\fP functions. For
-example, the shortname is obtained via \fIfatentrygetshortname(f, directory,
-index, shortname)\fP. The pair \fIlongdirectory,longindex\fP is where the
-sequence of entries for this file begins.
+The input value of the parameters \fIdirectory,index\fP is where to start the
+search. It may be the start of a directory, or the entry following the last
+entry of the previous file. The output value points to the position of the
+short entry of the next file. It contains most of the file data, which can can
+be retrived or changed via the \fIentry.h\fP functions. For example, the
+shortname is obtained via \fIfatentrygetshortname(f, directory, index,
+shortname)\fP. The pair \fIlongdirectory,longindex\fP is where the sequence of
+entries for this file begins.
 
 The name of the file is returned in \fIname\fP, which points to a dynamically
 allocated wide string. The program is supposed to free it when no longer used.
