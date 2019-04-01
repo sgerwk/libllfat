@@ -725,7 +725,7 @@ int directoryclean(fat *f, int testonly) {
 }
 
 /*
- * clean up the last deleted entries in a directory cluster 
+ * clean up the last deleted entries in a directory cluster
  */
 
 int _directorylast(fat *f,
@@ -1295,7 +1295,7 @@ int main(int argn, char *argv[]) {
 				argv++;
 			}
 			break;
-		case 'e': 
+		case 'e':
 			if (argv[1][2] != '\0')
 				simerrfile = &argv[1][2];
 			else {
@@ -1367,7 +1367,7 @@ int main(int argn, char *argv[]) {
 
 	if (! strcmp(operation, "isvalid")) {
 		if (useshortnames) {
-			if ((finalres = fatinvalidpath(option1))) 
+			if ((finalres = fatinvalidpath(option1)))
 				printf("invalid\n");
 			else {
 				name = fatstoragepath(option1);
@@ -1384,7 +1384,7 @@ int main(int argn, char *argv[]) {
 			longpath = malloc((wlen + 1) * sizeof(wchar_t));
 			mbstowcs(longpath, option1, wlen + 1);
 
-			if ((finalres = fatinvalidpathlong(longpath))) 
+			if ((finalres = fatinvalidpathlong(longpath)))
 				printf("invalid\n");
 			else {
 				longname = fatstoragepathlong(longpath);
@@ -1656,7 +1656,7 @@ int main(int argn, char *argv[]) {
 			printf("should be either \"free\" or \"leave\"\n");
 			exit(EXIT_FAILURE);
 		}
-		size = option3[0] == '\0' ? 
+		size = option3[0] == '\0' ?
 			fatentrygetsize(directory, index) :
 			(unsigned) atoi(option3);
 
@@ -1763,7 +1763,7 @@ int main(int argn, char *argv[]) {
 		}
 		if (sscanf(option1, "cluster:%" PRId32 "%c", &cl, &dummy) == 1)
 			;
-		else if (! memcmp(option1, "file:", 5) && 
+		else if (! memcmp(option1, "file:", 5) &&
 		         ! fileoptiontoreference(f, option1 + strlen("file:"),
 				&directory, &index, &previous, &target))
 			cl = -1;
@@ -2546,7 +2546,7 @@ int main(int argn, char *argv[]) {
 			exit(1);
 		}
 
-		if (! strcmp(option2, "write") || option2[0] == '\0') 
+		if (! strcmp(option2, "write") || option2[0] == '\0')
 			fatentrygetwritetime(directory, index, &tm);
 		else if (! strcmp(option2, "create"))
 			fatentrygetcreatetime(directory, index, &tm);
@@ -2649,7 +2649,7 @@ int main(int argn, char *argv[]) {
 			printf("file %s does not exists\n", option1);
 			exit(1);
 		}
-		else if (directory != NULL && 
+		else if (directory != NULL &&
 			! fatentryisdirectory(directory, index)) {
 			printf("file %s is not a directory\n", option1);
 			exit(1);
@@ -2690,7 +2690,7 @@ int main(int argn, char *argv[]) {
 			}
 
 			for (index = 0;
-			     ! startdir ? 
+			     ! startdir ?
 			     ! fatnextname(f, &directory, &index, &longname) :
 			     (res = fatlongnext(f, &directory, &index,
 				&longdirectory, &longindex, &longname))
