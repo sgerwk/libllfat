@@ -364,7 +364,7 @@ copy stdin to file; if the optional argument \fIlength\fP is given, stdin is
 not used; rather, a file of that length is created with a correct chain of
 clusters, but their content are uninitialized
 .TP
-\fBdeletefile\fP \fIfile\fP [\fIdir\fP|\fIforce\fP]
+\fBdeletefile\fP \fIfile\fP [(\fIdir\fP|\fIforce\fP) [\fIerase\fP]]
 delete the given file
 (see \fIFILE NAMES\fP, below)
 
@@ -373,6 +373,13 @@ if it is a directory, provided that it is empty; if the string is instead
 \fI"force"\fP, the directory is deleted even if not empty; its files and
 subdirectories are not deallocated; they can be then deallocated with
 \fIfattool filesystem unused\fP
+
+the optional third argument \fIerase\fP is for erasing the directory entries
+that contain the file name and attributes, rather than just marking them as no
+longer used; it does not erase the file content (\fIoverwrite\fP can do that
+before deleting the file); to pass a third argument without a second, use an
+empty second argument, like \fIfattool filesystem file "" erase\fP
+
 .TP
 \fBoverwrite\fP \fIfile\fP [(\fI""\fP|\fIimmediate\fP|\fItest\fP) [\fItries\fP]]
 write stdin to an existing file; no cluster is deleted or appended to the

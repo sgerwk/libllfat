@@ -1190,7 +1190,8 @@ void usage() {
 	printf("\t\t\t\tread content of file to stdout\n");
 	printf("\t\t\t\tchain: dump the entire cluster chain\n");
 	printf("\t\twritefile name\twrite stdin to file\n");
-	printf("\t\tdeletefile name [dir|force]\n\t\t\t\tdelete a file\n");
+	printf("\t\tdeletefile name [(dir|force) [erase]]\n");
+	printf("\t\t\t\tdelete a file\n");
 	printf("\t\toverwrite name [test]\n\t\t\t\toverwrite the ");
 	printf("differing clusters of a file\n");
 	printf("\t\tgetsize file\tget size of file\n");
@@ -2239,11 +2240,23 @@ int main(int argn, char *argv[]) {
 			fatsetnextcluster(f, cl, FAT_UNUSED);
 		}
 
-		if (! useshortnames &&
-		    (longdirectory != directory || longindex != index))
-			if (fatdeletelong(f, longdirectory, longindex))
-				printf("error while deleting long name\n");
-		fatentrydelete(directory, index);
+		if (! ! strcmp(option3, "erase")) {
+			if (! useshortnames &&
+			    (longdirectory != directory || longindex != index))
+				if (fatdeletelong(f, longdirectory, longindex))
+					printf("error deleting long name\n");
+			fatentrydelete(directory, index);
+		}
+		else {
+			while(longdirectory != directory ||
+					longindex != index) {
+				fatentryzero(longdirectory, longindex);
+				fatentrydelete(longdirectory, longindex);
+				fatnextentry(f, &longdirectory, &longindex);
+			}
+			fatentryzero(longdirectory, longindex);
+			fatentrydelete(longdirectory, longindex);
+		}
 	}
 	else if (! strcmp(operation, "overwrite")) {
 		if (option1[0] == '\0') {
