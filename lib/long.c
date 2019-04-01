@@ -1033,7 +1033,7 @@ int fatdeletelong(fat *f, unit *directory, int index) {
 
 	lastn = -1;
 	for (fatlonginit(&scan);
-	     (res = fatlongscan(directory, index, &scan)) == FAT_LONG_SOME;
+	     (res = fatlongscan(directory, index, &scan)) & FAT_LONG_SOME;
 	     fatnextentry(f, &directory, &index)) {
 		dprintf("delete entry %d,%d ", directory->n, index);
 		dprintf("(num %d)\n", scan.n);
