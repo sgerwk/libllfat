@@ -1201,6 +1201,8 @@ void usage() {
 	printf("\t\tlegalize filename\n\t\t\t\tmake the filename legal\n");
 	printf("\t\tgetname filename [short]\n");
 	printf("\t\t\t\tprint the name or short name of a file\n");
+	printf("\t\tsetname filename newname\n");
+	printf("\t\t\t\tchange the short name of a file\n");
 	printf("\t\tfind\t\tlist all files in the volume\n");
 	printf("\t\tmkdir directory\tcreate a directory\n");
 	printf("\t\tdirectoryclean\tclean unused directory clusters\n");
@@ -2383,6 +2385,28 @@ int main(int argn, char *argv[]) {
 				exit(1);
 			}
 			printf("%ls\n", longname);
+		}
+	}
+	else if (! strcmp(operation, "setname")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: file name\n");
+			exit(1);
+		}
+		if (fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			printf("file %s does not exists\n", option1);
+			exit(1);
+		}
+		if (option2[0] == '\0') {
+			printf("missing argument: new file name\n");
+			exit(1);
+		}
+		if ((finalres = fatinvalidname(option2)))
+			printf("invalid short file name: %s\n", option2);
+		else {
+			name = fatstoragename(option2);
+			fatentrysetshortname(directory, index, name);
+			free(name);
 		}
 	}
 	else if (! strcmp(operation, "find")) {
