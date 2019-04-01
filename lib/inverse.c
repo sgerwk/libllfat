@@ -172,7 +172,7 @@ int fatinversedelete(fat *f, fatinverse *rev) {
 		return -1;
 
 	for (cl = FAT_FIRST; cl <= fatlastcluster(f); cl++)
-		if (rev[cl].directory != NULL && 
+		if (rev[cl].directory != NULL &&
 				--rev[cl].directory->refer == 0) {
 			dprintf("delete %d\n", rev[cl].directory->n);
 			fatunitdelete(&f->clusters, rev[cl].directory->n);

@@ -11,7 +11,7 @@ OBJS=fs.o table.o unit.o entry.o directory.o reference.o inverse.o \
 long.o complex.o
 
 all: $(LIBS) $(HEADERS)
- 
+
 libllfat.a: $(OBJS)
 	ar rcs $@ $^
 

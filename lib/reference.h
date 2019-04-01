@@ -80,7 +80,7 @@ int fatfollowpath(fat *f, const char *path,
 
 /*
  * execute a refrun function on every cluster _reference_
- * 
+ *
  * the refrun function is called with:
  * - the cluster reference
  * - a reference to the directory entry of the file containing the cluster;

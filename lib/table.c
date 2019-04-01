@@ -443,7 +443,7 @@ int fatclusterisbetween(int32_t cluster, int32_t begin, int32_t end) {
 }
 
 void fatclusterisregular(fat *f, int32_t cluster) {
-	if (fatclusterisbetween(cluster, FAT_FIRST, fatlastcluster(f))) 
+	if (fatclusterisbetween(cluster, FAT_FIRST, fatlastcluster(f)))
 		return;
 	printf("cluster %d not a regular cluster: not between %d and %d\n",
 		cluster, FAT_FIRST, fatlastcluster(f));
@@ -642,7 +642,7 @@ int32_t fatclustermostfree(fat *f, int size, int allowbad,
  */
 int32_t fatclusterlongestlinear(fat *f, int32_t start,
 		int *maxlen, int *maxindex) {
-	int32_t maxstart, next; 
+	int32_t maxstart, next;
 	int len, index;
 
 	len = 1;

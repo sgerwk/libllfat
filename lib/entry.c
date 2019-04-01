@@ -204,7 +204,7 @@ void _fattmfixday(struct tm *tm) {
 	tzset();
 }
 
-int _fatentrygettime(unit *directory, int index, int time_pos, int date_pos, 
+int _fatentrygettime(unit *directory, int index, int time_pos, int date_pos,
 		struct tm *tm) {
 	_tminit(tm);
 	if (time_pos >= 0)

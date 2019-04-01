@@ -23,7 +23,7 @@
  * that some signal handling is necessary
  *
  *	FATINTERRUPTIBLEGLOBALS(name)
- *		declare some globals; choose an arbitrary name that is then 
+ *		declare some globals; choose an arbitrary name that is then
  *		used in the following macros
  *
  *	FATINTERRUPTIBLESTART(name)

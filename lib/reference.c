@@ -57,7 +57,7 @@
 int fatreferencedebug = 0;
 #define dprintf if (fatreferencedebug) printf
 
-/* 
+/*
  * get and set the cluster that is the target of a reference
  */
 
@@ -434,7 +434,7 @@ int _fatreferenceexecute(fat *f,
 		startdirectory, startindex, startprevious,
 		dirdirectory, dirindex, dirprevious,
 		0, user);
-	scan = (res & FAT_REFERENCE_ORIG) ? next : 
+	scan = (res & FAT_REFERENCE_ORIG) ? next :
 		fatreferencegettarget(f, directory, index, previous);
 
 			/* longname parts and deleted entries end here */
@@ -453,7 +453,7 @@ int _fatreferenceexecute(fat *f,
 			directory, index, previous,
 			startdirectory, startindex, startprevious,
 			0, user);
-		scan = (res & FAT_REFERENCE_ORIG) ? next : 
+		scan = (res & FAT_REFERENCE_ORIG) ? next :
 			fatgetnextcluster(f, scan);
 	}
 
@@ -492,7 +492,7 @@ int _fatreferenceexecute(fat *f,
 			fatunitdelete(&f->clusters, prevdir->n);
 		}
 
-		if (! (res & FAT_REFERENCE_ALL) && 
+		if (! (res & FAT_REFERENCE_ALL) &&
 				(! fatentryexists(dir, ind) ||
 				fatentryislongpart(dir, ind)))
 			continue;
@@ -531,7 +531,7 @@ leavedir:
 		startdirectory, startindex, startprevious,
 		dirdirectory, dirindex, dirprevious,
 		-2, user);
-	scan = (res & FAT_REFERENCE_ORIG) ? next : 
+	scan = (res & FAT_REFERENCE_ORIG) ? next :
 		fatreferencegettarget(f, directory, index, previous);
 
 	while ((res & FAT_REFERENCE_CHAIN) && scan >= FAT_FIRST) {
@@ -541,7 +541,7 @@ leavedir:
 			directory, index, previous,
 			startdirectory, startindex, startprevious,
 			-2, user);
-		scan = (res & FAT_REFERENCE_ORIG) ? next : 
+		scan = (res & FAT_REFERENCE_ORIG) ? next :
 			fatreferencegettarget(f, NULL, 0, scan);
 	}
 

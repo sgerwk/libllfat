@@ -290,7 +290,7 @@ int _fatunitwrite(unit *u) {
 }
 
 /*
- * order of units in the tree 
+ * order of units in the tree
  */
 
 int _compareunit(const void *a, const void *b) {
@@ -497,7 +497,7 @@ void fatunitdump(unit *u, int hex) {
 			for (j = i; j < i + 16 && j < u->size; j++)
 				if (isprint(u->data[j]))
 					printf("%c", u->data[j]);
-				else 
+				else
 					printf(".");
 			printf("\n");
 		}

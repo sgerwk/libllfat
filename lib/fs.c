@@ -144,7 +144,7 @@ fat *fatsignatureopen(char *filename, off_t offset) {
 int _onebit(uint8_t c) {
 	int n, s;
 
-	if (sizeof(int) >= 3) 
+	if (sizeof(int) >= 3)
 		return c != 0 && ((((c - 1) << 15) / c) & 0xFF) == 0x00;
 
 	s = 0;

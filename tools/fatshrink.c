@@ -75,7 +75,7 @@ int main(int argn, char *argv[]) {
 
 	filename = argv[1];
 	f = fatopen(filename, 0);
-	if (f == NULL) 
+	if (f == NULL)
 		return -1;
 	
 	if (0 != fatcheck(f)) {

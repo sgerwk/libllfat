@@ -316,7 +316,7 @@ int main(int argn, char *argv[]) {
 		printf("free between 100 and 190 starting at -1: %d\n\n",
 			freecluster);
 		fatsetnextcluster(f, freecluster, FAT_EOF);
-		freecluster = 
+		freecluster =
 			fatclusterfindfreebetween(f, 100, 190, -1);
 		printf("free between 100 and 190 starting at -1: %d\n\n",
 			freecluster);
@@ -744,7 +744,7 @@ int main(int argn, char *argv[]) {
 	case 23:
 		printf("\n********* inverse fat test\n");
 
-		rev = fatinversecreate(f, 1); 
+		rev = fatinversecreate(f, 1);
 		if (test == 22)
 			for (cl = 2; cl <= fatlastcluster(f); cl++) {
 				fatinverseprint(f, rev, cl);
@@ -1025,7 +1025,7 @@ int main(int argn, char *argv[]) {
 		// break;
 
 		for (i = 55; i < 82; i++) {
-			swprintf(longname, 1000, 
+			swprintf(longname, 1000,
 					L"alongdirectoryname/"
 					L"anotherfilestillquitesomehowlong"
 					"%d.txt", i);

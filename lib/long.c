@@ -254,7 +254,7 @@ int fatlongscan(unit *directory, int index, struct fatlongscan *scan) {
 		first = FAT_LONG_FIRST;
 	}
 	else if (scan->checksum != _unit8uint(directory, index * 32 + 13) ||
-	    scan->n <= 0 || 
+	    scan->n <= 0 ||
 	    scan->n != (_unit8int(directory, index * 32) & 0x3F)) {
 		scan->n = -1;
 		return 0;
@@ -421,7 +421,7 @@ int fatlookupfilelongboth(fat *f, int32_t dir, wchar_t *name,
 	*directory = NULL;
 	return -1;
 }
- 
+
 int fatlookupfilelong(fat *f, int32_t dir, wchar_t *name,
 		unit **directory, int *index) {
 	unit *longdirectory;
@@ -430,7 +430,7 @@ int fatlookupfilelong(fat *f, int32_t dir, wchar_t *name,
 	return fatlookupfilelongboth(f, dir, name, directory, index,
 		&longdirectory, &longindex);
 }
- 
+
 /*
  * first cluster of file, given its long name
  */
@@ -827,7 +827,7 @@ void _fatwcstoupper(unsigned char *dst, wchar_t *src, int len) {
 	int i;
 
 	fatwstochar((char *) dst, src, len, NULL);
-	for(i = 0; i < len; i++) 
+	for(i = 0; i < len; i++)
 		dst[i] = toupper(dst[i]);
 }
 

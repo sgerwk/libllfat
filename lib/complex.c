@@ -169,7 +169,7 @@ int fatmovearea(fat *f,
  * compact a filesystem by moving cluster at the beginning
  */
 int fatcompact(fat *f) {
-	return 
+	return
 	fatmovearea(f, FAT_FIRST, fatlastcluster(f), 2, fatlastcluster(f));
 }
 
@@ -304,7 +304,7 @@ int _fattruncate(fat *f,
 		fatreferenceprint(s->cutdirectory != FAT_ROOT ?
 					fatclusterread(f, s->cutdirectory) :
 					NULL,
-				s->cutindex, 
+				s->cutindex,
 				s->cutdirectory == FAT_ROOT ? -1 : 0);
 		printf(" (%d,%d)\n", s->cutdirectory, s->cutindex);
 

@@ -100,7 +100,7 @@ int copydirectoryclusters(fat *f,
 
 	if (diffonly) {
 		destination = fatclusterread(dst, cl);
-		if (destination != NULL && 
+		if (destination != NULL &&
 			cluster->size == destination->size &&
 			! memcmp(fatunitgetdata(cluster),
 				fatunitgetdata(destination),
