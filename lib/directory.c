@@ -319,8 +319,6 @@ int fatinvalidname(const char *name) {
 		return -1;
 
 	for (i = 0; name[i]; i++) {
-		if (name[i] < 0)
-			continue;
 		if (isalnum(name[i]))
 			continue;
 		if (strchr(". $%'-_@~`!(){}^#&", name[i]))
