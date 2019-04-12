@@ -745,7 +745,15 @@ Find a free cluster, or \fIFAT_ERR\fP if non exists. Seach start from
 .TP
 .BI "int32_t fatclusterfindfreebetween(fat *" f, \
 int32_t " begin ", int32_t " end ", int32_t " start )
-Same, but within an interval and starting the search for a given cluster. If
+Same, but within an interval and starting the search from a given cluster. If
+\fIstart\fP is -1, start from \fIf->last\fP.
+.TP
+.BI "int32_t fatclusterfindfreesequencebetween(fat *" f ", int " length )
+Search for \fIlength\fP consecutive free clusters.
+.TP
+.BI "int32_t fatclusterfindfreesequencebetween(fat *" f ", \
+int32_t " begin ", int32_t " end ", int32_t " start ", int " length )
+Same, but within an interval and starting the search from a given cluster. If
 \fIstart\fP is -1, start from \fIf->last\fP.
 .TP
 .BI "int fatclusterareaisbad(fat *" f ", int32_t " begin ", int32_t " end )
@@ -785,7 +793,7 @@ Find an allocated (non-free) cluster in the given interval, extremes included.
 .TP
 .BI "int fatclusterfindallocatedbetween(fat *" f ", \
 int32_t " begin ", int32_t " end ", int32_t " start )
-Same as above, but start searching for the given cluster.
+Same as above, but start searching from the given cluster.
 .TP
 .BI "int fatclusterfreechain(fat *" f ", int32_t " begin )
 Free the chain of clusters starting from \fIbegin\fP.

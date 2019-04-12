@@ -504,12 +504,13 @@ int32_t fatclusternumfree(fat *f) {
 }
 
 /*
- * find a free cluster (wrap if end < begin)
+ * find free clusters (wrap if end < begin)
  */
 
-int32_t fatclusterfindfreebetween(fat *f,
-		int32_t begin, int32_t end, int32_t start) {
-	int32_t c;
+int32_t fatclusterfindfreesequencebetween(fat *f,
+		int32_t begin, int32_t end, int32_t start, int length) {
+	int32_t cl, first;
+	int count;
 
 	dprintf("searching for a free cluster between %d and %d, "
 		"starting at %d\n", begin, end, start);
@@ -525,21 +526,41 @@ int32_t fatclusterfindfreebetween(fat *f,
 
 	dprintf("actual search: %d - %d, start %d:", begin, end, start);
 
-	c = start;
+	count = 0;
+	cl = start;
 	do {
-		dprintf(" %d", c);
+		dprintf(" %d", cl);
 
-		if (fatgetnextcluster(f, c) == FAT_UNUSED) {
-			dprintf(" <-- found: %d\n", c);
-			f->last = c;
-			return c;
+		if (fatgetnextcluster(f, cl) != FAT_UNUSED)
+			count = 0;
+		else {
+			dprintf(" <-- found: %d (%d)\n", cl, count + 1);
+			if (count == 0) {
+				count++;
+				first = cl;
+			}
+			if (cl < first)
+				count = 0;
+			f->last = cl;
+			if (count == length)
+				return first;
 		}
 
-		c = fatclusterintervalnext(f, c, begin, end);
-	} while (c != start);
+		cl = fatclusterintervalnext(f, cl, begin, end);
+	} while (cl != start);
 
 	dprintf(" not found\n");
 	return FAT_ERR;
+}
+
+int32_t fatclusterfindfreebetween(fat *f,
+		int32_t begin, int32_t end, int32_t start) {
+	return fatclusterfindfreesequencebetween(f, begin, end, start, 1);
+}
+
+int32_t fatclusterfindfreesequence(fat *f, int length) {
+	return fatclusterfindfreesequencebetween(f,
+		FAT_FIRST, fatlastcluster(f), -1, length);
 }
 
 int32_t fatclusterfindfree(fat *f) {

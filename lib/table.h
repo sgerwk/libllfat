@@ -101,8 +101,11 @@ int32_t fatclusternumfreebetween(fat *f, int32_t begin, int32_t end);
 int32_t fatclusternumfree(fat *f);
 
 /*
- * find a free cluster
+ * find a free cluster or sequence
  */
+int32_t fatclusterfindfreesequencebetween(fat *f,
+		int32_t begin, int32_t end, int32_t start, int length);
+int32_t fatclusterfindfreesequence(fat *f, int length);
 int32_t fatclusterfindfreebetween(fat *f,
 		int32_t begin, int32_t end, int32_t start);
 int32_t fatclusterfindfree(fat *f);
