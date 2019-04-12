@@ -392,6 +392,19 @@ end; argument \fItest\fP makes the program run doing everything but writing; if
 comparing it to the new is attempted this number of times before overwriting
 (default is 1); the return value is 64 if some cluster is or would have been
 overwritten, 0 otherwise
+
+.TP
+\fBconsecutive\fP \fIfile\fP \fIlength\fP
+create a file stored in consecutive clusters; the content of these clusters is
+not changed, which means that the file may show the content of deleted files;
+this function can be used to test the writing/reading speed of the media:
+\fIconsecutive\fP reserves a contigous region of the device, \fIgetsize\fP
+retrieves the actual length of the file, \fIgetfirst\fP gives its first cluster
+and \fIposition\fP its offset in the filesystem; a testing program may then
+directly write and read in that region of the device, bypassing the filesystem
+without interfering with it; care should be taken to check that file creation
+actually succeded before writing
+
 .TP
 \fBgetsize\fP \fIfile\fP
 print the size of an existing file

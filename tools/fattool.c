@@ -1194,6 +1194,8 @@ void usage() {
 	printf("\t\t\t\tdelete a file\n");
 	printf("\t\toverwrite name [test]\n\t\t\t\toverwrite the ");
 	printf("differing clusters of a file\n");
+	printf("\t\tconsecutive name size\n\t\t\t\tcreate a ");
+	printf("file of consecutive clusters\n");
 	printf("\t\tgetsize file\tget size of file\n");
 	printf("\t\tsetsize file size\n\t\t\t\tchange file size; ");
 	printf("directory entry only, see man\n");
@@ -2325,6 +2327,50 @@ int main(int argn, char *argv[]) {
 
 		printf("\n");
 		free(buf);
+	}
+	else if (! strcmp(operation, "consecutive")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: file\n");
+			exit(1);
+		}
+		if (! fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			if (fatreferenceisvoid(directory, index, previous))
+				printf("cannot create file by cluster\n");
+			else  {
+				printf("file %s exists, ", option1);
+				printf("not overwriting\n");
+			}
+			exit(1);
+		}
+		if (option2[0] == '\0') {
+			printf("missing argument: size\n");
+			exit(1);
+		}
+		size = atoi(option2);
+		if (size <= 0) {
+			printf("size must be greater than zero\n");
+			exit(1);
+		}
+		ncluster = (size + fatbytespercluster(f) - 1) /
+			fatbytespercluster(f);
+
+		start = fatclusterfindfreesequence(f, ncluster);
+		if (start == FAT_ERR) {
+			printf("not enough consecutive free clusters\n");
+			exit(1);
+		}
+
+		if (createfile(f, r, option1, 0, &directory, &index)) {
+			printf("cannot create file %s\n", option1);
+			exit(1);
+		}
+		fatentrysetsize(directory, index, size);
+		fatentrysetfirstcluster(directory, index, fatbits(f), start);
+
+		for (cl = 0; cl < ncluster; cl++)
+			fatsetnextcluster(f, start + cl, start + cl + 1);
+		fatsetnextcluster(f, start + cl - 1, FAT_EOF);
 	}
 	else if (! strcmp(operation, "getsize")) {
 		if (option1[0] == '\0') {
