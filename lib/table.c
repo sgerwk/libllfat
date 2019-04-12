@@ -512,6 +512,9 @@ int32_t fatclusterfindfreesequencebetween(fat *f,
 	int32_t cl, first;
 	int count;
 
+	if (length <= 0)
+		return FAT_ERR;
+
 	dprintf("searching for a free cluster between %d and %d, "
 		"starting at %d\n", begin, end, start);
 
