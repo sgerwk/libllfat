@@ -535,10 +535,9 @@ int32_t fatclusterfindfreesequencebetween(fat *f,
 			count = 0;
 		else {
 			dprintf(" <-- found: %d (%d)\n", cl, count + 1);
-			if (count == 0) {
-				count++;
+			if (count == 0)
 				first = cl;
-			}
+			count++;
 			if (cl < first)
 				count = 0;
 			f->last = cl;
