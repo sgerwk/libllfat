@@ -466,6 +466,12 @@ Determine the number of bits of a FAT from a given number of clusters. This is
 the same as the return value of \fBfatbits()\fP when called on a filesystem
 with \fInclusters\fP number of clusters.
 .TP
+.BI "int fatbestfatsize(fat *" f )
+Set the size of the FATs to the best allowed value. This is not obvious since
+the size of a FAT is proportional to the number of data clusters, but the
+number of data clusters is a function of the number of sectors minus the
+total size of the FATs.
+.TP
 .BI "int32_t fatgetrootbegin(fat *" f )
 The number of the first cluster of the root directory. This is always FAT_ROOT
 for a FAT12 and FAT16, and is usually but not always FAT_FIRST for a FAT32.

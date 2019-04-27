@@ -504,6 +504,41 @@ int fatminfatsize(fat *f, int nclusters) {
 }
 
 /*
+ * set the size of a fat to its minimum possible value
+ */
+int fatbestfatsize(fat *f) {
+	int prev, best, fatsize[3];
+	int32_t nclusters[3];
+	int i;
+
+	prev = fatgetfatsize(f);
+	fatsetfatsize(f, 1);
+
+	for (i = 0; i < 3; i++) {
+		nclusters[i] = -2 - i;
+		fatsize[i] = -2 - i;
+	}
+
+	for (i = 0;
+	     nclusters[i] != nclusters[(i + 1) % 3] &&
+	     fatsize[i] != fatsize[(i + 1) % 3];
+	     i = (i + 1) % 3) {
+		nclusters[i] = fatnumdataclusters(f);
+		fatsize[i] = fatminfatsize(f, nclusters[i]);
+		printf("%d %d\n", nclusters[i], fatsize[i]);
+		fatsetfatsize(f, fatsize[i]);
+	}
+
+	best = fatsize[i] > fatsize[(i + 2) % 3] ?
+		fatsize[i] :
+		fatsize[(i + 2) % 3];
+
+	fatsetfatsize(f, prev);
+	fatsetfatsize(f, best);
+	return best;
+}
+
+/*
  * first cluster of root directory
  */
 
