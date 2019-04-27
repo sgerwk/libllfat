@@ -511,7 +511,7 @@ Return whether an extended boot signature exists.
 Set the existence of the extended boot signature. The application is
 responsible of filling its fields.
 .TP
-.BI "int fataddextendedbootsignature(fat *" f )
+.BI "int fatdeleteextendedbootsignature(fat *" f )
 Remove the extended boot signature. This function only remove the marker that
 denotes the existence of the extended boot signature in the filesystem, it does
 not touch any of its fields.
