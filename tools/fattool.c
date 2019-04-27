@@ -1084,6 +1084,10 @@ int fatformat(char *devicename, off_t offset,
 	if (fatbits(f) != 32)
 		f->info = NULL;
 	else {
+		fataddextendedbootsignature(f);
+		fatsetfilesystemtype(f, "FAT32   ");
+		fatsetserialnumber(f, 0x54234567);
+
 		f->info = fatunitcreate(sectorsize);
 		f->info->n = 1;
 		f->info->origin = offset;
