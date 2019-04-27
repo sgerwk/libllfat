@@ -1081,7 +1081,7 @@ int fatformat(char *devicename, off_t offset,
 		return -1;
 	}
 
-	if (f->bits != 32)
+	if (fatbits(f) != 32)
 		f->info = NULL;
 	else {
 		f->info = fatunitcreate(sectorsize);
@@ -1119,7 +1119,7 @@ int fatformat(char *devicename, off_t offset,
 		f->info->fd = f->fd;
 
 	fatsetmedia(f, 0xF8);
-	if (f->bits == 32)
+	if (fatbits(f) == 32)
 		fatcopyboottobackup(f);
 	fatzero(f);
 	fatclose(f);
