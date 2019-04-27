@@ -894,7 +894,7 @@ void fatsummary(fat *f) {
 		printf("  filesystem type: \"%s\"\n", fatgetfilesystemtype(f));
 	}
 	if (f->info != NULL) {
-		printf("information sector:\n");
+		printf("information sector (%d):\n", f->info->n);
 		printf("  information sector signature: %s\n",
 			fatgetinfosignatures(f) ? "yes" : "no");
 		printf("  last known allocated cluster: %d\n",
