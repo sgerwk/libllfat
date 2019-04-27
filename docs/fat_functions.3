@@ -443,6 +443,19 @@ The size of each file allocation table, in sectors.
 Set the size of each file allocation table, in sectors. Set when formatting a
 volume and never changed afterwards.
 .TP
+.BI "int fatgetfatsize16(fat *" f )
+.PD 0
+.TP
+.BI "int fatsetfatsize16(fat *" f ", int " sectors )
+.TP
+.BI "int fatgetfatsize32(fat *" f )
+.TP
+.BI "int fatsetfatsize32(fat *" f ", int " sectors )
+Similar to the above two functions, but allow individual access to the 16-bit
+and the 32-bit entries of the fat size field. The first is used in FAT12 and
+FAT16, the second in FAT32.
+.PD
+.TP
 .BI "int32_t fatgetrootbegin(fat *" f )
 The number of the first cluster of the root directory. This is always FAT_ROOT
 for a FAT12 and FAT16, and is usually but not always FAT_FIRST for a FAT32.

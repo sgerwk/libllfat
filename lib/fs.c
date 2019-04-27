@@ -429,29 +429,47 @@ int fatsetnumsectors(fat *f, uint32_t sectors) {
 }
 
 /*
- * size of each fat
+ * size of one fat: 16-bit version, 32-bit version, fatbits-dependent version
  */
+
+int fatgetfatsize16(fat *f) {
+	return le16toh(_unit16int(f->boot, 0x16));
+}
+
+int fatsetfatsize16(fat *f, int size) {
+	if (f == NULL || f->boot == NULL)
+		return -1;
+	_unit16int(f->boot, 0x16) = htole16(size);
+	return 0;
+}
+
+int fatgetfatsize32(fat *f) {
+	return le32toh(_unit32int(f->boot, 0x24));
+}
+
+int fatsetfatsize32(fat *f, int size) {
+	if (f == NULL || f->boot == NULL)
+		return -1;
+	_unit32int(f->boot, 0x24) = htole32(size);
+	return 0;
+}
+
 int fatgetfatsize(fat *f) {
-	uint16_t s;
-	uint32_t l;
-
-	s = le16toh(_unit16int(f->boot, 0x16));
-	l = le32toh(_unit32int(f->boot, 0x24));
-
-	return s != 0 ? s : l;
+	if (f == NULL || f->boot == NULL)
+		return -1;
+	if (fatbits(f) == 32)
+		return fatgetfatsize32(f);
+	else
+		return fatgetfatsize16(f);
 }
 
 int fatsetfatsize(fat *f, int size) {
 	if (f == NULL || f->boot == NULL)
 		return -1;
-	if (size <= 0xFFFF) {
-		_unit16int(f->boot, 0x16) = htole16(size);
-		_unit32int(f->boot, 0x24) = htole32(0);
-	}
-	else {
-		_unit16int(f->boot, 0x16) = htole16(0);
-		_unit32int(f->boot, 0x24) = htole32(size);
-	}
+	if (fatbits(f) == 32)
+		fatsetfatsize32(f, size);
+	else
+		fatsetfatsize16(f, size);
 	f->boot->dirty = 1;
 	return 0;
 }
