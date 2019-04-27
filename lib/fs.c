@@ -433,6 +433,8 @@ int fatsetnumsectors(fat *f, uint32_t sectors) {
  */
 
 int fatgetfatsize16(fat *f) {
+	if (f == NULL || f->boot == NULL)
+		return -1;
 	return le16toh(_unit16int(f->boot, 0x16));
 }
 
@@ -444,6 +446,8 @@ int fatsetfatsize16(fat *f, int size) {
 }
 
 int fatgetfatsize32(fat *f) {
+	if (f == NULL || f->boot == NULL)
+		return -1;
 	return le32toh(_unit32int(f->boot, 0x24));
 }
 
