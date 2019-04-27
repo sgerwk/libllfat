@@ -488,6 +488,21 @@ int fatsetfatsize(fat *f, int size) {
 }
 
 /*
+ * minimal size of a fat for a given number of clusters
+ */
+int fatminfatsize(fat *f, int nclusters) {
+	int nentries, nbytes, nsectors;
+
+	nentries = 2 + nclusters;
+	nbytes = nentries * fatbits(f) / 8
+		+ (fatbits(f) == 12 && nentries % 2 ? 1 : 0);
+	nsectors = (nbytes + fatgetbytespersector(f) - 1) /
+		fatgetbytespersector(f);
+
+	return nsectors;
+}
+
+/*
  * first cluster of root directory
  */
 
