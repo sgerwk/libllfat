@@ -1092,6 +1092,8 @@ int fatformat(char *devicename, off_t offset,
 		fatsetinfopos(f, f->info->n);
 		fatsetinfosignatures(f);
 		fatsetfreeclusters(f, fatlastcluster(f) - 2 - 1);
+
+		fatsetbackupsector(f, 6);
 	}
 
 	fatsummary(f);
@@ -1117,6 +1119,8 @@ int fatformat(char *devicename, off_t offset,
 		f->info->fd = f->fd;
 
 	fatsetmedia(f, 0xF8);
+	if (f->bits == 32)
+		fatcopyboottobackup(f);
 	fatzero(f);
 	fatclose(f);
 
