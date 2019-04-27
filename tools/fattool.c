@@ -918,17 +918,18 @@ int fatsetentries(fat *f, int maxentries) {
 }
 
 int fatsetsize(fat *f) {
-	int nsectors;
+	int nsectors, nclusters;
 
 	fatsetnumfats(f, 2);
 
 	f->bits = 12;		/* overestimate number of clusters */
 	fatsetreservedsectors(f, 1);
 	fatsetfatsize(f, 1);
-	nsectors = 2 + fatnumdataclusters(f);
-	nsectors += fatbits(f) == 12 ? 1 : 0;
+	nclusters = fatnumdataclusters(f);
 
 	f->bits = 32;		/* overestimate size of each fat */
+	nsectors = 2 + nclusters;
+	nsectors += fatbits(f) == 12 ? 1 : 0;
 	nsectors = nsectors * fatbits(f) / 8;
 	nsectors += fatgetbytespersector(f) - 1;
 	nsectors /= fatgetbytespersector(f);
@@ -936,7 +937,7 @@ int fatsetsize(fat *f) {
 
 	f->bits = 0;
 	fatbits(f);		/* actual calculation */
-	nsectors = 2 + fatnumdataclusters(f);
+	nsectors = 2 + nclusters;
 	nsectors += fatbits(f) == 12 ? 1 : 0;
 	nsectors = nsectors * fatbits(f) / 8;
 	nsectors += fatgetbytespersector(f) - 1;
