@@ -610,7 +610,7 @@ int fataddextendedbootsignature(fat *f) {
 		return FAT_ERR;
 	return 0;
 }
-int fatdeleteextendedbootsignaturp(fat *f) {
+int fatdeleteextendedbootsignature(fat *f) {
 	if (fatbits(f) == 12 || fatbits(f) == 16)
 		_unit8uint(f->boot, 0x26) = 0x0;
 	else if (fatbits(f) == 32)
