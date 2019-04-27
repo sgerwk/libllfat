@@ -1069,6 +1069,8 @@ int fatformat(char *devicename, off_t offset,
 		return -1;
 	}
 
+	fatsetrootbegin(f, fatbits(f) == 32 ? FAT_FIRST : FAT_ROOT);
+
 	if (fatsetentries(f, maxentries)) {
 		printf("invalid number of entries in root: %d\n", maxentries);
 		return -1;
