@@ -109,6 +109,7 @@ int fatsetvolumelabel(fat *f, const char l[11]);
 char* fatgetfilesystemtype(fat *f);
 int fatsetfilesystemtype(fat *f, char t[8]);
 int fatgetbackupsector(fat *f);
+int fatsetbackupsector(fat *f, int sector);
 int fatcopyboottobackup(fat *f);
 int fatgetinfopos(fat *f);
 int fatsetinfopos(fat *f, int pos);

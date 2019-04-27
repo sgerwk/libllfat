@@ -565,7 +565,7 @@ the boot sector is always 0, the backup is always 6. This field only exists
 because a value of 0x0000 or 0xFFFF mean that the backup does not exists, in
 which case this function returns -1.
 .TP
-.BI "int fatsetbackupsector(fat *" f )
+.BI "int fatsetbackupsector(fat *" f ", int " sector )
 Set the number of the sector that is the backup copy of the boot sector. If
 such a backup exists its sector number is 6, otherwise it is 0x0000 or 0xFFFF.
 The function however allows it to be any reserved sector but the boot or
