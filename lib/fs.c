@@ -475,10 +475,14 @@ int fatgetfatsize(fat *f) {
 int fatsetfatsize(fat *f, int size) {
 	if (f == NULL || f->boot == NULL)
 		return -1;
-	if (fatbits(f) == 32)
+	if (fatbits(f) == 32) {
+		fatsetfatsize16(f, 0);
 		fatsetfatsize32(f, size);
-	else
+	}
+	else {
 		fatsetfatsize16(f, size);
+		fatsetfatsize32(f, 0);
+	}
 	f->boot->dirty = 1;
 	return 0;
 }
