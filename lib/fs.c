@@ -459,9 +459,14 @@ int fatsetfatsize32(fat *f, int size) {
 }
 
 int fatgetfatsize(fat *f) {
+	int s;
 	if (f == NULL || f->boot == NULL)
 		return -1;
-	if (fatbits(f) == 32)
+	if (f->bits == 0) {
+		s = fatgetfatsize16(f);
+		return s != 0 ? s : fatgetfatsize32(f);
+	}
+	else if (fatbits(f) == 32)
 		return fatgetfatsize32(f);
 	else
 		return fatgetfatsize16(f);
