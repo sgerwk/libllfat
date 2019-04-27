@@ -933,9 +933,9 @@ int fatsetsize(fat *f) {
 	nsectors = nsectors * fatbits(f) / 8;
 	nsectors += fatgetbytespersector(f) - 1;
 	nsectors /= fatgetbytespersector(f);
-	fatsetfatsize(f, nsectors);
 
 	f->bits = 0;
+	fatsetfatsize(f, nsectors);
 	fatbits(f);		/* actual calculation */
 	nsectors = 2 + nclusters;
 	nsectors += fatbits(f) == 12 ? 1 : 0;
