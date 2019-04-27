@@ -278,6 +278,13 @@ int fatclose(fat *f) {
 }
 
 /*
+ * bits of fat for a given number of clusters
+ */
+int fatbitsfromclusters(int32_t nclusters) {
+	return nclusters < 4085 ? 12 : nclusters < 65525 ? 16 : 32;
+}
+
+/*
  * determine bits of FAT: 12, 16 or 32
  */
 int fatbits(fat *f) {
@@ -295,13 +302,7 @@ int fatbits(fat *f) {
 	clusters = fatnumdataclusters(f);
 	dprintf("clusters: %d\n", clusters);
 
-	if (clusters < 4085)
-		f->bits = 12;
-	else if (clusters < 65525)
-		f->bits = 16;
-	else
-		f->bits = 32;
-
+	f->bits = fatbitsfromclusters(clusters);
 	return f->bits;
 }
 

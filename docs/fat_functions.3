@@ -461,6 +461,11 @@ Determine the minimal size of a FAT large enogh for the given number of
 clusters. The value is only returned, the FAT size of the filesystem is not
 changed.
 .TP
+.BI "int fatbitsfromclusters(int " ncusters )
+Determine the number of bits of a FAT from a given number of clusters. This is
+the same as the return value of \fBfatbits()\fP when called on a filesystem
+with \fInclusters\fP number of clusters.
+.TP
 .BI "int32_t fatgetrootbegin(fat *" f )
 The number of the first cluster of the root directory. This is always FAT_ROOT
 for a FAT12 and FAT16, and is usually but not always FAT_FIRST for a FAT32.

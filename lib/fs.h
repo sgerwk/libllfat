@@ -88,6 +88,7 @@ int fatsetfatsize32(fat *f, int size);
 int fatgetfatsize(fat *f);
 int fatsetfatsize(fat *f, int size);
 int fatminfatsize(fat *f, int nclusters);
+int fatbitsfromclusters(int32_t nclusters);
 int32_t fatgetrootbegin(fat *f);
 int fatsetrootbegin(fat *f, int32_t num);
 int fatgetrootentries(fat *f);
