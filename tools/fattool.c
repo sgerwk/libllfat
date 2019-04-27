@@ -1081,6 +1081,19 @@ int fatformat(char *devicename, off_t offset,
 		return -1;
 	}
 
+	if (f->bits != 32)
+		f->info = NULL;
+	else {
+		f->info = fatunitcreate(sectorsize);
+		f->info->n = 1;
+		f->info->origin = offset;
+		f->info->dirty = 1;
+		fatunitinsert(&f->sectors, f->info, 1);
+		fatsetinfopos(f, f->info->n);
+		fatsetinfosignatures(f);
+		fatsetfreeclusters(f, fatlastcluster(f) - 2 - 1);
+	}
+
 	fatsummary(f);
 
 	f->fd = open(devicename, O_RDWR, 0666);
@@ -1100,6 +1113,8 @@ int fatformat(char *devicename, off_t offset,
 	if (res == -1)
 		return -1;
 	f->boot->fd = f->fd;
+	if (f->info != NULL)
+		f->info->fd = f->fd;
 
 	fatsetmedia(f, 0xF8);
 	fatzero(f);
