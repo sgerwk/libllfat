@@ -537,7 +537,7 @@ label followed by \fI\\0\fP. The caller is responsible to free it with
 Set the volume label. The argument needs not to be \fI\\0\fP-terminated.
 .TP
 .BI "char* fatgetfilesystemtype(fat *" f )
-Return the filesystem type as a dynamically-allocated array of 11 character,
+Return the filesystem type as a dynamically-allocated array of 9 characters,
 the type followed by \fI\\0\fP. This string is usually \fI"FAT12   "\fP,
 \fI"FAT16   "\fP or \fI"FAT32   "\fP, but the type of the filesystem is what
 returned by \fIfatbits(f)\fP, not the content of this string.
