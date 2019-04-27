@@ -920,15 +920,30 @@ int fatsetentries(fat *f, int maxentries) {
 int fatsetsize(fat *f) {
 	int nsectors;
 
-	fatsetreservedsectors(f, fatbits(f) == 32 ? 32 : 1);
 	fatsetnumfats(f, 2);
-	fatsetfatsize(f, 1); /* overestimate a number of data clusters */
+
+	f->bits = 12;		/* overestimate number of clusters */
+	fatsetreservedsectors(f, 1);
+	fatsetfatsize(f, 1);
+	nsectors = 2 + fatnumdataclusters(f);
+	nsectors += fatbits(f) == 12 ? 1 : 0;
+
+	f->bits = 32;		/* overestimate size of each fat */
+	nsectors = nsectors * fatbits(f) / 8;
+	nsectors += fatgetbytespersector(f) - 1;
+	nsectors /= fatgetbytespersector(f);
+	fatsetfatsize(f, nsectors);
+
+	f->bits = 0;
+	fatbits(f);		/* actual calculation */
 	nsectors = 2 + fatnumdataclusters(f);
 	nsectors += fatbits(f) == 12 ? 1 : 0;
 	nsectors = nsectors * fatbits(f) / 8;
 	nsectors += fatgetbytespersector(f) - 1;
 	nsectors /= fatgetbytespersector(f);
 	fatsetfatsize(f, nsectors);
+
+	fatsetreservedsectors(f, fatbits(f) == 32 ? 32 : 1);
 
 	if (fatnumdataclusters(f) <= 0)
 		return -1;
@@ -1063,21 +1078,21 @@ int fatformat(char *devicename, off_t offset,
 		return 0;
 	}
 
-	f->bits = 0;
 	if (fatsetsectorspercluster(f, sectpercl)) {
 		printf("invalid sectors per cluster: %d\n", sectpercl);
 		return -1;
 	}
 
+	if (fatsetsize(f)) {
+		toosmall(f);
+		return -1;
+	}
+
+	fatsetbootsignature(f);
 	fatsetrootbegin(f, fatbits(f) == 32 ? FAT_FIRST : FAT_ROOT);
 
 	if (fatsetentries(f, maxentries)) {
 		printf("invalid number of entries in root: %d\n", maxentries);
-		return -1;
-	}
-
-	if (fatsetsize(f)) {
-		toosmall(f);
 		return -1;
 	}
 
