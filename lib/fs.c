@@ -521,8 +521,8 @@ int fatbestfatsize(fat *f) {
 	dprintf("fat bits: %d\n", fatbits(f));
 
 	for (i = 0;
-	     nclusters[i] != nclusters[(i + 1) % 3] &&
-	     fatsize[i] != fatsize[(i + 1) % 3];
+	     nclusters[(i + 2) % 3] != nclusters[(i + 0) % 3] ||
+	     fatsize[(i + 2) % 3] != fatsize[(i + 0) % 3];
 	     i = (i + 1) % 3) {
 		nclusters[i] = fatnumdataclusters(f);
 		fatsize[i] = fatminfatsize(f, nclusters[i]);
@@ -531,9 +531,9 @@ int fatbestfatsize(fat *f) {
 		fatsetfatsize(f, fatsize[i]);
 	}
 
-	best = fatsize[i] > fatsize[(i + 2) % 3] ?
-		fatsize[i] :
-		fatsize[(i + 2) % 3];
+	best = fatsize[(i + 2) % 3] > fatsize[(i + 0) % 3] ?
+		fatsize[(i + 2) % 3] :
+		fatsize[(i + 0) % 3];
 	fatsetfatsize(f, best);
 	return best;
 }
