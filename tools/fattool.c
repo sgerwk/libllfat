@@ -917,7 +917,7 @@ int fatsetentries(fat *f, int maxentries) {
 	return fatsetrootentries(f, maxentries);
 }
 
-int fatsetsize(fat *f) {
+void fatsetsize(fat *f) {
 	int bits, extra, best;
 
 	extra = 0;
@@ -929,12 +929,10 @@ int fatsetsize(fat *f) {
 		fatsetfatsize(f, best + extra);
 		f->bits = fatnumdataclusters(f) < 0 ? 32 : 0;
 		if (bits == fatbits(f))
-			break;
+			return;
 		if (bits > fatbits(f))
 			extra++;
 	}
-
-	return fatconsistentsize(f);
 }
 
 void toosmall(fat *f) {
@@ -1052,7 +1050,10 @@ int fatformat(char *devicename, off_t offset,
 				continue;
 			}
 			printf("%d\t", fatgetrootentries(f));
-			if (fatsetsize(f))
+			fatsetsize(f);
+			if (fatnumdataclusters(f) < 0)
+				printf("too many clusters\n");
+			else if (fatconsistentsize(f))
 				toosmall(f);
 			else
 				printf("FAT%d\n", fatbits(f));
@@ -1070,7 +1071,12 @@ int fatformat(char *devicename, off_t offset,
 		return -1;
 	}
 
-	if (fatsetsize(f)) {
+	fatsetsize(f);
+	if (fatnumdataclusters(f) < 0) {
+		printf("too many clusters\n");
+		return -1;
+	}
+	else if (fatconsistentsize(f)) {
 		toosmall(f);
 		return -1;
 	}
