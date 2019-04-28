@@ -978,7 +978,7 @@ void fatsummary(fat *f) {
 	printf("bytes per cluster: %d\n", fatbytespercluster(f));
 	printf("reserved sectors: %d\n", fatgetreservedsectors(f));
 	printf("number of fats: %d\n", fatgetnumfats(f));
-	printf("sectors: %d\n", fatgetnumsectors(f));
+	printf("sectors: %u\n", fatgetnumsectors(f));
 	printf("size of each fat: %d\n", fatgetfatsize(f));
 	printf("first cluster of root directory: %d\n", fatgetrootbegin(f));
 	printf("max entries in root directory: %d\n", fatgetrootentries(f));
