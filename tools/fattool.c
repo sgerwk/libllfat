@@ -918,42 +918,23 @@ int fatsetentries(fat *f, int maxentries) {
 }
 
 int fatsetsize(fat *f) {
-	int nsectors, nclusters;
+	int bits, extra, best;
 
-	fatsetnumfats(f, 2);
+	extra = 0;
 
-	f->bits = 12;		/* overestimate number of clusters */
-	fatsetreservedsectors(f, 1);
-	fatsetfatsize(f, 1);
-	nclusters = fatnumdataclusters(f);
+	for (bits = 12; ; bits = fatbits(f)) {
+		f->bits = bits;
+		fatsetreservedsectors(f, bits == 32 ? 32 : 1);
+		best = fatbestfatsize(f);
+		fatsetfatsize(f, best + extra);
+		f->bits = 0;
+		if (bits == fatbits(f))
+			break;
+		if (bits > fatbits(f))
+			extra++;
+	}
 
-	f->bits = 32;		/* overestimate size of each fat */
-	nsectors = 2 + nclusters;
-	nsectors += fatbits(f) == 12 ? 1 : 0;
-	nsectors = nsectors * fatbits(f) / 8;
-	nsectors += fatgetbytespersector(f) - 1;
-	nsectors /= fatgetbytespersector(f);
-
-	f->bits = 0;
-	fatsetfatsize(f, nsectors);
-	fatbits(f);		/* actual calculation */
-	nsectors = 2 + nclusters;
-	nsectors += fatbits(f) == 12 ? 1 : 0;
-	nsectors = nsectors * fatbits(f) / 8;
-	nsectors += fatgetbytespersector(f) - 1;
-	nsectors /= fatgetbytespersector(f);
-	fatsetfatsize(f, nsectors);
-
-	fatsetreservedsectors(f, fatbits(f) == 32 ? 32 : 1);
-
-	if (fatnumdataclusters(f) <= 0)
-		return -1;
-
-	return (uint32_t) fatgetreservedsectors(f) +
-		fatgetfatsize(f) * fatgetnumfats(f) +
-		fatgetrootentries(f) * 32 / fatgetbytespersector(f) +
-		fatgetsectorspercluster(f) * (fatbits(f) == 32 ? 2 : 1)
-			> fatgetnumsectors(f);
+	return fatconsistentsize(f);
 }
 
 void toosmall(fat *f) {
@@ -1058,11 +1039,11 @@ int fatformat(char *devicename, off_t offset,
 
 	fatsetnumsectors(f, sectors);
 	fatsetbytespersector(f, sectorsize);
+	fatsetnumfats(f, 2);
 
 	if (option2[0] == '\0' || sectpercl == 0) {
 		printf("secXcl\troot\ttype\n");
 		for (sectpercl = 1; sectpercl < 256; sectpercl <<= 1) {
-			f->bits = 0;
 			fatsetsectorspercluster(f, sectpercl);
 			printf("%d\t", sectpercl);
 			if (fatsetentries(f, maxentries)) {
@@ -1084,6 +1065,11 @@ int fatformat(char *devicename, off_t offset,
 		return -1;
 	}
 
+	if (fatsetentries(f, maxentries)) {
+		printf("invalid number of entries in root: %d\n", maxentries);
+		return -1;
+	}
+
 	if (fatsetsize(f)) {
 		toosmall(f);
 		return -1;
@@ -1091,11 +1077,6 @@ int fatformat(char *devicename, off_t offset,
 
 	fatsetbootsignature(f);
 	fatsetrootbegin(f, fatbits(f) == 32 ? FAT_FIRST : FAT_ROOT);
-
-	if (fatsetentries(f, maxentries)) {
-		printf("invalid number of entries in root: %d\n", maxentries);
-		return -1;
-	}
 
 	if (fatbits(f) != 32)
 		f->info = NULL;
