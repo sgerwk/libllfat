@@ -620,20 +620,19 @@ int32_t _fatnumclusters(fat *f) {
  * number of data clusters (first cluster is 2)
  */
 
+#define CONDITIONALMINUS(a, b)			\
+	if ((a) < (uint32_t) (b)) {		\
+		dprintf("%u < %d\n", a, b);	\
+		return -1;			\
+	}					\
+	a -= b;
+
 int32_t fatnumdataclusters(fat *f) {
-	int nsectors;
-
+	uint32_t nsectors;
 	nsectors = fatgetnumsectors(f);
-	nsectors -= fatgetreservedsectors(f);
-	if (nsectors < 0)
-		return -1;
-	nsectors -= fatgetnumfats(f) * fatgetfatsize(f);
-	if (nsectors < 0)
-		return -1;
-	nsectors -= fatnumrootsectors(f);
-	if (nsectors < 0)
-		return -1;
-
+	CONDITIONALMINUS(nsectors, fatgetreservedsectors(f));
+	CONDITIONALMINUS(nsectors, fatgetnumfats(f) * fatgetfatsize(f));
+	CONDITIONALMINUS(nsectors, fatnumrootsectors(f));
 	return nsectors / fatgetsectorspercluster(f);
 }
 
