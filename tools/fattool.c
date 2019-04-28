@@ -1055,8 +1055,12 @@ int fatformat(char *devicename, off_t offset,
 				printf("too many clusters\n");
 			else if (fatconsistentsize(f))
 				toosmall(f);
-			else
-				printf("FAT%d\n", fatbits(f));
+			else {
+				printf("FAT%d", fatbits(f));
+				if (fatnumdataclusters(f) > 0x0FFFFFFF)
+					printf(" - WARNING: >28bits");
+				printf("\n");
+			}
 		}
 		return 0;
 	}
@@ -1105,6 +1109,11 @@ int fatformat(char *devicename, off_t offset,
 	}
 
 	fatsummary(f);
+	if (fatnumdataclusters(f) > 0x0FFFFFFF) {
+		printf("WARNING: each cluster entry in FAT takes ");
+		printf("more than 28 bits: not portable\n");
+		check();
+	}
 
 	f->fd = open(devicename, O_RDWR, 0666);
 	if (f->fd != -1) {
