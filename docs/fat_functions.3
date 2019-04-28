@@ -467,10 +467,25 @@ the same as the return value of \fBfatbits()\fP when called on a filesystem
 with \fInclusters\fP number of clusters.
 .TP
 .BI "int fatbestfatsize(fat *" f )
-Set the size of the FATs to the best allowed value. This is not obvious since
-the size of a FAT is proportional to the number of data clusters, but the
-number of data clusters is a function of the number of sectors minus the
-total size of the FATs.
+Set the size of the FATs to the best allowed value: large just enough for all
+clusters. This is not obvious since the size of the FATs is proportional to the
+number of data clusters, but the number of data clusters increases with the
+number of sectors minus the total size of the FATs.
+
+This operation depends on the bits of the FAT (12, 16 or 32), which however
+depends on the number of clusters, which depends on the size of the FATs. The
+caller is supposed to set \fIf->bits\fP before calling to avoid this
+calculation.
+
+The resulting filesystem may not be correct, because: a. the size of a FAT in a
+FAT12 and FAT16 is fit into 16 bits even if this reduction makes it too small
+for all clusters; b. the number of clusters in a FAT32 may be too large to fit
+into the prescribed 28 bits. In the first case, resetting \fIf->bits\fP to zero
+and calling this function again may solve the problem; or may not: the source
+of \fBfattool(\fP\fI1\fP\fB)\fP contains a more general solution. In the second
+case, the number of sectors is too large for a FAT filesystem, or the number of
+sectors per clusters too small.
+
 .TP
 .BI "int fatconsistentsize(fat *" f)
 Check the consistency of the size of the parts of a filesystem. In particular,
