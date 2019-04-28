@@ -532,6 +532,8 @@ int fatbestfatsize(fat *f) {
 		dprintf("clusters: %u ", nclusters[i]);
 		dprintf("fatsize: %u\n", fatsize[i]);
 		fatsetfatsize(f, fatsize[i]);
+		if (fatgetfatsize(f) < fatsize[i])
+			fatsetfatsize(f, 0xFFFF);
 	}
 
 	best = fatsize[(i + 2) % 3] > fatsize[(i + 0) % 3] ?
