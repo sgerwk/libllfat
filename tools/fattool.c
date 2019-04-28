@@ -1044,13 +1044,13 @@ int fatformat(char *devicename, off_t offset,
 		for (sectpercl = 1; sectpercl < 256; sectpercl <<= 1) {
 			fatsetsectorspercluster(f, sectpercl);
 			printf("%d\t", sectpercl);
+			fatsetsize(f);
 			if (fatsetentries(f, maxentries)) {
 				printf("invalid number of entries ");
 				printf("in root directory: %d\n", maxentries);
 				continue;
 			}
 			printf("%d\t", fatgetrootentries(f));
-			fatsetsize(f);
 			if (fatnumdataclusters(f) < 0)
 				printf("too many clusters\n");
 			else if (fatconsistentsize(f))
@@ -1066,11 +1066,6 @@ int fatformat(char *devicename, off_t offset,
 		return -1;
 	}
 
-	if (fatsetentries(f, maxentries)) {
-		printf("invalid number of entries in root: %d\n", maxentries);
-		return -1;
-	}
-
 	fatsetsize(f);
 	if (fatnumdataclusters(f) < 0) {
 		printf("too many clusters\n");
@@ -1078,6 +1073,11 @@ int fatformat(char *devicename, off_t offset,
 	}
 	else if (fatconsistentsize(f)) {
 		toosmall(f);
+		return -1;
+	}
+
+	if (fatsetentries(f, maxentries)) {
+		printf("invalid number of entries in root: %d\n", maxentries);
 		return -1;
 	}
 
