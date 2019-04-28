@@ -1024,7 +1024,7 @@ int fatformat(char *devicename, off_t offset,
 		}
 		sectors -= (offset + sectorsize - 1) / sectorsize;
 	}
-	printf("sectors: %d\n", sectors);
+	printf("sectors: %u\n", sectors);
 
 	f = fatcreate();
 	f->devicename = devicename;
