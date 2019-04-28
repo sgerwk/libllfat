@@ -927,7 +927,7 @@ int fatsetsize(fat *f) {
 		fatsetreservedsectors(f, bits == 32 ? 32 : 1);
 		best = fatbestfatsize(f);
 		fatsetfatsize(f, best + extra);
-		f->bits = 0;
+		f->bits = fatnumdataclusters(f) < 0 ? 32 : 0;
 		if (bits == fatbits(f))
 			break;
 		if (bits > fatbits(f))
