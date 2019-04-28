@@ -540,6 +540,7 @@ int fatbestfatsize(fat *f) {
 		fatsize[(i + 2) % 3] :
 		fatsize[(i + 0) % 3];
 	fatsetfatsize(f, best);
+	dprintf("best: %d\n", best);
 	return best;
 }
 
