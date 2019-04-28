@@ -405,7 +405,9 @@ int fatsetnextcluster(fat *f, int32_t n, int32_t next) {
  */
 int fatinittable(fat *f, int nfat) {
 	int prevfat;
-	int32_t cl, r;
+	int32_t cl, r, pilot;
+	int32_t sector;
+	unit *table;
 
 	if (nfat < 0 || nfat >= fatgetnumfats(f))
 		return -1;
@@ -415,8 +417,22 @@ int fatinittable(fat *f, int nfat) {
 	prevfat = f->nfat;
 	f->nfat = nfat;
 
-	for (cl = FAT_FIRST; cl <= fatlastcluster(f); cl++)
-		fatsetnextcluster(f, cl, FAT_UNUSED);
+	pilot = 2 * 4 * fatgetbytespersector(f);
+	if (fatlastcluster(f) <= pilot)
+		for (cl = FAT_FIRST; cl <= fatlastcluster(f); cl++)
+			fatsetnextcluster(f, cl, FAT_UNUSED);
+	else {
+		for (cl = FAT_FIRST; cl < pilot; cl++)
+			fatsetnextcluster(f, cl, FAT_UNUSED);
+		for (sector = fatgetreservedsectors(f) + 1;
+		     sector < fatgetreservedsectors(f) + fatgetfatsize(f) - 1;
+		     sector++) {
+			table = fatunitget(&f->sectors, f->offset,
+				fatgetbytespersector(f), sector, f->fd);
+			fatunitmove(&f->sectors, table, sector + 1);
+			fatunitwriteback(table);
+		}
+	}
 
 	r = fatgetrootbegin(f);
 	if (r >= FAT_FIRST)
