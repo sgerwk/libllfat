@@ -494,7 +494,7 @@ int fatsetfatsize(fat *f, int size) {
 int fatminfatsize(fat *f, int32_t nclusters) {
 	long long int nentries, nbytes, nsectors;
 
-	nentries = 2 + nclusters;
+	nentries = 2LLU + nclusters;
 	nbytes = nentries * fatbits(f) / 8
 		+ (fatbits(f) == 12 && nentries % 2 ? 1 : 0);
 	nsectors = (nbytes + fatgetbytespersector(f) - 1) /
