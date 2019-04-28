@@ -191,8 +191,8 @@ int fatcheck(fat *f) {
 	
 	if (fatgetbytespersector(f) != 0 && fatgetsectorspercluster(f) != 0 &&
 	    fatbits(f) != 0 &&
-	    fatgetfatsize(f) * fatgetbytespersector(f) * 8 / fatbits(f) <
-			fatlastcluster(f) + 1)
+	    1LLU * fatgetfatsize(f) * fatgetbytespersector(f) * 8 / fatbits(f)
+			< (unsigned) fatlastcluster(f) + 1)
 		res--;
 
 	if (0 && fatbytespercluster(f) > 32 * 1024)	// not really mandatory
