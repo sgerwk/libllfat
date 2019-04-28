@@ -518,13 +518,16 @@ int fatbestfatsize(fat *f) {
 		fatsize[i] = -2 - i;
 	}
 
+	dprintf("fat bits: %d\n", fatbits(f));
+
 	for (i = 0;
 	     nclusters[i] != nclusters[(i + 1) % 3] &&
 	     fatsize[i] != fatsize[(i + 1) % 3];
 	     i = (i + 1) % 3) {
 		nclusters[i] = fatnumdataclusters(f);
 		fatsize[i] = fatminfatsize(f, nclusters[i]);
-		printf("%d %d\n", nclusters[i], fatsize[i]);
+		dprintf("clusters: %d ", nclusters[i]);
+		dprintf("fatsize: %d\n", fatsize[i]);
 		fatsetfatsize(f, fatsize[i]);
 	}
 
