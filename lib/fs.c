@@ -492,7 +492,7 @@ int fatsetfatsize(fat *f, int size) {
  * minimal size of a fat for a given number of clusters
  */
 int fatminfatsize(fat *f, int nclusters) {
-	int nentries, nbytes, nsectors;
+	long long int nentries, nbytes, nsectors;
 
 	nentries = 2 + nclusters;
 	nbytes = nentries * fatbits(f) / 8
