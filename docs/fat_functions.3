@@ -456,12 +456,12 @@ and the 32-bit entries of the fat size field. The first is used in FAT12 and
 FAT16, the second in FAT32.
 .PD
 .TP
-.BI "int fatminfatsize(fat *" f ", int " nclusters )
+.BI "int fatminfatsize(fat *" f ", int32_t " nclusters )
 Determine the minimal size of a FAT large enogh for the given number of
 clusters. The value is only returned, the FAT size of the filesystem is not
 changed.
 .TP
-.BI "int fatbitsfromclusters(int " ncusters )
+.BI "int fatbitsfromclusters(int32_t " ncusters )
 Determine the number of bits of a FAT from a given number of clusters. This is
 the same as the return value of \fBfatbits()\fP when called on a filesystem
 with \fInclusters\fP number of clusters.
