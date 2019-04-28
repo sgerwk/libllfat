@@ -507,11 +507,10 @@ int fatminfatsize(fat *f, int nclusters) {
  * set the size of a fat to its minimum possible value
  */
 int fatbestfatsize(fat *f) {
-	int prev, best, fatsize[3];
+	int best, fatsize[3];
 	int32_t nclusters[3];
 	int i;
 
-	prev = fatgetfatsize(f);
 	fatsetfatsize(f, 1);
 
 	for (i = 0; i < 3; i++) {
@@ -532,8 +531,6 @@ int fatbestfatsize(fat *f) {
 	best = fatsize[i] > fatsize[(i + 2) % 3] ?
 		fatsize[i] :
 		fatsize[(i + 2) % 3];
-
-	fatsetfatsize(f, prev);
 	fatsetfatsize(f, best);
 	return best;
 }
