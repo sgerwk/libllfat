@@ -35,6 +35,8 @@
 int fatdebug = 0;
 #define dprintf if (fatdebug) printf
 
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
+
 #ifdef O_DIRECT
 #else
 #define O_DIRECT 0
@@ -525,9 +527,10 @@ int fatbestfatsize(fat *f) {
 	     fatsize[(i + 2) % 3] != fatsize[(i + 0) % 3];
 	     i = (i + 1) % 3) {
 		nclusters[i] = fatnumdataclusters(f);
-		fatsize[i] = fatminfatsize(f, nclusters[i]);
-		dprintf("clusters: %d ", nclusters[i]);
-		dprintf("fatsize: %d\n", fatsize[i]);
+		fatsize[i] = fatminfatsize(f,
+			MIN((uint32_t) nclusters[i], 0x7FFFFFFF));
+		dprintf("clusters: %u ", nclusters[i]);
+		dprintf("fatsize: %u\n", fatsize[i]);
 		fatsetfatsize(f, fatsize[i]);
 	}
 
