@@ -539,6 +539,17 @@ int fatbestfatsize(fat *f) {
 }
 
 /*
+ * check consistency of sizes in a filesystem (see fat_functions.3)
+ */
+int fatconsistentsize(fat *f) {
+	return (uint32_t) fatgetreservedsectors(f) +
+		fatgetfatsize(f) * fatgetnumfats(f) +
+		fatgetrootentries(f) * 32 / fatgetbytespersector(f) +
+		fatgetsectorspercluster(f) * (fatbits(f) == 32 ? 2 : 1)
+			> fatgetnumsectors(f);
+}
+
+/*
  * first cluster of root directory
  */
 
