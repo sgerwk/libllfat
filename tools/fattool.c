@@ -1128,7 +1128,8 @@ int fatformat(char *devicename, off_t offset,
 		}
 	}
 	res = ftruncate(f->fd,
-		f->offset + fatgetnumsectors(f) * fatgetbytespersector(f));
+		f->offset +
+		1LLU * fatgetnumsectors(f) * fatgetbytespersector(f));
 	if (res == -1)
 		return -1;
 	f->boot->fd = f->fd;
