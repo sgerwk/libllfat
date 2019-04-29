@@ -364,15 +364,18 @@ void fatmap(fat *f, char *used, char *unused, char *bad) {
 /*
  * restore the filesystem to its pristine state
  */
-void fatzero(fat *f) {
+void fatzero(fat *f, int table) {
 	int nfat;
 	unit *root;
 	int index;
 
 	fatsetdirtybits(f, 0);
 
-	for (nfat = 0; nfat < fatgetnumfats(f); nfat++)
-		fatinittable(f, nfat);
+	if (table)
+		for (nfat = 0; nfat < fatgetnumfats(f); nfat++)
+			fatinittable(f, nfat);
+	else if (fatbits(f) == 32)
+		fatsetnextcluster(f, fatgetrootbegin(f), FAT_EOF);
 
 	root = fatclusterread(f, fatgetrootbegin(f));
 	for (index = 0; index < root->size / 32; index++)
@@ -972,7 +975,7 @@ toosmallend:
 }
 
 int fatformat(char *devicename, off_t offset,
-		char *option1, char *option2, char *option3) {
+		char *option1, char *option2, char *option3, char *option4) {
 	int fd;
 	fat *f;
 	int sectorsize = 512;
@@ -1139,7 +1142,7 @@ int fatformat(char *devicename, off_t offset,
 	fatsetmedia(f, 0xF8);
 	if (fatbits(f) == 32)
 		fatcopyboottobackup(f);
-	fatzero(f);
+	fatzero(f, ! ! strcmp(option4, "nofats"));
 	fatclose(f);
 
 	return 0;
@@ -1402,7 +1405,8 @@ int main(int argn, char *argv[]) {
 				/* create a file system */
 
 	if (! strcmp(operation, "format"))
-		return fatformat(name, offset, option1, option2, option3);
+		return fatformat(name, offset,
+			option1, option2, option3, option4);
 
 				/* validity of a path */
 
@@ -1637,7 +1641,7 @@ int main(int argn, char *argv[]) {
 		sleep(5);
 		check();
 		printf("resetting the filesystem\n");
-		fatzero(f);
+		fatzero(f, 1);
 	}
 	else if (! strcmp(operation, "unused")) {
 		fatinversedebug = 1;

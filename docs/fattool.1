@@ -546,7 +546,7 @@ using \fIfattool -o $((63 * 512)) ...\fP, and may be mounted via
 
 .TP
 \fBformat\fB (\fIsectors\fP|\fI""\fP) (\fIsectorspercluster\fP|\fI""\fP) \
-(\fImaxentries\fP|\fI""\fP)
+(\fImaxentries\fP|\fI""\fP) [\fInofats\fP]
 Create a filesystem or evaluate whether it can be created and how. The first
 parameter \fIsectors\fP is the number of sectors in the filesystem; if omitted
 or specified as \fI""\fP, it is derived from the size of the device or file and
@@ -558,7 +558,11 @@ shows whether the filesystem could be created, and of which type, but does not
 actually create it. The third parameter \fImaxentries\fP is the maximal number
 of entries in the root directory; a value is allowed only if \fImaxentries *
 32\fP is a multiple of the sector size (512); default is 256; this value is
-silently ignored if the filesystem turns out to be a FAT32.
+silently ignored if the filesystem turns out to be a FAT32. If the fourth
+argument contains the string \fInofats\fP, the FATs are not initialized other
+than their headers and the entry of the first cluster of the root directory;
+this probabily only makes sense to quickly format a large image file on a
+filesystem that supports sparse files.
 .
 .
 .
