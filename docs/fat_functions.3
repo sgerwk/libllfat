@@ -487,7 +487,7 @@ case, the number of sectors is too large for a FAT filesystem, or the number of
 sectors per clusters too small.
 
 .TP
-.BI "int fatconsistentsize(fat *" f)
+.BI "int fatconsistentsize(fat *" f )
 Check the consistency of the size of the parts of a filesystem. In particular,
 the number of sectors is expected to be large enough to contain all reserved
 sectors, all fats, a root directory and at least one cluster for data.
