@@ -907,6 +907,46 @@ void directoryclusters(fat *f) {
 }
 
 /*
+ * obtain offset and size from an mbr partition
+ */
+int mbr(char *file, int num, uint32_t *start, uint32_t *length) {
+	int fd;
+	int res;
+	unsigned char sector[512], *entry;
+	unsigned char active, label;
+	uint32_t *record;
+
+	fd = open(file, O_RDWR);
+	if (fd == -1)
+		return -2;
+
+	res = read(fd, sector, 512);
+	if (res != 512)
+		return -3;
+
+	if (sector[0x1FE] != 0x55 || sector[0x1FF] != 0xAA)
+		return -4;
+
+	entry = sector + 0x1BE + (num - 1) * 16;
+
+	active = entry[0];
+	if (active != 0 && active != 0x80)
+		return -4;
+
+	label = entry[4];
+	if (label == 0)
+		return -1;
+
+	record = (uint32_t *) entry;
+	*start = le32toh(record[2]);
+	*length = le32toh(record[3]);
+
+	close(fd);
+
+	return 0;
+}
+
+/*
  * create a filesystem
  */
 
@@ -974,7 +1014,7 @@ toosmallend:
 	printf(" > %d\n", fatgetnumsectors(f));
 }
 
-int fatformat(char *devicename, off_t offset,
+int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 		char *option1, char *option2, char *option3, char *option4) {
 	int fd;
 	fat *f;
@@ -985,13 +1025,17 @@ int fatformat(char *devicename, off_t offset,
 	struct stat ss;
 	int res;
 
-	errno = 0;
-	ul = strtoul(option1, NULL, 10);
-	if (ul == ULONG_MAX && errno == ERANGE) {
-		printf("overflow: %s\n", option1);
-		return -1;
+	if (len > 0)
+		sectors = len;
+	else {
+		errno = 0;
+		ul = strtoul(option1, NULL, 10);
+		if (ul == ULONG_MAX && errno == ERANGE) {
+			printf("overflow: %s\n", option1);
+			return -1;
+		}
+		sectors = ul;
 	}
-	sectors = ul;
 
 	errno = 0;
 	ul = strtoul(option2, NULL, 10);
@@ -1009,13 +1053,13 @@ int fatformat(char *devicename, off_t offset,
 	}
 	maxentries = ul;
 
-	if (option1[0] == '\0' || sectors == 0) {
+	if (len == 0 && (option1[0] == '\0' || sectors == 0)) {
 		if (stat(devicename, &ss)) {
 			perror(devicename);
 			return -1;
 		}
 		if (S_ISREG(ss.st_mode))
-			sectors = ss.st_size / sectorsize;
+			len = ss.st_size / sectorsize;
 		else if (S_ISBLK(ss.st_mode)) {
 			fd = open(devicename, O_RDONLY);
 			ioctl(fd, BLKGETSIZE, &sectors);
@@ -1025,7 +1069,8 @@ int fatformat(char *devicename, off_t offset,
 			printf("unsupported file type\n");
 			return -1;
 		}
-		sectors -= (offset + sectorsize - 1) / sectorsize;
+		len -= (offset + sectorsize - 1) / sectorsize;
+		sectors = len;
 	}
 	printf("sectors: %u\n", sectors);
 
@@ -1130,11 +1175,13 @@ int fatformat(char *devicename, off_t offset,
 			return -1;
 		}
 	}
-	res = ftruncate(f->fd,
-		f->offset +
-		1LLU * fatgetnumsectors(f) * fatgetbytespersector(f));
-	if (res == -1)
-		return -1;
+	if (len == 0 && truncate && ! strstr(option4, "noresize")) {
+		res = ftruncate(f->fd,
+			f->offset +
+			1LLU * fatgetnumsectors(f) * fatgetbytespersector(f));
+		if (res == -1)
+			return -1;
+	}
 	f->boot->fd = f->fd;
 	if (f->info != NULL)
 		f->info->fd = f->fd;
@@ -1272,6 +1319,8 @@ void usage() {
 
 int main(int argn, char *argv[]) {
 	char *name, *operation, *option1, *option2, *option3, *option4;
+	int partition;
+	uint32_t begin, length;
 	off_t offset;
 	int signature;
 	size_t wlen;
@@ -1302,7 +1351,9 @@ int main(int argn, char *argv[]) {
 
 				/* arguments */
 
+	partition = 0;
 	offset = 0;
+	len = 0;
 	signature = 0;
 	fatnum = -1;
 	first = 0;
@@ -1320,6 +1371,15 @@ int main(int argn, char *argv[]) {
 				offset = atol(argv[1] + 1);
 			else {
 				offset = atol(argv[2]);
+				argn--;
+				argv++;
+			}
+			break;
+		case 'p':
+			if (argv[1][2] != '\0')
+				partition = atol(argv[1] + 1);
+			else {
+				partition = atol(argv[2]);
 				argn--;
 				argv++;
 			}
@@ -1392,6 +1452,22 @@ int main(int argn, char *argv[]) {
 	option3 = argn - 1 >= 5 ? argv[5] : "";
 	option4 = argn - 1 >= 6 ? argv[6] : "";
 
+				/* partition data */
+
+	if (partition >= 1) {
+		res = mbr(name, partition, &begin, &length);
+		if (res == -1) {
+			printf("no partition %d on %s\n", partition, name);
+			exit(EXIT_FAILURE);
+		}
+		else if (res < 0) {
+			printf("invalid mbr on %s\n", name);
+			exit(EXIT_FAILURE);
+		}
+		length -= (offset + 512 - 1) / 512;
+		offset += 512 * begin;
+	}
+
 				/* find location of the boot sector */
 
 	if (! strcmp(operation, "boot")) {
@@ -1405,7 +1481,7 @@ int main(int argn, char *argv[]) {
 				/* create a file system */
 
 	if (! strcmp(operation, "format"))
-		return fatformat(name, offset,
+		return fatformat(name, offset, len, partition == 0,
 			option1, option2, option3, option4);
 
 				/* validity of a path */

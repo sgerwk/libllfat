@@ -62,7 +62,14 @@ dump the cluster cache at the end of the operation; this is only useful during
 testing to check whether clusters are correctly deallocated
 .TP
 \fB-o\fP \fIoffset\fP
-the filesystem is assumed to start at this offset in the device
+the filesystem is assumed to start at this offset in the device; the offset is
+given in number of bytes, not sectors
+.TP
+\fB-p\fP \fInum\fP
+the file is assumed to be MBR-partitioned with no extended partitions;
+the operation is done on partition \fInum\fP; this is useful on partitioned
+images, as the alternative made of \fBlosetup\fP(1) and \fBpartprobe\fP(1)
+requires root privileges
 .TP
 \fB-d\fP
 use the signature to determine the number of bits of the fat; this is a string
@@ -546,7 +553,7 @@ using \fIfattool -o $((63 * 512)) ...\fP, and may be mounted via
 
 .TP
 \fBformat\fB (\fIsectors\fP|\fI""\fP) (\fIsectorspercluster\fP|\fI""\fP) \
-(\fImaxentries\fP|\fI""\fP) [\fInofats\fP]
+(\fImaxentries\fP|\fI""\fP) [\fInofats\fP][,][\fInotrunc\fP]
 Create a filesystem or evaluate whether it can be created and how. The first
 parameter \fIsectors\fP is the number of sectors in the filesystem; if omitted
 or specified as \fI""\fP, it is derived from the size of the device or file and
@@ -558,11 +565,28 @@ shows whether the filesystem could be created, and of which type, but does not
 actually create it. The third parameter \fImaxentries\fP is the maximal number
 of entries in the root directory; a value is allowed only if \fImaxentries *
 32\fP is a multiple of the sector size (512); default is 256; this value is
-silently ignored if the filesystem turns out to be a FAT32. If the fourth
-argument contains the string \fInofats\fP, the FATs are not initialized other
-than their headers and the entry of the first cluster of the root directory;
-this probabily only makes sense to quickly format a large image file on a
-filesystem that supports sparse files.
+silently ignored if the filesystem turns out to be a FAT32.
+
+If the fourth argument contains the string \fInofats\fP, the FATs are not
+initialized other than their headers and the entry of the first cluster of the
+root directory; this probabily only makes sense to quickly format a large image
+file on a filesystem that supports sparse files. If the fourth argument
+contains the string \fInoresize\fP, no attempt is made to resize the file, as
+it is otherwise done if the number of sectors is passed and the file is not
+partitioned.
+
+A recipe for creating a partitioned image of 10000 sectors containing a single
+primary partition of type \fI0x0C\fP:
+
+.nf
+.I
+	dd if=/dev/zero of=example bs=512 count=10000 conv=sparse
+.I
+	echo '- - c' | sfdisk example
+.I
+	fattool -p 1 example format "" 1
+.fi
+
 .
 .
 .
