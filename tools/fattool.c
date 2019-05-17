@@ -1481,7 +1481,7 @@ int main(int argn, char *argv[]) {
 				/* create a file system */
 
 	if (! strcmp(operation, "format"))
-		return fatformat(name, offset, len, partition == 0,
+		return fatformat(name, offset, length, partition == 0,
 			option1, option2, option3, option4);
 
 				/* validity of a path */
