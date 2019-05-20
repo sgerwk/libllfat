@@ -66,7 +66,8 @@ the filesystem is assumed to start at this offset in the device; the offset is
 given in number of bytes, not sectors
 .TP
 \fB-p\fP \fInum\fP
-the file is assumed to be MBR-partitioned with no extended partitions;
+the file is assumed to be MBR-partitioned with no extended partitions and
+sectors of 512 bytes;
 the operation is done on partition \fInum\fP; this is useful on partitioned
 images, as the alternative made of \fBlosetup\fP(1) and \fBpartprobe\fP(1)
 requires root privileges
