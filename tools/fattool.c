@@ -1353,7 +1353,7 @@ int main(int argn, char *argv[]) {
 
 	partition = 0;
 	offset = 0;
-	len = 0;
+	length = 0;
 	signature = 0;
 	fatnum = -1;
 	first = 0;
