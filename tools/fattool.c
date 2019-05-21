@@ -907,6 +907,31 @@ void directoryclusters(fat *f) {
 }
 
 /*
+ * size of a file, as number of 512-sectors
+ */
+uint32_t filesize(char *file) {
+	struct stat ss;
+	int fd;
+	int sectors;
+	int sectorsize = 512;
+
+	if (stat(file, &ss)) {
+		perror(file);
+		return 0;
+	}
+	if (S_ISREG(ss.st_mode))
+		return ss.st_size / sectorsize;
+	else if (S_ISBLK(ss.st_mode)) {
+		fd = open(file, O_RDONLY);
+		ioctl(fd, BLKGETSIZE, &sectors);
+		close(fd);
+		return sectors;
+	}
+	printf("unsupported file type\n");
+	return 0;
+}
+
+/*
  * obtain offset and size from an mbr partition
  */
 int mbr(char *file, int num, uint32_t *start, uint32_t *length) {
@@ -1016,13 +1041,11 @@ toosmallend:
 
 int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 		char *option1, char *option2, char *option3, char *option4) {
-	int fd;
 	fat *f;
 	int sectorsize = 512;
 	unsigned long int ul;
 	uint32_t sectors, sectpercl;
 	unsigned maxentries;
-	struct stat ss;
 	int res;
 
 	if (len > 0)
@@ -1054,19 +1077,10 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 	maxentries = ul;
 
 	if (len == 0 && (option1[0] == '\0' || sectors == 0)) {
-		if (stat(devicename, &ss)) {
-			perror(devicename);
-			return -1;
-		}
-		if (S_ISREG(ss.st_mode))
-			len = ss.st_size / sectorsize;
-		else if (S_ISBLK(ss.st_mode)) {
-			fd = open(devicename, O_RDONLY);
-			ioctl(fd, BLKGETSIZE, &sectors);
-			close(fd);
-		}
-		else {
-			printf("unsupported file type\n");
+		len = filesize(devicename);
+		if (len == 0) {
+			printf("cannot determine size of filesystem, ");
+			printf("and it was not specified\n");
 			return -1;
 		}
 		len -= (offset + sectorsize - 1) / sectorsize;
