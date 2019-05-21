@@ -91,6 +91,17 @@ print the serial number of the filesystem
 .BI setserial " number
 change the serial number of the filesystem; an 8-bytes hex number is accepted
 .TP
+.B getlastcluster
+print the number of the last cluster in the filesystem
+.TP
+\fBsetlastcluster\fP \fInumber\fP [\fInosize\fP]
+change the number of sectors in the filesystem to obtain the given number of
+the last cluster; this operation only changes the number of sectors stored in
+the boot sector, and is constrained by the size of the FATs and the size of the
+device or image file; the second check can be skipped by passing \fInosize\fP
+as the third argument; this is only safe if the filesystem is on a
+non-partitioned image file
+.TP
 \fBfree\fP/\fBused\fP/\fBmap\fP
 print a map of the clusters that tells which are free and which are used
 .TP

@@ -1230,6 +1230,10 @@ void usage() {
 	printf("\t\tsummary\t\tbasic characteristics of the filesystem\n");
 	printf("\t\tgetserial\tget the filesystem serial number\n");
 	printf("\t\tsetserial\tset the filesystem serial number\n");
+	printf("\t\tgetlastcluster\tget the number of the last cluster\n");
+	printf("\t\tsetlastcluster num [nosize]\n");
+	printf("\t\t\t\tchange the number of the last cluster\n");
+	printf("\t\t\t\tnosize: do not check size of device\n");
 	printf("\t\tused\t\tmap of used clusters\n");
 	printf("\t\tfree\t\tmap of free clusters\n");
 	printf("\t\tmap\t\tmap of all clusters, with\n");
@@ -1334,7 +1338,7 @@ void usage() {
 int main(int argn, char *argv[]) {
 	char *name, *operation, *option1, *option2, *option3, *option4;
 	int partition;
-	uint32_t begin, length;
+	uint32_t begin, length, fsize;
 	off_t offset;
 	int signature;
 	size_t wlen;
@@ -1623,6 +1627,38 @@ int main(int argn, char *argv[]) {
 		printf("new serial number: 0x%08X\n", serial);
 		fatsetserialnumber(f, serial);
 		fatcopyboottobackup(f);
+	}
+	else if (! strcmp(operation, "getlastcluster"))
+		printf("%d\n", last);
+	else if (! strcmp(operation, "setlastcluster")) {
+		if (option1[0] == '\0') {
+			printf("argument missing: new last cluster\n");
+			return -1;
+		}
+		last = strtoul(option1, &buf, 0);
+		if (last < 2) {
+			printf("last cluster must be >= 2\n");
+			return -1;
+		}
+		if (! strstr(option2, "nofat") &&
+		    (last * fatbits(f) + 8 - 1) / 8 >=
+		    fatgetfatsize(f) * fatgetbytespersector(f)) {
+			printf("not enough space in FAT ");
+			printf("for cluster %d\n", last);
+			exit(EXIT_FAILURE);
+		}
+		sector = (last - 1) * fatgetsectorspercluster(f) +
+			fatnumrootsectors(f) +
+			fatgetnumfats(f) * fatgetfatsize(f) +
+			fatgetreservedsectors(f);
+		fsize = length > 0 ? length : filesize(name);
+		if (! strstr(option2, "nosize") &&
+		    fsize > 0 && sector > fsize) {
+			printf("file is not large enough: ");
+			printf("%d > %d\n", sector, fsize);
+			exit(EXIT_FAILURE);
+		}
+		fatsetnumsectors(f, sector);
 	}
 	else if (! strcmp(operation, "free"))
 		fatmap(f, "%d", "     .", "BAD");
