@@ -1210,12 +1210,53 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 }
 
 /*
+ * parse a range of clusters
+ */
+int parserange(char *option, int32_t *first, int32_t *last) {
+	char *minus, *end;
+	int32_t val;
+
+	if (*option == '-')
+		minus = option;
+	else {
+		errno = 0;
+		val = strtol(option, &minus, 10);
+		if (*minus != '-') {
+			printf("cannot parse range: %s\n", option);
+			return -1;
+		}
+		if (val == LONG_MAX && errno == ERANGE) {
+			printf("overflow: %s\n", option);
+			return -2;
+		}
+		if (minus != option)
+			*first = val;
+	}
+
+	errno = 0;
+	val = strtol(minus + 1, &end, 0);
+	if (val == LONG_MAX && errno == ERANGE) {
+		printf("overflow: %s\n", option);
+		return -3;
+	}
+	if (*end != '\0') {
+		printf("extra characters at end of range: %s\n", option);
+		return -4;
+	}
+	if (end != minus + 1)
+		*last = val;
+
+	return 0;
+}
+
+/*
  * usage
  */
 void usage() {
 	printf("usage:\n\tfattool [-f num] [-l] [-s] [-t] [-n] ");
 	printf("[-m] [-c] [-o offset] [-p num]\n");
-	printf("\t\t[-e simerr.txt] device operation\n");
+	printf("\t\t[-a first-last] [-e simerr.txt] ");
+	printf("device operation [arg...]\n");
 	printf("\t\t-f num\t\tuse the specified file allocation table\n");
 	printf("\t\t-l\t\tload the first FAT in cache immediately\n");
 	printf("\t\t-s\t\tuse shortnames\n");
@@ -1225,6 +1266,7 @@ void usage() {
 	printf("\t\t-c\t\tcheck: show cluster cache at the end\n");
 	printf("\t\t-o offset\tfilesystem starts at this offset in device\n");
 	printf("\t\t-d\t\tdetermine number of bits from signature\n");
+	printf("\t\t-a first-last\trange of allocable clusters\n");
 	printf("\t\t-e simerr.txt\tread simulated errors from file\n");
 	printf("\n\toperations:\n");
 	printf("\t\tsummary\t\tbasic characteristics of the filesystem\n");
@@ -1337,10 +1379,14 @@ void usage() {
 	printf("\t\t\t\tcreate a filesystem or estimate its type\n");
 }
 
+/* 
+ * main
+ */
 int main(int argn, char *argv[]) {
 	char *name, *operation, *option1, *option2, *option3, *option4;
 	int partition;
 	uint32_t begin, length, fsize;
+	int32_t afirst, alast;
 	off_t offset;
 	int signature;
 	size_t wlen;
@@ -1357,7 +1403,7 @@ int main(int argn, char *argv[]) {
 	unsigned long readserial;
 	int res, diff, finalres, recur, chain, all, chains;
 	int over, startdir, nchanges;
-	char dummy, pad, *buf, firstchar;
+	char dummy, pad, *buf, firstchar, attrib;
 	int nfat;
 	char *timeformat;
 	struct tm tm;
@@ -1381,6 +1427,8 @@ int main(int argn, char *argv[]) {
 	useshortnames = 0;
 	legalize = 0;
 	nostoragepaths = 0;
+	afirst = -1;
+	alast = -1;
 	memcheck = 0;
 	clusterdump = 0;
 	simerrfile = NULL;
@@ -1439,6 +1487,17 @@ int main(int argn, char *argv[]) {
 			break;
 		case 'n':
 			nostoragepaths = 1;
+			break;
+		case 'a':
+			if (argv[1][2] != '\0')
+				res = parserange(argv[1] + 2, &afirst, &alast);
+			else {
+				res = parserange(argv[2], &afirst, &alast);
+				argn--;
+				argv++;
+			}
+			if (res < 0)
+				exit(EXIT_FAILURE);
 			break;
 		case 'm':
 			memcheck = 1;
@@ -1575,6 +1634,9 @@ int main(int argn, char *argv[]) {
 		}
 		f->nfat = fatnum;
 	}
+
+	afirst = afirst != -1 ? afirst : FAT_FIRST;
+	alast = alast != -1 ? alast : fatlastcluster(f);
 
 				/* read first FAT if -f passed */
 
@@ -1861,7 +1923,8 @@ int main(int argn, char *argv[]) {
 			else if (size <= 0)
 				fatsetnextcluster(f, cl, FAT_EOF);
 			else if (next == FAT_EOF || next == FAT_UNUSED) {
-				next = fatclusterfindfree(f);
+				next = fatclusterfindfreebetween(f,
+					afirst, alast, -1);
 				fatsetnextcluster(f, cl, next);
 				fatsetnextcluster(f, next, FAT_EOF);
 			}
@@ -1909,7 +1972,8 @@ int main(int argn, char *argv[]) {
 	else if (! strcmp(operation, "createchain")) {
 		size = atol(option1);
 		if (option2[0] == '\0') {
-			start = fatclusterfindfree(f);
+			start = fatclusterfindfreebetween(f,
+				afirst, alast, -1);
 			printf("%d\n", start);
 		}
 		else {
@@ -1917,7 +1981,8 @@ int main(int argn, char *argv[]) {
 			f->last = start + 1;
 		}
 		for (cl = start; size > 0; cl = next) {
-			next = fatclusterfindfree(f);
+			next = fatclusterfindfreebetween(f,
+				afirst, alast, -1);
 			if (cl == FAT_ERR || next == FAT_ERR) {
 				printf("failed to allocate cluster\n");
 				exit(1);
@@ -2316,7 +2381,8 @@ int main(int argn, char *argv[]) {
 		fatreferencesettarget(f, directory, index, cl, FAT_UNUSED);
 
 		do {
-			next = fatclusterfindfree(f);
+			next = fatclusterfindfreebetween(f,
+				afirst, alast, -1);
 			printf("next: %d max: %d       \r", next, max);
 			if (next == FAT_ERR) {
 				printf("filesystem full\n");
@@ -2526,7 +2592,8 @@ int main(int argn, char *argv[]) {
 		ncluster = (size + fatbytespercluster(f) - 1) /
 			fatbytespercluster(f);
 
-		start = fatclusterfindfreesequence(f, ncluster);
+		start = fatclusterfindfreesequencebetween(f,
+			afirst, alast, -1, ncluster);
 		if (start == FAT_ERR) {
 			printf("not enough consecutive free clusters\n");
 			exit(1);
@@ -2698,7 +2765,7 @@ int main(int argn, char *argv[]) {
 			exit(1);
 		}
 		fatentrysetattributes(directory, index, 0x10);
-		next = fatclusterfindfree(f);
+		next = fatclusterfindfreebetween(f, afirst, alast, -1);
 		if (next == FAT_ERR) {
 			printf("filesystem full\n");
 			exit(1);
