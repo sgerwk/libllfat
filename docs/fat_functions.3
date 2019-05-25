@@ -783,6 +783,7 @@ Same, but decreases \fIc\fP instead of increasing.
 .BI "int32_t fatclusternumfree(fat *" f )
 The number of free clusters in the filesystem. This number is also saved in
 \fIf->free\fP, and possibly saved if the filesystem is a FAT32.
+.TP
 .BI "int32_t fatclusternumfreebetween(fat *" f ", \
 int32_t " begin ", int32_t " end )
 The number of free clusters between \fIbegin\fP and \fIend\fP, inclusive. This
