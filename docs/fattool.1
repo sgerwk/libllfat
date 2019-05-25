@@ -425,6 +425,25 @@ without interfering with it; care should be taken to check that file creation
 actually succeded before writing
 
 .TP
+.BI getattrib " file
+print the file attributes as a single hexadecimal char;
+the meaning of its bits are:
+
+.nf
+  0x01 read-only
+  0x02 hidden
+  0x04 system file
+  0x08 volume
+  0x10 directory
+  0x20 archive (regular file)
+.fi
+
+.TP
+.BI setattrib " file attrib
+set the attributes of a file; the attributes are given as a single hexadecimal
+char; the meaning of its bits are in the description of the previous operation
+
+.TP
 \fBgetsize\fP \fIfile\fP
 print the size of an existing file
 .TP

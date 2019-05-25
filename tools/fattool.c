@@ -1303,6 +1303,8 @@ void usage() {
 	printf("differing clusters of a file\n");
 	printf("\t\tconsecutive name size\n\t\t\t\tcreate a ");
 	printf("file of consecutive clusters\n");
+	printf("\t\tgetattrib file\tget attributes of file\n");
+	printf("\t\tsetattrib file attrib\n\t\t\t\tset attributes of file\n");
 	printf("\t\tgetsize file\tget size of file\n");
 	printf("\t\tsetsize file size\n\t\t\t\tchange file size; ");
 	printf("directory entry only, see man\n");
@@ -2540,6 +2542,35 @@ int main(int argn, char *argv[]) {
 		for (cl = 0; cl < ncluster; cl++)
 			fatsetnextcluster(f, start + cl, start + cl + 1);
 		fatsetnextcluster(f, start + cl - 1, FAT_EOF);
+	}
+	else if (! strcmp(operation, "getattrib")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: file\n");
+			exit(1);
+		}
+		if (fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			printf("file %s does not exists\n", option1);
+			exit(1);
+		}
+		printf("0x%02X\n", fatentrygetattributes(directory, index));
+	}
+	else if (! strcmp(operation, "setattrib")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: file\n");
+			exit(1);
+		}
+		if (fileoptiontoreference(f, option1,
+				&directory, &index, &previous, &target)) {
+			printf("file %s does not exists\n", option1);
+			exit(1);
+		}
+		if (option2[0] == '\0') {
+			printf("missing argument: attributes\n");
+			exit(1);
+		}
+		attrib = strtod(option2, NULL);
+		fatentrysetattributes(directory, index, attrib);
 	}
 	else if (! strcmp(operation, "getsize")) {
 		if (option1[0] == '\0') {
