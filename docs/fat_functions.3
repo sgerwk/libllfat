@@ -19,6 +19,11 @@ caches
 global parameters of the filesystem, such as whether it is a FAT12, FAT16 or
 FAT32
 .TP
+.B boot.h
+access the boot and the information sector;
+apart from some specific cases, this is better done via the functions in
+\fIfs.h\fP
+.TP
 .B table.h
 the file allocation table, which tells the successor of each cluster, and
 whether a cluster is unused or bad
@@ -660,6 +665,29 @@ Set the number of free clusters as stored in the filesystem.
 .BI "void fatsummary(fat *" f )
 Print a summary of the global parameters of the filesystem to stdout. This is
 useful for debugging.
+.
+.
+.
+.SH boot.h
+
+Most functions in \fIfs.h\fP access data stored in the boot sector. They
+require the filesystem to be correctly open, with the boot sector as its first
+one. This is sometimes a limitation: for example, the filesystem may not be
+opened because it contains errors, or the sector to be accessed is the backup
+copy of the boot sector.
+
+The functions in \fIboot.h\fP access data in a boot sector that is passed as
+argument, rather than being the first in the filesystem. The names of the
+functions are similar to those in \fIfs.h\fP, like \fIfatbootgetnumfats()\fP.
+Some other functions access data in the information sector, like
+\fIfatinfogetfreeclusters()\fP. Their first parameter is a pointer to a unit,
+rather than a FAT structure.
+
+Some functions also receive the number of bits of the fat (12, 16 or 32) as the
+target of a pointer. Passing a null pointer makes the number of bits to be
+calculated from the sector itself. Passing a pointer to zero also makes the
+number bits to be calculated from the sector, but also stored at the pointer
+target. Otherwise, the pointed value is used as the number of bits of the fat.
 .
 .
 .

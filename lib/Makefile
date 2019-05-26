@@ -7,7 +7,7 @@ CFLAGS+=-I.
 CFLAGS+=-fPIC
 # CFLAGS+=-g
 
-OBJS=fs.o table.o unit.o entry.o directory.o reference.o inverse.o \
+OBJS=fs.o boot.o table.o unit.o entry.o directory.o reference.o inverse.o \
 long.o complex.o
 
 all: $(LIBS) $(HEADERS)
@@ -18,7 +18,7 @@ libllfat.a: $(OBJS)
 libllfat.so: $(OBJS)
 	gcc -shared -o $@ $^ -fPIC
 
-llfat.h: llfat.h.header fs.h entry.h table.h directory.h reference.h \
+llfat.h: llfat.h.header fs.h boot.h entry.h table.h directory.h reference.h \
 inverse.h long.h complex.h debug.h
 	cat $^ > $@
 
