@@ -1115,7 +1115,7 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 			printf("%d\t", fatgetrootentries(f));
 			if (fatnumdataclusters(f) < 0)
 				printf("too many clusters\n");
-			else if (fatconsistentsize(f))
+			else if (! fatconsistentsize(f))
 				toosmall(f);
 			else {
 				printf("FAT%d", fatbits(f));
@@ -1137,7 +1137,7 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 		printf("too many clusters\n");
 		return -1;
 	}
-	else if (fatconsistentsize(f)) {
+	else if (! fatconsistentsize(f)) {
 		toosmall(f);
 		return -1;
 	}
