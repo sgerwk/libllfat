@@ -1097,9 +1097,10 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 	f->boot->dirty = 1;
 	fatunitinsert(&f->sectors, f->boot, 1);
 
-	fatsetnumsectors(f, sectors);
-	fatsetbytespersector(f, sectorsize);
+	memset(fatunitgetdata(f->boot), 0, f->boot->size);
 	fatsetnumfats(f, 2);
+	fatsetbytespersector(f, sectorsize);
+	fatsetnumsectors(f, sectors);
 
 	if (option2[0] == '\0' || sectpercl == 0) {
 		printf("secXcl\troot\ttype\n");
