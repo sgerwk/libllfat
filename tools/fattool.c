@@ -1053,7 +1053,7 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 	else {
 		errno = 0;
 		ul = strtoul(option1, NULL, 10);
-		if (ul == ULONG_MAX && errno == ERANGE) {
+		if ((ul == ULONG_MAX && errno == ERANGE) || ul > 0xFFFFFFFF) {
 			printf("overflow: %s\n", option1);
 			return -1;
 		}
@@ -1062,7 +1062,7 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 
 	errno = 0;
 	ul = strtoul(option2, NULL, 10);
-	if (ul == ULONG_MAX && errno == ERANGE) {
+	if ((ul == ULONG_MAX && errno == ERANGE) || ul > 0xFFFFFFFF) {
 		printf("overflow: %s\n", option2);
 		return -1;
 	}
@@ -1070,7 +1070,7 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
 
 	errno = 0;
 	ul = strtoul(option3, NULL, 10);
-	if (ul == ULONG_MAX && errno == ERANGE) {
+	if ((ul == ULONG_MAX && errno == ERANGE) || ul > 0xFFFFFFFF) {
 		printf("overflow: %s\n", option3);
 		return -1;
 	}
