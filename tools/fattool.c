@@ -1214,7 +1214,7 @@ int fatformat(char *devicename, off_t offset, uint32_t len, int truncate,
  */
 int parserange(char *option, int32_t *first, int32_t *last) {
 	char *minus, *end;
-	int32_t val;
+	long int val;
 
 	if (*option == '-')
 		minus = option;
