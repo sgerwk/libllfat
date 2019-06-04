@@ -118,13 +118,13 @@ int fatreadinfosector(fat *f, int info) {
 	u = fatunitget(&f->sectors,
 		f->offset, fatgetbytespersector(f), info, f->fd);
 	if (u == NULL)
-		return 0;
+		return -1;
+
+	if (! fatinfogetinfosignatures(u))
+		return -1;
 
 	f->info = u;
 	f->info->refer = 1;
-
-	if (! fatgetinfosignatures(f))
-		return 0;
 
 	f->last = fatgetlastallocatedcluster(f);
 	if (! fatisvalidcluster(f, f->last))
