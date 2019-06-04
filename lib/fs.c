@@ -71,6 +71,20 @@ fat *fatcreate() {
 }
 
 /*
+ * read the boot sector
+ */
+int fatreadbootsector(fat *f, int boot) {
+	f->boot = fatunitget(&f->sectors,
+		f->offset, BOOTSECTORSIZE, boot, f->fd);
+	if (f->boot == NULL) {
+		printf("error reading boot sector\n");
+		return -1;
+	}
+	f->boot->refer = 1;
+	return 0;
+}
+
+/*
  * open a filesystem and read the boot sector, but do not check for errors
  */
 fat *fatopenonly(char *filename, off_t offset, int boot) {
@@ -87,36 +101,13 @@ fat *fatopenonly(char *filename, off_t offset, int boot) {
 	}
 	f->offset = offset;
 
-	f->boot = fatunitget(&f->sectors,
-		f->offset, BOOTSECTORSIZE, boot, f->fd);
-	if (f->boot == NULL) {
-		printf("error reading boot sector\n");
-		return NULL;
-	}
-	f->boot->refer = 1;
-
-	return f;
+	return fatreadbootsector(f, boot) ? NULL : f;
 }
 
 /*
- * open a filesystem; also read the boot and possibly the information sector
+ * read the information sector, if any
  */
-fat *_fatopen(char *filename, off_t offset, int (*fatbits)(fat *f)) {
-	fat *f;
-	int32_t info;
-
-	f = fatopenonly(filename, offset, 0);
-
-	f->bits = fatbits(f);
-	if (fatbits(f) == -1) {
-		printf("cannot determine bits of FAT\n");
-		return NULL;
-	}
-
-	if (fatbits(f) != 32)
-		return f;
-
-	info = fatgetinfopos(f);
+int fatreadinfosector(fat *f, int info) {
 	if (info == 0 || info == 0xFFFF)
 		return 0;
 
@@ -137,7 +128,29 @@ fat *_fatopen(char *filename, off_t offset, int (*fatbits)(fat *f)) {
 	if (f->free < 0 || f->free > fatnumdataclusters(f))
 		f->free = -1;
 
-	return f;
+	return 0;
+}
+
+/*
+ * open a filesystem; also read the boot and possibly the information sector
+ */
+fat *_fatopen(char *filename, off_t offset, int (*fatbits)(fat *f)) {
+	fat *f;
+
+	f = fatopenonly(filename, offset, 0);
+	if (f == NULL)
+		return NULL;
+
+	f->bits = fatbits(f);
+	if (fatbits(f) == -1) {
+		printf("cannot determine bits of FAT\n");
+		return NULL;
+	}
+
+	if (fatbits(f) != 32)
+		return f;
+
+	return fatreadinfosector(f, fatgetinfopos(f)) ? NULL : f;
 }
 fat *fatopen(char *filename, off_t offset) {
 	return _fatopen(filename, offset, fatbits);

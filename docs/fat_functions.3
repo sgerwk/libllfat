@@ -387,6 +387,22 @@ Close the file without flushing the filesystem.
 .TP
 .BI "int fatclose(fat *" f )
 Flush the filesystem to file and close it.
+
+.P
+The following two functions read or set the boot and the information sectors.
+This is always done by \fIfatopen()\fP, but sometimes needs to be done
+explicitely, like when reading the backup copy of these sectors.
+.TP
+.BI "int fatreadbootsector(fat *" f ", int " boot )
+Read or set the boot sector at index \fIboot\fP in the device. This operation
+assumes sector size 512. The regular boot sector is at \fIboot=0\fP; its backup
+is at \fIboot=6\fP, if any.
+.TP
+.BI "int fatreadinfosector(fat *" f ", int " info )
+Read or set the information sector as sector of index \fIinfo\fP in the device.
+The fat structure is supposed to already contain a boot sector, as the the size
+of the sectors is read from it.
+
 .P
 The following functions access the global parameters of a filesystem. These
 having get or set in the name are for reading data that is directory stored in
