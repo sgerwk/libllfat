@@ -342,32 +342,15 @@ int fatsetfatsize32(fat *f, int size) {
 }
 
 int fatgetfatsize(fat *f) {
-	int s;
-	if (f == NULL || f->boot == NULL)
+	if (f == NULL)
 		return -1;
-	if (f->bits == 0) {
-		s = fatgetfatsize16(f);
-		return s != 0 ? s : fatgetfatsize32(f);
-	}
-	else if (fatbits(f) == 32)
-		return fatgetfatsize32(f);
-	else
-		return fatgetfatsize16(f);
+	return fatbootgetfatsize(f->boot, &f->bits);
 }
 
 int fatsetfatsize(fat *f, int size) {
-	if (f == NULL || f->boot == NULL)
+	if (f == NULL)
 		return -1;
-	if (fatbits(f) == 32) {
-		fatsetfatsize16(f, 0);
-		fatsetfatsize32(f, size);
-	}
-	else {
-		fatsetfatsize16(f, size);
-		fatsetfatsize32(f, 0);
-	}
-	f->boot->dirty = 1;
-	return 0;
+	return fatbootsetfatsize(f->boot, &f->bits, size);
 }
 
 /*
