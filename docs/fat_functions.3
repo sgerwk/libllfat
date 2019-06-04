@@ -355,11 +355,14 @@ the necessary parameters such as the number of sectors, etc. and the
 allocations tables. To open an existing filesystem, call \fIfatopen()\fP
 instead.
 .TP
-.BI "fat *fatopenonly(char *" filename ", off_t " offset )
-Open a filesystem from file \fIfilename\fP at position \fIoffset\fP. Return the
+.BI "fat *fatopenonly(char *" filename ", off_t " offset ", int " boot )
+Open a filesystem from file \fIfilename\fP at position \fIoffset\fP and read
+the sector \fIboot\fP as the boot sector, assuming sector size 512. Return the
 fat structure if the file can be opened and the boot sector read, but do not
 check for errors nor read the information sector. Use it only for filesystems
-that may contain errors in the boot sector, otherwise call \fIfatopen()\fP.
+that may contain errors in the boot sector, otherwise call \fIfatopen()\fP. The
+parameter \fIboot\fP is the sector number of the boot sector. It is normally 0,
+but may be 6 for using the backup of the boot sector.
 .TP
 .BI "fat *fatopen(char *" filename ", off_t " offset )
 Read a filesystem from file \fIfilename\fP, starting at position \fIoffset\fP.

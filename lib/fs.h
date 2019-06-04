@@ -58,6 +58,7 @@ typedef struct {
  * global operations on a fat: create, read, check, flush, quit and close
  */
 fat *fatcreate();
+fat *fatopenonly(char *filename, off_t offset, int boot);
 fat *fatopen(char *filename, off_t offset);
 fat *fatsignatureopen(char *filename, off_t offset);
 int fatcheck(fat *f);

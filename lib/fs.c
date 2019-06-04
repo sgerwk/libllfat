@@ -73,7 +73,7 @@ fat *fatcreate() {
 /*
  * open a filesystem and read the boot sector, but do not check for errors
  */
-fat *fatopenonly(char *filename, off_t offset) {
+fat *fatopenonly(char *filename, off_t offset, int boot) {
 	fat *f;
 
 	f = fatcreate();
@@ -87,7 +87,8 @@ fat *fatopenonly(char *filename, off_t offset) {
 	}
 	f->offset = offset;
 
-	f->boot = fatunitget(&f->sectors, f->offset, BOOTSECTORSIZE, 0, f->fd);
+	f->boot = fatunitget(&f->sectors,
+		f->offset, BOOTSECTORSIZE, boot, f->fd);
 	if (f->boot == NULL) {
 		printf("error reading boot sector\n");
 		return NULL;
@@ -104,7 +105,7 @@ fat *_fatopen(char *filename, off_t offset, int (*fatbits)(fat *f)) {
 	fat *f;
 	int32_t info;
 
-	f = fatopenonly(filename, offset);
+	f = fatopenonly(filename, offset, 0);
 
 	f->bits = fatbits(f);
 	if (fatbits(f) == -1) {
