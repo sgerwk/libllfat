@@ -45,7 +45,7 @@ int fatdebug = 0;
 #define BOOTSECTORSIZE 512
 
 /*
- * init a fat structure
+ * initialize a fat structure; nothing is read from a device
  */
 fat *fatcreate() {
 	fat *f;
@@ -71,11 +71,10 @@ fat *fatcreate() {
 }
 
 /*
- * open a fat (also read the boot sector)
+ * open a filesystem and read the boot sector, but do not check for errors
  */
-fat *_fatopen(char *filename, off_t offset, int (*fatbits)(fat *f)) {
+fat *fatopenonly(char *filename, off_t offset) {
 	fat *f;
-	int32_t info;
 
 	f = fatcreate();
 	f->devicename = filename;
@@ -95,8 +94,19 @@ fat *_fatopen(char *filename, off_t offset, int (*fatbits)(fat *f)) {
 	}
 	f->boot->refer = 1;
 
-	f->bits = fatbits(f);
+	return f;
+}
 
+/*
+ * open a filesystem; also read the boot and possibly the information sector
+ */
+fat *_fatopen(char *filename, off_t offset, int (*fatbits)(fat *f)) {
+	fat *f;
+	int32_t info;
+
+	f = fatopenonly(filename, offset);
+
+	f->bits = fatbits(f);
 	if (fatbits(f) == -1) {
 		printf("cannot determine bits of FAT\n");
 		return NULL;
