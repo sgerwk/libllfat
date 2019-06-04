@@ -1267,6 +1267,7 @@ void usage() {
 	printf("\t\t-c\t\tcheck: show cluster cache at the end\n");
 	printf("\t\t-o offset\tfilesystem starts at this offset in device\n");
 	printf("\t\t-d\t\tdetermine number of bits from signature\n");
+	printf("\t\t-b num\t\tuse n-th sector as the boot sector\n");
 	printf("\t\t-a first-last\trange of allocable clusters\n");
 	printf("\t\t-e simerr.txt\tread simulated errors from file\n");
 	printf("\n\toperations:\n");
@@ -1393,7 +1394,7 @@ int main(int argn, char *argv[]) {
 	size_t wlen;
 	wchar_t *longname, *longpath, *legalized;
 	fat *f;
-	int fatnum;
+	int fatnum, bootindex;
 	int32_t previous, target, r, cl, next, start;
 	int32_t secondprevious, secondtarget, end, last, len;
 	unit *directory, *startdirectory, *longdirectory, *seconddirectory;
@@ -1423,6 +1424,7 @@ int main(int argn, char *argv[]) {
 	length = 0;
 	signature = 0;
 	fatnum = -1;
+	bootindex = 0;
 	first = 0;
 	insensitive = 0;
 	useshortnames = 0;
@@ -1455,6 +1457,15 @@ int main(int argn, char *argv[]) {
 			break;
 		case 'd':
 			signature = 1;
+			break;
+		case 'b':
+			if (argv[1][2] != '\0')
+				bootindex = atoi(argv[1] + 1);
+			else {
+				bootindex = atoi(argv[2]);
+				argn--;
+				argv++;
+			}
 			break;
 		case 'l':
 			first = 1;
@@ -1610,7 +1621,20 @@ int main(int argn, char *argv[]) {
 
 				/* open and check */
 
-	f = signature ? fatsignatureopen(name, offset) : fatopen(name, offset);
+	if (bootindex == 0)
+		f = signature ?
+			fatsignatureopen(name, offset) : fatopen(name, offset);
+	else {
+		f = fatopenonly(name, offset, bootindex);
+		f->bits = signature ? fatsignaturebits(f) : fatbits(f);
+		if (fatbits(f) == -1 ||
+		    (fatbits(f) == 32 &&
+		     fatreadinfosector(f, fatgetinfopos(f))) ||
+		    fatcheck(f)) {
+			fatquit(f);
+			f = NULL;
+		}
+	}
 	if (f == NULL) {
 		printf("cannot open %s as a FAT filesystem\n", name);
 		exit(1);
