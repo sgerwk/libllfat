@@ -74,12 +74,14 @@ fat *fatcreate() {
  * read the boot sector
  */
 int fatreadbootsector(fat *f, int boot) {
-	f->boot = fatunitget(&f->sectors,
+	unit *u;
+	u = fatunitget(&f->sectors,
 		f->offset, BOOTSECTORSIZE, boot, f->fd);
-	if (f->boot == NULL) {
+	if (u == NULL) {
 		printf("error reading boot sector\n");
 		return -1;
 	}
+	f->boot = u;
 	f->boot->refer = 1;
 	return 0;
 }
@@ -108,15 +110,19 @@ fat *fatopenonly(char *filename, off_t offset, int boot) {
  * read the information sector, if any
  */
 int fatreadinfosector(fat *f, int info) {
+	unit *u;
+
 	if (info == 0 || info == 0xFFFF)
 		return 0;
 
-	f->info = fatunitget(&f->sectors,
+	u = fatunitget(&f->sectors,
 		f->offset, fatgetbytespersector(f), info, f->fd);
-	if (f->info == NULL)
+	if (u == NULL)
 		return 0;
 
+	f->info = u;
 	f->info->refer = 1;
+
 	if (! fatgetinfosignatures(f))
 		return 0;
 
