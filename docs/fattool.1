@@ -593,6 +593,10 @@ using \fIfattool -o $((63 * 512)) ...\fP, and may be mounted via
 	mount /dev/loop0 somedirectory
 .fi
 
+This command can also be used to locate the backup of the boot sector, if any.
+If it is found at position \fIn\fP, the filesystem can then be opened with
+option \fI-b n\fP.
+
 .TP
 \fBformat\fB (\fIsectors\fP|\fI""\fP) (\fIsectorspercluster\fP|\fI""\fP) \
 (\fImaxentries\fP|\fI""\fP) [\fInofats\fP][,][\fInotrunc\fP]
