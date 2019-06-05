@@ -1626,13 +1626,15 @@ int main(int argn, char *argv[]) {
 			fatsignatureopen(name, offset) : fatopen(name, offset);
 	else {
 		f = fatopenonly(name, offset, bootindex);
-		f->bits = signature ? fatsignaturebits(f) : fatbits(f);
-		if (fatbits(f) == -1 ||
-		    (fatbits(f) == 32 &&
-		     fatreadinfosector(f, fatgetinfopos(f))) ||
-		    fatcheck(f)) {
-			fatquit(f);
-			f = NULL;
+		if (f != NULL) {
+			f->bits = signature ? fatsignaturebits(f) : fatbits(f);
+			if (fatbits(f) == -1 ||
+			    (fatbits(f) == 32 &&
+			     fatreadinfosector(f, fatgetinfopos(f))) ||
+			    fatcheck(f)) {
+				fatquit(f);
+				f = NULL;
+			}
 		}
 	}
 	if (f == NULL) {
