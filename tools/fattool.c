@@ -1846,6 +1846,23 @@ int main(int argn, char *argv[]) {
 	else if (! strcmp(operation, "recompute"))
 		printf("free clusters: %d\n",
 			fatclusternumfree(f));
+	else if (! strcmp(operation, "getid") ||
+		 ! strcmp(operation, "geteof")) {
+		cl = ! strcmp(operation, "getid") ? 0 : 1;
+		printf(f->bits == 12 ? "0x%03X\n" :
+		       f->bits == 16 ? "0x%04X\n" : "0x%08X\n",
+			fatgetfat(f, f->nfat == -1 ? 0 : f->nfat, cl));
+	}
+	else if (! strcmp(operation, "setid") ||
+		 ! strcmp(operation, "seteof")) {
+		if (option1[0] == '\0') {
+			printf("missing value to set\n");
+			exit(1);
+		}
+		next = atoi(option1);
+		cl = ! strcmp(operation, "setid") ? 0 : 1;
+		fatsetfat(f, f->nfat == -1 ? 0 : f->nfat, cl, next);
+	}
 	else if (! strcmp(operation, "header"))
 		for (nfat = 0; nfat < fatgetnumfats(f); nfat++)
 			fatfixtableheader(f, nfat);

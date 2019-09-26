@@ -159,6 +159,18 @@ first cluster in the filesystem; this is a no-op on FAT12 and FAT16
 count the free clusters in the filesystem; also save this number if the
 filesystem is FAT32
 .TP
+.B getid
+print the fat id, the first entry in the file allocation table
+.TP
+.BI setid " value
+change the fat id, the first entry in the file allocation table
+.TP
+.B geteof
+print the eof marker, the second entry in the file allocation table
+.TP
+.BI seteof " value
+change the eof marker, the second entry in the file allocation table
+.TP
 \fBheader\fP
 restore the first two entries in all file allocation tables; this allows to run
 \fBdosfsck\fP(8) on a filesystem that has the boot sector as its only undamaged
