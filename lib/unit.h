@@ -96,6 +96,9 @@ void fatunitdeallocate(unit *cache);
 /* dump a unit to stdout */
 void fatunitdump(unit *u, int hex);
 
+/* dump the difference between two units */
+void fatunitdiff(unit *src, unit *dst);
+
 /* dump all cached units, for debugging */
 void fatunitdumpcache(char *which, unit *cache);
 

@@ -153,10 +153,8 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 	}
 
 	if (printdiff && diffonly) {
-		printf("\nsource sector %d\n", o->n);
-		fatunitdump(o, 1);
-		printf("destination sector %d\n", d->n);
-		fatunitdump(d, 1);
+		printf("\nsector %d\n", o->n);
+		fatunitdiff(o, d);
 	}
 	else {
 		if (dst->boot != NULL &&

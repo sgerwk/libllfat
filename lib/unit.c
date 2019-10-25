@@ -33,6 +33,8 @@
 int fatunitdebug = 0;
 #define dprintf if (fatunitdebug) printf
 
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
+
 #define UNUSED_DEPTH int __attribute__((unused)) depth
 
 #define NO_ORIGIN ((uint64_t) -1)
@@ -501,6 +503,43 @@ void fatunitdump(unit *u, int hex) {
 					printf(".");
 			printf("\n");
 		}
+}
+
+/*
+ * dump the difference between two units
+ */
+void fatunitdiff(unit *src, unit *dst) {
+	int i, j, block = 8;
+	int diff;
+
+	for (i = 0; i < MAX(src->size, dst->size); i += block) {
+		diff = 0;
+		for (j = i; j < i + block; j++) {
+			if (j >= src->size || j >= dst->size)
+				diff = 1;
+			if (src->data[j] != dst->data[j])
+				diff = 1;
+		}
+		if (! diff)
+			continue;
+		printf("%04X	", i);
+		for (j = i; j < i + block && j < src->size; j++) 
+	  		printf("%02X ", src->data[j]);
+		for (j = i; j < i + block && j < src->size; j++) 
+			if (isprint(src->data[j]))
+				printf("%c", src->data[j]);
+			else
+				printf(".");
+		printf("    ");
+		for (j = i; j < i + block && j < dst->size; j++) 
+			printf("%02X ", dst->data[j]);
+		for (j = i; j < i + block && j < dst->size; j++) 
+			if (isprint(dst->data[j]))
+				printf("%c", dst->data[j]);
+			else
+				printf(".");
+		printf("\n");
+	}
 }
 
 /*
