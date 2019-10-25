@@ -522,19 +522,30 @@ void fatunitdiff(unit *src, unit *dst) {
 		}
 		if (! diff)
 			continue;
+
 		printf("%04X	", i);
-		for (j = i; j < i + block && j < src->size; j++) 
-	  		printf("%02X ", src->data[j]);
-		for (j = i; j < i + block && j < src->size; j++) 
-			if (isprint(src->data[j]))
+		for (j = i; j < i + block; j++)
+			if (j >= src->size)
+				printf("   ");
+			else
+				printf("%02X ", src->data[j]);
+		for (j = i; j < i + block; j++)
+			if (j >= src->size)
+				printf(" ");
+			else if (isprint(src->data[j]))
 				printf("%c", src->data[j]);
 			else
 				printf(".");
 		printf("    ");
-		for (j = i; j < i + block && j < dst->size; j++) 
-			printf("%02X ", dst->data[j]);
-		for (j = i; j < i + block && j < dst->size; j++) 
-			if (isprint(dst->data[j]))
+		for (j = i; j < i + block; j++)
+			if (j >= dst->size)
+				printf("   ");
+			else
+				printf("%02X ", dst->data[j]);
+		for (j = i; j < i + block; j++)
+			if (j >= dst->size)
+				printf(" ");
+			else if (isprint(dst->data[j]))
 				printf("%c", dst->data[j]);
 			else
 				printf(".");
