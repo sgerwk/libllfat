@@ -190,15 +190,18 @@ deallocate the \fIu->data\fP part of a unit, if \fIu->dirty\fP and
 .BI "void fatunitfreecache(unit *" cache )
 call \fBfatunitfree(\fP\fIu\fP\fB)\fP for every unit \fIu\fP in cache
 .P
-The following two functions are for debugging only. The second is of particular
-interest for checking clusters, since those belonging to files are better
-flushed and deleted from cache as soon as possible.
+The following three functions are mainly for debugging. The second is of
+particular interest for checking clusters, since those belonging to files are
+better flushed and deleted from cache as soon as possible.
 .TP
 .BI "void fatunitdump(unit *" u ", int " hex )
 .PD 0
 .TP
+.BI "void fatunitdiff(unit *" src ", unit *" dst )
+.PD 0
+.TP
 .BI "void fatunitdumpcache(char *" which ", unit *" cache )
-print the initial part of a cluster, or of all in cache
+print a unit, the difference between two units, or all units in cache
 .PD
 .P
 A cache does not need to be initialized: just setting it to NULL is enough. The
