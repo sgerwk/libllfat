@@ -43,6 +43,7 @@
 
 int diffonly = 1;
 int nocopy = 0;
+int printdiff = 0;
 
 /*
  * ask the user whether to proceed
@@ -109,10 +110,13 @@ int copydirectoryclusters(fat *f,
 			return FAT_REFERENCE_NORMAL;
 	}
 
-			/* copy cluster to destination filesystem */
+			/* print cluster number */
 
 	printf(" %d", cl);
 	fflush(stdout);
+
+			/* copy cluster to destination filesystem */
+
 	if (! nocopy) {
 		copy = fatunitcopy(cluster);
 		copy->fd = dst->fd;
@@ -138,6 +142,7 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 		return;
 
 	o = * (unit **) nodep;
+	d = NULL;
 
 	if (diffonly) {
 		d = fatunitget(&dst->sectors, 0, o->size, o->n, dst->fd);
@@ -145,6 +150,21 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 		    o->size == d->size &&
 		    ! memcmp(fatunitgetdata(o), fatunitgetdata(d), o->size))
 			return;
+	}
+
+	if (printdiff && diffonly) {
+		printf("\nsource sector %d\n", o->n);
+		fatunitdump(o, 1);
+		printf("destination sector %d\n", d->n);
+		fatunitdump(d, 1);
+	}
+	else {
+		if (dst->boot != NULL &&
+		    (o->n - fatgetreservedsectors(dst)) % fatgetfatsize(dst)
+		     == 0)
+			printf("  ");
+		printf(" %d", o->n);
+		fflush(stdout);
 	}
 
 	if (! nocopy) {
@@ -155,12 +175,6 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 		if (c->n == 0)
 			dst->boot = c;
 	}
-
-	if (dst->boot != NULL &&
-	    (o->n - fatgetreservedsectors(dst)) % fatgetfatsize(dst) == 0)
-		printf("  ");
-	printf(" %d", o->n);
-	fflush(stdout);
 }
 
 /*
@@ -193,6 +207,9 @@ int main(int argn, char *argv[]) {
 		case 't':
 			nocopy = 1;
 			break;
+		case 'p':
+			printdiff = 1;
+			break;
 		case 'w':
 			whole = 1;
 			break;
@@ -202,7 +219,7 @@ int main(int argn, char *argv[]) {
 	}
 
 	if (argn - 1 < 2) {
-		printf("usage:\n\tfatbackup [-i] [-u] [-a] [-t] [-w] ");
+		printf("usage:\n\tfatbackup [-i] [-u] [-a] [-t] [-p] [-w] ");
 		printf("source destination\n");
 		printf("\t\t-i\toverwrite without asking\n");
 		printf("\t\t-u\tcopy only sectors of FAT that are used\n");
@@ -210,6 +227,8 @@ int main(int argn, char *argv[]) {
 		printf("already coincide\n");
 		printf("\t\t-t\tonly report which sectors and clusters ");
 		printf("would be copied\n");
+		printf("\t\t-p\tprint the content ");
+		printf("of the differing sectors\n");
 		printf("\t\t-w\tmake destination as large as ");
 		printf("the whole filesystem\n");
 		exit(1);

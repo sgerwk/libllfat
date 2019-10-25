@@ -3,7 +3,9 @@
 fatbackup \- copy the essential parts of a FAT12/16/32 filesystem
 .SH SYNOPSIS
 .B fatbackup
-[\fI-i\fP] [\fI-u\fP] [\fI-a\fP] [\fI-t\fP] [\fI-w\fP] \fIsource destination\fP
+[\fI-i\fP] [\fI-u\fP] [\fI-a\fP] [\fI-t\fP] [\fI-p\fP] [\fI-w\fP]
+\fIsource destination\fP
+
 .
 .
 .
@@ -25,6 +27,7 @@ restored by copying its structure back: \fI fatbackup /home/sgerwk/image.fat
 /dev/sdb1\fP. Only the structure of the filesystem is restored; if the content
 of a file is corrupted or changed, it is not. This may be a problem when
 deleting old files and creating new ones, especially on a FAT12 or FAT16.
+
 .
 .
 .
@@ -48,8 +51,13 @@ only if they do not coincide
 only report which clusters and sectors would be overwritten, but do not
 actually copy them
 .TP
+.B
+-p
+print the content of the differing sectors
+.TP
 \fB-w\fP
 make the destination file as large as whole source filesystem
+
 .
 .
 .
@@ -62,10 +70,14 @@ partitioned also the master boot record is essential. To save it:
 	fatbackup /dev/sdb1 image.fat
 .fi
 
+.
+.
+.
 .SH BUGS
 No check is done on the destination: if a backup is copied to a filesystem that
 was not where the backup comes from, its content is likely irreparably
 corrupted.
+
 .
 .
 .
