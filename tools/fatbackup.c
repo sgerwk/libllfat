@@ -42,6 +42,7 @@
 #include <llfat.h>
 
 int diffonly = 1;
+int nocopy = 0;
 
 /*
  * ask the user whether to proceed
@@ -112,9 +113,11 @@ int copydirectoryclusters(fat *f,
 
 	printf(" %d", cl);
 	fflush(stdout);
-	copy = fatunitcopy(cluster);
-	copy->fd = dst->fd;
-	fatunitinsert(&dst->clusters, copy, 1);
+	if (! nocopy) {
+		copy = fatunitcopy(cluster);
+		copy->fd = dst->fd;
+		fatunitinsert(&dst->clusters, copy, 1);
+	}
 
 	return FAT_REFERENCE_NORMAL;
 }
@@ -139,22 +142,24 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 	if (diffonly) {
 		d = fatunitget(&dst->sectors, 0, o->size, o->n, dst->fd);
 		if (d != NULL &&
-			o->size == d->size &&
-			! memcmp(fatunitgetdata(o), fatunitgetdata(d),
-				o->size))
-		return;
+		    o->size == d->size &&
+		    ! memcmp(fatunitgetdata(o), fatunitgetdata(d), o->size))
+			return;
 	}
 
-	c = fatunitcopy(o);
-	c->fd = dst->fd;
-	fatunitinsert(&dst->sectors, c, 1);
+	if (! nocopy) {
+		c = fatunitcopy(o);
+		c->fd = dst->fd;
+		fatunitinsert(&dst->sectors, c, 1);
 
-	if (c->n == 0)
-		dst->boot = c;
+		if (c->n == 0)
+			dst->boot = c;
+	}
+
 	if (dst->boot != NULL &&
-	    (c->n - fatgetreservedsectors(dst)) % fatgetfatsize(dst) == 0)
+	    (o->n - fatgetreservedsectors(dst)) % fatgetfatsize(dst) == 0)
 		printf("  ");
-	printf(" %d", c->n);
+	printf(" %d", o->n);
 	fflush(stdout);
 }
 
@@ -164,7 +169,7 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 int main(int argn, char *argv[]) {
 	char *srcname, *dstname;
 	fat *src, *dst;
-	int overwrite, usedonly, whole;
+	int overwrite, usedonly, whole, remove;
 	int sectors, size, s;
 	int nfat;
 	int res;
@@ -185,6 +190,9 @@ int main(int argn, char *argv[]) {
 		case 'a':
 			diffonly = 0;
 			break;
+		case 't':
+			nocopy = 1;
+			break;
 		case 'w':
 			whole = 1;
 			break;
@@ -194,12 +202,14 @@ int main(int argn, char *argv[]) {
 	}
 
 	if (argn - 1 < 2) {
-		printf("usage:\n\tfatbackup [-i] [-u] [-a] [-w] ");
+		printf("usage:\n\tfatbackup [-i] [-u] [-a] [-t] [-w] ");
 		printf("source destination\n");
 		printf("\t\t-i\toverwrite without asking\n");
 		printf("\t\t-u\tcopy only sectors of FAT that are used\n");
 		printf("\t\t-a\tcopy also sectors and clusters that ");
 		printf("already coincide\n");
+		printf("\t\t-t\tonly report which sectors and clusters ");
+		printf("would be copied\n");
 		printf("\t\t-w\tmake destination as large as ");
 		printf("the whole filesystem\n");
 		exit(1);
@@ -225,11 +235,17 @@ int main(int argn, char *argv[]) {
 
 	dst = fatcreate();
 
+	remove = 0;
 	dst->fd = open(dstname, O_CREAT | O_EXCL | O_WRONLY, 0666);
-	if (dst->fd != -1)
+	if (dst->fd != -1) {
+		if (nocopy)
+			remove = 1;
 		diffonly = 0;
+	}
 	else if (errno == EEXIST) {
-		if (! overwrite && check("WARNING, file exists\n")) {
+		if (! overwrite &&
+		    ! nocopy &&
+		    check("WARNING, file exists\n")) {
 			printf("aborted\n");
 			fatclose(src);
 			exit(0);
@@ -285,7 +301,12 @@ int main(int argn, char *argv[]) {
 			/* close */
 
 	// fatunitdebug = 1;
-	fatclose(dst);
+	if (nocopy)
+		fatquit(dst);
+	else
+		fatclose(dst);
+	if (remove)
+		unlink(dstname);
 	fatquit(src);
 
 	return 0;
