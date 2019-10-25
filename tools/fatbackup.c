@@ -112,8 +112,14 @@ int copydirectoryclusters(fat *f,
 
 			/* print cluster number */
 
-	printf(" %d", cl);
-	fflush(stdout);
+	if (diffonly && printdiff) {
+		printf("\ncluster %d\n", cluster->n);
+		fatunitdiff(cluster, destination);
+	}
+	else {
+		printf(" %d", cl);
+		fflush(stdout);
+	}
 
 			/* copy cluster to destination filesystem */
 
@@ -142,7 +148,6 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 		return;
 
 	o = * (unit **) nodep;
-	d = NULL;
 
 	if (diffonly) {
 		d = fatunitget(&dst->sectors, 0, o->size, o->n, dst->fd);
@@ -152,7 +157,7 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 			return;
 	}
 
-	if (printdiff && diffonly) {
+	if (diffonly && printdiff) {
 		printf("\nsector %d\n", o->n);
 		fatunitdiff(o, d);
 	}
