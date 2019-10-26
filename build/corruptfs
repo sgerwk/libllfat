@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# corrupt a filesystem by randomly changing a byte in a sector or cluster
+#
+# corruptfs filesystem [n]
+#	n not given: corrupt a sector in reserved area or fats
+#	n given: corrupt one of the first n clusters
+
+[ $# -lt 1 ] && echo filesystem name missing && exit 1
+FS="$1"
+
+SECTOR=$(fattool "$FS" summary | grep 'bytes per sector' | cut -d: -f2)
+CLUSTER=$(fattool "$FS" summary | grep 'bytes per cluster' | cut -d: -f2)
+ENTRIES=$(fattool "$FS" summary | grep 'max entries in root' | cut -d: -f2)
+RESERVED=$(fattool "$FS" summary | grep 'reserved sectors' | cut -d: -f2)
+FAT=$(fattool "$FS" summary | grep 'size of each fat' | cut -d: -f2)
+FIRST=$(fattool "$FS" summary | grep 'first cluster of root' | cut -d: -f2)
+
+START=$(fattool "$FS" position $FIRST | grep cluster | \
+	cut -d: -f2 | cut -d' ' -f3)
+
+echo $SECTOR $RESERVED $FAT $START $ENTRIES $CLUSTER
+
+AREA=$((SECTOR * (RESERVED + 2 * FAT)))
+RANDOM=$(date +%s)
+
+if [ $# -gt 1 ];
+then
+	POS=$((START + RANDOM * RANDOM % (ENTRIES * 16 + (CLUSTER - 1) * $2)))
+else
+	POS=$((RANDOM % AREA))
+fi
+
+printf "changing byte at position %d (%X)\n" $POS $POS
+dd if=/dev/urandom of="$FS" bs=1 count=1 seek=$POS conv=notrunc 2> /dev/null
+
