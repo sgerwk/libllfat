@@ -75,6 +75,8 @@ int copydirectoryclusters(fat *f,
 	int cl;
 	unit *cluster, *destination, *copy;
 	int nfat;
+	uint64_t origin;
+	int size;
 
 			/* force reading cluster entry from all FATs */
 
@@ -113,7 +115,9 @@ int copydirectoryclusters(fat *f,
 			/* print cluster number */
 
 	if (diffonly && printdiff) {
-		printf("\ncluster %d\n", cluster->n);
+		printf("\ncluster %d ", cl);
+		fatclusterposition(f, cl, &origin, &size);
+		printf("(0x%llX)\n", origin + size * cl);
 		fatunitdiff(cluster, destination);
 	}
 	else {
@@ -158,7 +162,8 @@ void copysector(const void *nodep, const VISIT which, const int depth) {
 	}
 
 	if (diffonly && printdiff) {
-		printf("\nsector %d\n", o->n);
+		printf("\nsector %d ", o->n);
+		printf("(0x%X)\n", o->n * o->size);
 		fatunitdiff(o, d);
 	}
 	else {
