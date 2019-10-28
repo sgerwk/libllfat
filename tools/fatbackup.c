@@ -39,6 +39,7 @@
 #include <errno.h>
 #include <string.h>
 #include <search.h>
+#include <inttypes.h>
 #include <llfat.h>
 
 int diffonly = 1;
@@ -117,7 +118,7 @@ int copydirectoryclusters(fat *f,
 	if (diffonly && printdiff) {
 		printf("\ncluster %d ", cl);
 		fatclusterposition(f, cl, &origin, &size);
-		printf("(0x%llX)\n", origin + size * cl);
+		printf("(0x%" PRIx64 ")\n", origin + size * cl);
 		fatunitdiff(cluster, destination);
 	}
 	else {
