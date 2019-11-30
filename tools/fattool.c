@@ -1396,7 +1396,7 @@ int main(int argn, char *argv[]) {
 	int signature;
 	size_t wlen;
 	wchar_t *longname, *longpath, *legalized;
-	fat *f;
+	fat *f, *cross;
 	int fatnum, bootindex;
 	int32_t previous, target, r, cl, next, start;
 	int32_t secondprevious, secondtarget, end, last, len;
@@ -3169,6 +3169,44 @@ int main(int argn, char *argv[]) {
 			fatsetnextcluster(f, next, FAT_EOF);
 		}
 		fatentryfirst(seconddirectory, secondindex, firstchar);
+	}
+	else if (! strcmp(operation, "cross")) {
+		if (option1[0] == '\0') {
+			printf("missing argument: device\n");
+			exit(1);
+		}
+		if (option2[0] == '\0') {
+			printf("missing argument: file\n");
+			exit(1);
+		}
+		cross = signature ?
+			fatsignatureopen(option1, offset) :
+			fatopen(option1, offset);
+		if (cross == NULL) {
+			printf("cannot open %s as a FAT filesystem\n", name);
+			exit(1);
+		}
+		if (fileoptiontoreference(f, option2,
+				&directory, &index, &previous, &target)) {
+			printf("not found: %s\n", option1);
+			exit(1);
+		}
+		chain = fatreferenceisvoid(directory, index, previous) ?
+			-1 : ! strcmp(option2, "chain");
+		size = chain || directory == NULL ?
+			0 : fatentrygetsize(directory, index);
+		for (cl = previous > 0 ? previous : target;
+		     cl != FAT_EOF && cl != FAT_UNUSED && cl != FAT_BAD &&
+				(size > 0 || chain);
+		     cl = fatgetnextcluster(f, cl)) {
+			cluster = fatclusterread(cross, cl);
+			if (cluster == NULL)
+				break;
+			res = write(1, fatunitgetdata(cluster),
+				chain || size > cluster->size ?
+					cluster->size : size);
+			size -= cluster->size;
+		}
 	}
 	else {
 		printf("unknown operation: %s\n", operation);

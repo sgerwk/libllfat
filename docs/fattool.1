@@ -578,6 +578,19 @@ cluster; if specified by entry, the first letter of the undeleted file is
 always \fIX\fP
 
 .TP
+.BI cross " otherfilesystem file
+read \fIfile\fP as usual for the FAT and directory structure, but obtain the
+file content from \fIotherfilesystem\fP instead; this is intended for
+experimenting undeletion from a damaged filesystem without touching it or
+making a complete copy of it; for example:
+
+.nf
+\fIfatbackup original copy\fP				# copy the filesystem
+\fIfattool copy undelete filename\fP		# undelete a file
+\fIfattool copy cross original filename\fP	# check file content
+.fi
+
+.TP
 \fBdirfind\fP [\fInum\fP]
 try to detect which clusters are used for directories; the intended usage is to
 attempt recovering files from a damaged filesystem: after finding the clusters
