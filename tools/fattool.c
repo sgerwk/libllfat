@@ -1375,6 +1375,9 @@ void usage() {
 	printf("\t\t\t\tcheck, set or unset the dirty bits\n");
 	printf("\t\tdotcase\t\tclean case byte in . and ..\n");
 	printf("\t\tdir [directory] [start]\n\t\t\t\tlist directory entry\n");
+	printf("\t\trecover file [size]\n");
+	printf("\t\t\t\tattempt reading a deleted file\n");
+	printf("\t\tundelete file\tattempt undeleting a file\n");
 	printf("\t\tdirfind [num]\ttry to locate directory clusters\n");
 	printf("\t\tformat (sectors|\"\") (sectorsperclusters|\"\") ");
 	printf("(maxentries|\"\")\n");
