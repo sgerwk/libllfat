@@ -406,6 +406,6 @@ void fatentryprint(unit *directory, int index) {
 	}
 	fatentryprintshortname(directory, index);
 	printf(" 0x%02X", fatentrygetattributes(directory, index));
-	printf(" %'8d", fatentrygetsize(directory, index));
+	printf(" %'8u", fatentrygetsize(directory, index));
 }
 
