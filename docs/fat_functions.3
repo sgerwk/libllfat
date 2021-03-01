@@ -1683,7 +1683,7 @@ non-zero. To dump the whole filesystem pass \fINULL,0,-1\fP and \fIrecur=1\fP.
 This includes the chain of clusters of each file and directory. If \fIall=1\fP,
 also the directory entries of the deleted files and long file names parts are
 printed. If \fIchains=1\fP, print chains of consecutive clusters as
-\fIfirst-last\fP.
+\fIfirst-last\fP and print a summary of the number of chains and clusters.
 .TP
 .BI "void fatcalls(fat *" f ", int " all )
 This function helps testing. It prints the sequence of calls
@@ -2426,7 +2426,8 @@ Print an indented summary of the filesystem starting from the cluster reference
 non-zero. To dump the whole filesystem pass \fINULL,0,-1\fP and \fIrecur=1\fP.
 This includes the chain of clusters of each file and directory. If \fIall\fP is
 not zero, also the directory entries of the long file names are printed. If
-\fIchains=1\fP, print chains of consecutive clusters as \fIfirst-last\fP.
+\fIchains=1\fP, print chains of consecutive clusters as \fIfirst-last\fP
+and print a summary of the number of chains and clusters.
 .TP
 .PD 0
 .BI "typedef void (*" longrun ")(fat *" f ", wchar_t *"path ", \

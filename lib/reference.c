@@ -597,6 +597,8 @@ struct fatdumpstruct {
 	int level;
 	int recur;
 	int all;
+	int clusters;
+	int consecutive;
 	int32_t chain;
 };
 
@@ -637,26 +639,35 @@ int _fatdump(fat __attribute__((unused)) *f,
 		if (s->chain == FAT_ERR - 1)
 			fatreferenceprint(directory, index, previous);
 		else if (fatreferenceiscluster(directory, index, previous)) {
+			s->clusters++;
 			if (target != previous + 1) {
 				if (previous == s->chain)
 					printf(" %d", previous);
 				else
 					printf(" %d-%d", s->chain, previous);
 				s->chain = target;
+				s->consecutive++;
 			}
 		}
 		else {
 			fatreferenceprint(directory, index, previous);
 			s->chain = target;
+			s->clusters = 0;
+			s->consecutive = 0;
 		}
 
-		if (target == FAT_EOF ||
+		if (target == FAT_EOF || 
 		    target == FAT_UNUSED ||
 		    target == FAT_ERR ||
 		    (directory != NULL &&
 		     ! fatentryexists(directory, index) &&
-		     s->all))
-			printf("\n");
+		     s->all)) {
+			if (s->chain == FAT_ERR - 1)
+				printf("\n");
+			else
+				printf(" (%d/%d)\n",
+					s->consecutive, s->clusters);
+		}
 		return FAT_REFERENCE_COND(s->recur) |
 			(s->all ? FAT_REFERENCE_ALL : 0);
 	}
@@ -669,7 +680,9 @@ void fatdump(fat *f, unit* directory, int index, int32_t previous,
 	s.level = 0;
 	s.recur = recur;
 	s.all = all;
-	s.chain = chains ? FAT_EOF : FAT_ERR - 1;
+	s.clusters = 0;
+	s.consecutive = 0;
+	s.chain = chains == 1 ? FAT_EOF : FAT_ERR - 1;
 	fatreferenceexecute(f, directory, index, previous, _fatdump, &s);
 }
 
