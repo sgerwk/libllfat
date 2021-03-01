@@ -1,3 +1,5 @@
+VERSION=0.1.8
+
 all:
 	+make -C lib
 	+make -C build
