@@ -466,7 +466,7 @@ int main(int argn, char *argv[]) {
 		index = -1;
 		fattabledebug = 1;
 		for (i = 0; i < 10000; i++) {
-			if(fatfindfreeentry(f, &root, &index)) {
+			if (fatfindfreeentry(f, &root, &index)) {
 				printf("no more free directory entries\n");
 				break;
 			}
@@ -704,7 +704,7 @@ int main(int argn, char *argv[]) {
 		root = fatclusterread(f, r);
 		index = -1;
 		for (i = 0; i < 10000; i++)
-			if(! fatfindfreeentry(f, &root, &index))
+			if (! fatfindfreeentry(f, &root, &index))
 				break;
 
 		size = -1; // how many clusters; -1 = fill the filesystem

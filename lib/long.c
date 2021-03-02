@@ -47,7 +47,7 @@ int fatlongdebug = 0;
 #define ENTRYPOS(directory, index, pos)			\
 	(fatunitgetdata((directory))[(index) * 32 + (pos)])
 
-#define MIN(x,y) (((x)<(y))?(x):(y))
+#define MIN(x,y) (((x) < (y)) ? (x) : (y))
 
 /*
  * ucs2 type, length function and print
@@ -155,10 +155,10 @@ wchar_t *_fatshorttowide(unit *directory, int index) {
 	memcpy(entryname, & ENTRYPOS(directory, index, 0), 11);
 
 	if (ENTRYPOS(directory, index, 12) & 0x08)
-		for (i=0; i<8; i++)
+		for (i = 0; i < 8; i++)
 			entryname[i] = tolower(entryname[i]);
 	if (ENTRYPOS(directory, index, 12) & 0x10)
-		for (i=8; i<11; i++)
+		for (i = 8; i < 11; i++)
 			entryname[i] = tolower(entryname[i]);
 
 	fatshortnametostring(shortname, entryname);
@@ -827,7 +827,7 @@ void _fatwcstoupper(unsigned char *dst, wchar_t *src, int len) {
 	int i;
 
 	fatwstochar((char *) dst, src, len, NULL);
-	for(i = 0; i < len; i++)
+	for (i = 0; i < len; i++)
 		dst[i] = toupper(dst[i]);
 }
 
@@ -1357,7 +1357,7 @@ wchar_t *fatinversepathlong(fat *f, fatinverse *rev,
 	path = NULL;
 	pathlen = 0;
 
-	while(! fatreferenceisvoid(directory, index, previous) &&
+	while (! fatreferenceisvoid(directory, index, previous) &&
 	      ! fatreferenceisboot(directory, index, previous)) {
 
 		fatinversereferencetoentry(rev, &directory, &index, &previous);

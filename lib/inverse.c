@@ -151,7 +151,7 @@ fatinverse *fatinversecreate(fat *f, int file) {
 	rev[0].index = size;
 	rev[0].previous = file;
 
-	for(cl = FAT_ROOT; cl <= fatlastcluster(f); cl++)
+	for (cl = FAT_ROOT; cl <= fatlastcluster(f); cl++)
 		fatinverseclear(rev, cl);
 
 	res = fatreferenceexecute(f, NULL, 0, -1, _fatinversecreate, rev);
@@ -385,8 +385,8 @@ char *fatinversepath(fatinverse *rev,
 	path = NULL;
 	pathlen = 0;
 
-	while(! fatreferenceisvoid(directory, index, previous) &&
-	      ! fatreferenceisboot(directory, index, previous)) {
+	while (! fatreferenceisvoid(directory, index, previous) &&
+	       ! fatreferenceisboot(directory, index, previous)) {
 
 		fatinversereferencetoentry(rev, &directory, &index, &previous);
 

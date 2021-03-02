@@ -384,7 +384,7 @@ void fatentryprintpos(unit *directory, int index, int minsize) {
 void _fatprintucs2(uint16_t *c, int len) {
 	int i;
 
-	for(i = 0; i < len; i ++)
+	for (i = 0; i < len; i ++)
 		if (c[i] != 0xFFFF && c[i] != 0x0000)
 			printf("%c", c[i]);
 		else

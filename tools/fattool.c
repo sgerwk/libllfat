@@ -1823,7 +1823,7 @@ int main(int argn, char *argv[]) {
 			printf("operation aborted due to IO error\n");
 			printf("check the device for faulty sectors\n");
 		}
-		else if(nchanges == 0)
+		else if (nchanges == 0)
 			printf("filesystem already linear\n");
 		else
 			printf("%d changes %s\n", nchanges,
@@ -2521,7 +2521,7 @@ int main(int argn, char *argv[]) {
 		}
 
 		next = fatentrygetfirstcluster(directory, index, fatbits(f));
-		for(cl = next; cl != FAT_EOF && cl != FAT_UNUSED; cl = next) {
+		for (cl = next; cl != FAT_EOF && cl != FAT_UNUSED; cl = next) {
 			next = fatgetnextcluster(f, cl);
 			fatsetnextcluster(f, cl, FAT_UNUSED);
 		}
@@ -2534,7 +2534,7 @@ int main(int argn, char *argv[]) {
 			fatentrydelete(directory, index);
 		}
 		else {
-			while(longdirectory != directory ||
+			while (longdirectory != directory ||
 					longindex != index) {
 				fatentryzero(longdirectory, longindex);
 				fatentrydelete(longdirectory, longindex);

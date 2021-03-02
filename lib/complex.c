@@ -78,7 +78,7 @@ int _fatmovearea(fat *f,
 	int32_t cl, target, dest;
 	struct moveareastruct *s;
 
-	if(FATINTERRUPTIBLECHECK(movearea))
+	if (FATINTERRUPTIBLECHECK(movearea))
 		return 0;
 
 	if (fatreferenceisboot(directory, index, previous) && fatbits(f) != 32)
@@ -120,7 +120,7 @@ int _fatmovearea(fat *f,
 	if (fatcomplexdebug)
 		fatreferenceprint(directory, index, previous);
 	dprintf(" %d -> %d = ", target, dest);
-	if(fatclustermove(f, directory, index, previous, dest, 1) < -1) {
+	if (fatclustermove(f, directory, index, previous, dest, 1) < -1) {
 		printf("IO error reading cluster %d\n", target);
 		FATINTERRUPTIBLEABORT(movearea, FATINTERRUPTIBLEIOERROR);
 		return 0;
@@ -432,7 +432,7 @@ int _fatdefragment(fat *f,
 	int res;
 	int isdir;
 
-	if(FATINTERRUPTIBLECHECK(defragment))
+	if (FATINTERRUPTIBLECHECK(defragment))
 		return 0;
 
 	if (direction != 0)

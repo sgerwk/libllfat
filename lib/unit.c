@@ -313,7 +313,7 @@ unit *fatunitget(unit **cache, uint64_t origin, int size, long n, int fd) {
 
 	k.n = n;
 	s = (unit **) tfind(&k, (void **) cache, _compareunit);
-	if (s != NULL && (*s)->data !=NULL)
+	if (s != NULL && (*s)->data != NULL)
 		return *s;
 
 	if (s == NULL)
@@ -491,7 +491,7 @@ void fatunitdump(unit *u, int hex) {
 		for (i = 0; i < u->size; i++)
 			printf("%c", u->data[i]);
 	else
-		for (i = 0; i < u->size; i+=16) {
+		for (i = 0; i < u->size; i += 16) {
 			printf("%04X	", i);
 			for (j = i; j < i + 16 && j < u->size; j++)
 				printf("%02X ", u->data[j]);

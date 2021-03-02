@@ -485,7 +485,7 @@ int _fatreferenceexecute(fat *f,
 	}
 
 	prevdir = dir;
-	for(ind = -1; ! (err = fatnextentry(f, &dir, &ind)); prevdir = dir) {
+	for (ind = -1; ! (err = fatnextentry(f, &dir, &ind)); prevdir = dir) {
 		if ((res & FAT_REFERENCE_DELETE) &&
 				prevdir != dir && prevdir->refer == 0) {
 			fatunitwriteback(prevdir);
@@ -803,7 +803,7 @@ int _fatcutbad(fat *f,
 	fatreferencesettarget(f, directory, index, previous, FAT_EOF);
 
 	if (directory != NULL) {
-		if(fatentryisdirectory(directory, index)) {
+		if (fatentryisdirectory(directory, index)) {
 			if (c->verbose) {
 				printf("deleting dir ");
 				fatentryprintshortname(directory, index);
