@@ -471,44 +471,6 @@ int fatinversepreventry(fat *f, fatinverse *rev,
 }
 
 /*
- * mark unused all unused clusters
- */
-int fatcleanunused(fat *f) {
-	fatinverse *rev;
-	int32_t cl;
-	int count;
-
-	rev = fatinversecreate(f, 0);
-	if (rev == NULL) {
-		printf("cannot create inverse fat\n");
-		return -1;
-	}
-
-	count = 0;
-	if (fatinversedebug)
-		printf("scanning clusters:");
-
-	for (cl = FAT_FIRST; cl <= fatlastcluster(f); cl++)
-		if (fatgetnextcluster(f, cl) != FAT_UNUSED &&
-		    fatgetnextcluster(f, cl) != FAT_BAD &&
-				rev[cl].directory == NULL &&
-				rev[cl].previous == 0) {
-			fatsetnextcluster(f, cl, FAT_UNUSED);
-			count++;
-			dprintf(" %d", cl);
-		}
-
-	if (count) {
-		dprintf("\nmarked free %d unused clusters\n", count);
-	}
-	else {
-		dprintf("\nno unused non-free cluster found\n");
-	}
-
-	return count;
-}
-
-/*
  * view and possibly fix the unused clusters marked used
  */
 int fatunreachable(fat *f, int fix, int each) {

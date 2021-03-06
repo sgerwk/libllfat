@@ -86,11 +86,6 @@ char *fatinversepath(fatinverse *rev,
 int fatinversepreventry(fat *f, fatinverse *rev, unit **directory, int *index);
 
 /*
- * mark unused all unused clusters
- */
-int fatcleanunused(fat *f);
-
-/*
  * view and possibly fix the unused clusters marked used
  */
 int fatunreachable(fat *f, int fix, int each);

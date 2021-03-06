@@ -2378,7 +2378,7 @@ int main(int argn, char *argv[]) {
 	}
 	else if (! strcmp(operation, "cutbad")) {
 		if (fatcutbad(f, 1))
-			fatcleanunused(f);
+			fatunreachable(f, 1, 0);
 	}
 	else if (! strcmp(operation, "readfile")) {
 		if (option1[0] == '\0') {

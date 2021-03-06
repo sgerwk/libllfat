@@ -1864,9 +1864,6 @@ The converse to \fBfatnextentry()\fP: move from a directory entry to the
 previous one, possibly loading the previous directory cluster.
 Return -1 if this is the first entry in the directory.
 .TP
-.BI "int fatcleanunused(fat *" f )
-Mark unused all unused clusters.
-.TP
 .BI "int fatunreachable(fat *" f ", int " fix ", int " each )
 View the clusters that are marked used but not actually used by any file or
 directory. Optionally, fix the filesystem by marking them unused.
