@@ -508,3 +508,123 @@ int fatcleanunused(fat *f) {
 	return count;
 }
 
+/*
+ * view and possibly fix the unused clusters marked used
+ */
+int fatunreachable(fat *f, int fix, int each) {
+	fatinverse *rev, *unreach;
+	int32_t cl, start, next, prev;
+	int count;
+	char sep, end;
+
+	rev = fatinversecreate(f, 0);
+	if (rev == NULL) {
+		printf("cannot create inverse FAT\n");
+		return -1;
+	}
+
+	if (fix > 0)
+		unreach = NULL;
+	else {
+		unreach = fatinversechains(f, 0);
+		if (unreach == NULL) {
+			printf("cannot create inverse FAT\n");
+			return -1;
+		}
+	}
+
+	count = 0;
+	dprintf("clusters:");
+
+	start = FAT_ERR;
+	prev = FAT_ERR;
+	for (cl = FAT_FIRST; cl <= fatlastcluster(f); cl++) {
+		next = fatgetnextcluster(f, cl);
+		if (next == FAT_UNUSED)
+			continue;
+		if (next == FAT_BAD)
+			continue;
+		if (! fatreferenceisvoid(rev[cl].directory,
+		                         rev[cl].index,
+		                         rev[cl].previous))
+			continue;
+
+		if (fix > 0) {
+			if (start == FAT_ERR)
+				start = cl;
+			if (each) {
+				dprintf(" %d", cl);
+			}
+			else if (cl != prev + 1 && prev != FAT_ERR) {
+				if (start == prev) {
+					dprintf(" %d", prev);
+				}
+				else
+					dprintf(" %d-%d", start, prev);
+				start = cl;
+			}
+			if (fix == 2)
+				fatsetnextcluster(f, cl, FAT_UNUSED);
+			prev = cl;
+			continue;
+		}
+
+		if (! fatreferenceisvoid(unreach[cl].directory,
+		                         unreach[cl].index,
+		                         unreach[cl].previous))
+			continue;
+
+		start = cl;
+		prev = cl;
+		sep = ' ';
+		end = ' ';
+		for (;
+		     next >= FAT_FIRST && next <= fatlastcluster(f) &&
+		     fatreferenceisvoid(rev[next].directory,
+		                        rev[next].index,
+		                        rev[next].previous);
+		     next = fatgetnextcluster(f, prev)) {
+			if (next != prev + 1 || end == '|' || each) {
+				if (prev == start || each) {
+					dprintf("%c%d", sep, prev);
+				}
+				else
+					dprintf("%c%d-%d", sep, start, prev);
+				start = next;
+				sep = ',';
+			}
+			count++;
+			prev = next;
+		}
+		if (prev == start || each) {
+			dprintf("%c%d", sep, prev);
+		}
+		else
+			dprintf("%c%d-%d", sep, start, prev);
+
+		if (next == FAT_UNUSED) {
+			dprintf("*");
+		}
+		else if (next == FAT_EOF) {
+		}
+		else if (next < FAT_FIRST || next > fatlastcluster(f)) {
+			dprintf("?");
+		}
+		else if (! fatreferenceisvoid(rev[next].directory,
+		                              rev[next].index,
+		                              rev[next].previous))
+			dprintf("|%d...", next);
+	}
+
+	if (fix && prev != FAT_ERR && ! each) {
+		if (start == prev) {
+			dprintf(" %d", prev);
+		}
+		else
+			dprintf(" %d-%d", start, prev);
+	}
+	dprintf("\n");
+
+	return count;
+}
+
