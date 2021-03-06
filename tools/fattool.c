@@ -1299,6 +1299,7 @@ void usage() {
 	printf("\t\trecompute\tcalculate the number of free clusters\n");
 	printf("\t\tzero\t\treset to empty filesystem\n");
 	printf("\t\tunused\t\tmark free all unused clusters\n");
+	printf("\t\tunreachable\t\tlist or free all unused clusters\n");
 	printf("\t\tdelete\t\tforce deletion of a file or directory\n");
 	printf("\t\tlink target new [n [size]]\n");
 	printf("\t\t\t\tcreate an hard link\n");
@@ -1883,6 +1884,20 @@ int main(int argn, char *argv[]) {
 	else if (! strcmp(operation, "unused")) {
 		fatinversedebug = 1;
 		printf("cleaned up %d unused clusters\n", fatcleanunused(f));
+	}
+	else if (! strcmp(operation, "unreachable")) {
+		fatinversedebug = 1;
+		all = ! strcmp(option2, "each");
+		if (option1[0] == '\0')
+			printf("option required: clusters, chain or fix\n");
+		else if (! strcmp(option1, "chains"))
+			fatunreachable(f, 0, all);
+		else if (! strcmp(option1, "clusters"))
+			fatunreachable(f, 1, all);
+		else if (! strcmp(option1, "fix"))
+			fatunreachable(f, 2, all);
+		else
+			printf("unknow option: %s\n", option1);
 	}
 	else if (! strcmp(operation, "delete")) {
 		if (fileoptiontoreferenceboth(f, option1,

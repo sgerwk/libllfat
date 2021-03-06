@@ -186,6 +186,26 @@ zeros); it is useful to avoid reformatting a filesystem that is badly corrupted
 \fBunused\fP
 mark as unused all unused clusters that are erroneously marked used
 .TP
+\fBunreachable\fP (\fIfix\fP|\fIclusters\fP|\fIchains\fP) [\fIeach\fP]
+list the clusters that are not marked free but are not used by any file or
+directory; they are marked free with \fIfix\fP
+
+with \fIfix\fP or \fIclusters\fP, listing is by cluster number
+
+with \fIchains\fP, listing is by chains;
+the content of a chain starting at cluster \fIn\fP can be retrived with
+\fIfattool -n filesystem readfile cluster:n\fP
+
+each chain may be terminated by \fI*\fP or by \fI|n...\fP, where \fIn\fP is a
+cluster number;
+the first indicates that the final cluster of the chain has an invalid
+successor; the second indicates that its successor is used by some file or
+directory
+
+the optional argument \fIeach\fP makes consecutive clusters listed individually
+instead of the default form \fIfirst-last\fP
+
+.TP
 \fBdelete\fP \fIfile\fP
 remove a file or directory (see FILE NAMES, below) without reclaiming its
 clusters; useful if the file or directory is corrupted: its directory
