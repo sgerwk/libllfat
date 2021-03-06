@@ -1298,7 +1298,8 @@ void usage() {
 	printf("\t\t\t\tdefault: first data cluster in the filesystem\n");
 	printf("\t\trecompute\tcalculate the number of free clusters\n");
 	printf("\t\tzero\t\treset to empty filesystem\n");
-	printf("\t\tunreachable\t\tlist or free all unused clusters\n");
+	printf("\t\tunreachable (fix|clusters|chains) [each]\n");
+	printf("\t\t\t\tlist or free all unused clusters\n");
 	printf("\t\tdelete\t\tforce deletion of a file or directory\n");
 	printf("\t\tlink target new [n [size]]\n");
 	printf("\t\t\t\tcreate an hard link\n");
