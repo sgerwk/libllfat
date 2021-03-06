@@ -40,9 +40,10 @@ typedef struct {
 } fatinverse;
 
 /*
- * create (free when done), update and print an inverse fat
+ * create, delete, update and print an inverse fat
  */
 fatinverse *fatinversecreate(fat *f, int file);
+fatinverse *fatinversechains(fat *f, int file);
 int fatinversedelete(fat *f, fatinverse *rev);
 void fatinverseclear(fatinverse *rev, int32_t cluster);
 int fatinverseisvoid(fatinverse *rev, int32_t cluster);

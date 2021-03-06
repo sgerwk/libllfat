@@ -71,51 +71,14 @@ int32_t fatinverseset(fat *f, fatinverse *rev,
 }
 
 /*
- * create and delete an inverse fat
+ * create an empty inverse fat
  */
-
-int _fatinversecreate(fat *f,
-		unit *directory, int index, int32_t previous,
-		unit *startdirectory, int startindex, int32_t startprevious,
-		unit __attribute__((unused)) *dirdirectory,
-		int __attribute__((unused)) dirindex,
-		int32_t __attribute__((unused)) dirprevious,
-		int direction, void *user) {
-	fatinverse *rev;
-	int32_t target;
-	int isdir;
-
-	if (direction != 0)
-		return FAT_REFERENCE_DELETE;
-
-	if (directory != NULL && fatentryisdotfile(directory, index))
-		return 0;
-
-	rev = (fatinverse *) user;
-
-	/* avoid following cycles and confluences of clusters */
-	target = fatreferencegettarget(f, directory, index, previous);
-	if (target >= FAT_FIRST && ! fatinverseisvoid(rev, target))
-		return 0;
-
-	isdir = FATEXECUTEISDIR;
-
-	target = fatinverseset(f, rev, directory, index, previous, isdir);
-
-	/* the cluster is now the target of another pointer */
-	if (directory != NULL && target != FAT_ERR)
-		directory->refer++;
-	
-	return FAT_REFERENCE_NORMAL;
-}
-
-fatinverse *fatinversecreate(fat *f, int file) {
+fatinverse *fatinverseempty(fat *f, int file) {
 	fatinverse *rev;
 	char filename[] = "/tmp/inversefat-XXXXXX";
 	char c = '\0';
 	int fd;
-	int cl, size;
-	int res;
+	int size;
 
 	size = sizeof(fatinverse) * (fatlastcluster(f) + 2);
 
@@ -151,19 +114,12 @@ fatinverse *fatinversecreate(fat *f, int file) {
 	rev[0].index = size;
 	rev[0].previous = file;
 
-	for (cl = FAT_ROOT; cl <= fatlastcluster(f); cl++)
-		fatinverseclear(rev, cl);
-
-	res = fatreferenceexecute(f, NULL, 0, -1, _fatinversecreate, rev);
-	if (res) {
-		dprintf("error while filling the inverse FAT\n");
-		fatinversedelete(f, rev);
-		return NULL;
-	}
-
 	return rev;
 }
 
+/*
+ * delete an inverse fat
+ */
 int fatinversedelete(fat *f, fatinverse *rev) {
 	int32_t cl;
 	char *filename;
@@ -188,6 +144,84 @@ int fatinversedelete(fat *f, fatinverse *rev) {
 		free(filename);
 	}
 	return 0;
+}
+
+/*
+ * create an inverse fat
+ */
+
+int _fatinversecreate(fat *f,
+		unit *directory, int index, int32_t previous,
+		unit *startdirectory, int startindex, int32_t startprevious,
+		unit __attribute__((unused)) *dirdirectory,
+		int __attribute__((unused)) dirindex,
+		int32_t __attribute__((unused)) dirprevious,
+		int direction, void *user) {
+	fatinverse *rev;
+	int32_t target;
+	int isdir;
+
+	if (direction != 0)
+		return FAT_REFERENCE_DELETE;
+
+	if (directory != NULL && fatentryisdotfile(directory, index))
+		return 0;
+
+	rev = (fatinverse *) user;
+
+	/* avoid following cycles and confluences of clusters */
+	target = fatreferencegettarget(f, directory, index, previous);
+	if (target >= FAT_FIRST && ! fatinverseisvoid(rev, target))
+		return 0;
+
+	isdir = FATEXECUTEISDIR;
+
+	target = fatinverseset(f, rev, directory, index, previous, isdir);
+
+	/* the cluster is now the target of another pointer */
+	if (directory != NULL && target != FAT_ERR)
+		directory->refer++;
+
+	return FAT_REFERENCE_NORMAL;
+}
+
+fatinverse *fatinversecreate(fat *f, int file) {
+	fatinverse *rev;
+	int res;
+	int cl;
+
+	rev = fatinverseempty(f, file);
+	if (rev == NULL)
+		return NULL;
+
+	for (cl = FAT_ROOT; cl <= fatlastcluster(f); cl++)
+		fatinverseclear(rev, cl);
+
+	res = fatreferenceexecute(f, NULL, 0, -1, _fatinversecreate, rev);
+	if (res) {
+		dprintf("error while filling the inverse FAT\n");
+		fatinversedelete(f, rev);
+		return NULL;
+	}
+
+	return rev;
+}
+
+/*
+ * inverse fat of all chains of clusters, including the unrecheable ones
+ */
+fatinverse *fatinversechains(fat *f, int file) {
+	fatinverse *rev;
+	int32_t cl;
+
+	rev = fatinverseempty(f, file);
+	if (rev == NULL)
+		return NULL;
+
+	for (cl = FAT_FIRST; cl <= fatlastcluster(f); cl++)
+		fatinverseset(f, rev, NULL, 0, cl, 0);
+
+	return rev;
 }
 
 /*

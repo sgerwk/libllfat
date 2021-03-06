@@ -1753,13 +1753,17 @@ The following functions create, delete, update and print an inverse FAT.
 .TP
 .BI "fatinverse *fatinversecreate(fat *" f ", int " file )
 Create and return an inverse FAT for the filesystem \fIf\fP. The resulting
-memory area is not to be deallocated by \fBfree\fP(3) but via the following
-function. Apart from empty directories, all directory clusters are linked from
-this table, and will not be deallocated until the inverse FAT is removed.
-Argument \fIfile\fP tells whether the inverse FAT is to be created in memory or
-in a file that is then mapped to memory via \fBmmap\fP(2); the latter
-possibility is intended for filesystems too big for their inverse FAT to be in
-memory plus swap.
+memory area is not to be deallocated by \fBfree\fP(3) but via
+\fIfatinversedelete()\fP. Apart from empty directories, all directory clusters
+are linked from this table, and will not be deallocated until the inverse FAT
+is removed. Argument \fIfile\fP tells whether the inverse FAT is to be created
+in memory or in a file that is then mapped to memory via \fBmmap\fP(2); the
+latter possibility is intended for filesystems too big for their inverse FAT to
+be in memory plus swap.
+.TP
+.BI "fatinverse *fatinversechains(fat *" f ", int " file )
+Create an inverse FAT for all chains of clusters, including the ones that are
+not part of any file. References from directories to chains are not included.
 .TP
 .BI "int fatinversedelete(fat *" f ", fatinverse *" rev )
 Deallocates an inverse FAT. Also update the reference count of the directory
