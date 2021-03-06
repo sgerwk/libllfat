@@ -183,9 +183,6 @@ this function deallocates all clusters except the first of the root directory,
 which is reset to 2 if the filesystem is a FAT32 and re-initalized (filled with
 zeros); it is useful to avoid reformatting a filesystem that is badly corrupted
 .TP
-\fBunused\fP
-mark as unused all unused clusters that are erroneously marked used
-.TP
 \fBunreachable\fP (\fIfix\fP|\fIclusters\fP|\fIchains\fP) [\fIeach\fP]
 list the clusters that are not marked free but are not used by any file or
 directory; they are marked free with \fIfix\fP
