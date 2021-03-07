@@ -38,6 +38,9 @@
 int fattabledebug = 0;
 #define dprintf if (fattabledebug) printf
 
+int fattableerror = 1;
+#define eprintf if (fattableerror) printf
+
 /*
  * read a whole FAT in cache; read all FATs if nfat == FAT_ALL
  */
@@ -337,10 +340,10 @@ int32_t fatgetnextcluster(fat *f, int32_t n) {
 	}
 
 	if (next > fatlastcluster(f)) {
-		printf("\nerror: next of cluster %d is %d, ", n, entry);
-		printf("does not exist\n");
-		printf("last cluster in the filesystem is ");
-		printf("%d\n", fatlastcluster(f));
+		eprintf("\nerror: next of cluster %d is %d, ", n, entry);
+		eprintf("does not exist\n");
+		eprintf("last cluster in the filesystem is ");
+		eprintf("%d\n", fatlastcluster(f));
 		return FAT_ERR;
 	}
 

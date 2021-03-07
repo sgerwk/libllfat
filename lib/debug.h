@@ -27,6 +27,7 @@ extern int fatlongdebug;
 extern int fatdirectorydebug;
 extern int fatdebug;
 extern int fattabledebug;
+extern int fattableerror;
 extern int fatdirectorydebug;
 extern int fatunitdebug;
 
