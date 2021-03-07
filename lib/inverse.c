@@ -27,6 +27,7 @@
 #include "directory.h"
 #include "reference.h"
 #include "inverse.h"
+#include "debug.h"
 
 int fatinversedebug = 0;
 #define dprintf if (fatinversedebug) printf
@@ -478,10 +479,15 @@ int fatunreachable(fat *f, int fix, int each) {
 	int32_t cl, start, next, prev;
 	int count;
 	char sep, end;
+	int preverror;
+
+	preverror = fattableerror;
+	fattableerror = 0;
 
 	rev = fatinversecreate(f, 0);
 	if (rev == NULL) {
 		printf("cannot create inverse FAT\n");
+		fattableerror = preverror;
 		return -1;
 	}
 
@@ -491,6 +497,7 @@ int fatunreachable(fat *f, int fix, int each) {
 		unreach = fatinversechains(f, 0);
 		if (unreach == NULL) {
 			printf("cannot create inverse FAT\n");
+			fattableerror = preverror;
 			return -1;
 		}
 	}
@@ -587,6 +594,7 @@ int fatunreachable(fat *f, int fix, int each) {
 	}
 	dprintf("\n");
 
+	fattableerror = preverror;
 	return count;
 }
 
