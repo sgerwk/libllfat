@@ -193,11 +193,10 @@ with \fIchains\fP, listing is by chains;
 the content of a chain starting at cluster \fIn\fP can be retrived with
 \fIfattool -n filesystem readfile cluster:n\fP
 
-each chain may be terminated by \fI*\fP or by \fI|n...\fP, where \fIn\fP is a
-cluster number;
-the first indicates that the final cluster of the chain has an invalid
-successor; the second indicates that its successor is used by some file or
-directory
+a chain may be followed by either \fI*\fP, \fI?\fP or \fI|n...\fP where \fIn\fP
+is a cluster number; the first indicates that the final cluster of the chain is
+marked unused; the second that it has an invalid successor; the third that its
+successor is used by some file or directory
 
 the optional argument \fIeach\fP makes consecutive clusters listed individually
 instead of the default form \fIfirst-last\fP

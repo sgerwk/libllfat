@@ -1870,10 +1870,10 @@ directory. Optionally, fix the filesystem by marking them unused.
 
 If \fIfix\fP is \fI0\fP, the chains of unreachable clusters are printed. The
 content of the chain starting at cluster \fIstart\fP can be retrived by
-\fIfattool -n filesystem cluster:start\fP. A chain ends either normally, or by
-an invalid next cluster or by a cluster that is used by a file or directory.
-The second case is marked by \fI*\fP, the third by \fI|n...\fP where \fIn\fP is
-the cluster that is used; the subsequent clusters of the chain are not printed.
+\fIfattool -n filesystem cluster:start\fP. A marker signals the abnormal
+termination of a chain: \fI*\fP if the chain ends by an unused cluster, \fI?\fP
+it it ends by an invalid next cluster and \fI|n...\fP if it ends by the used
+cluster \fIn\fP, and the subsequent clusters of the chain are not printed.
 
 If \fIfix\fP is greater than \fI1\fP, the unreachable clusters are printed
 ordered by number rather than following their chains. If \fIfix\fP is \fI2\fP,
