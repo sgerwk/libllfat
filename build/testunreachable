@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# create some unreachable chains clusters
+
+for FS in fat12 fat16 fat32 fat32long;
+do
+	# a chain ending in EOF
+	fattool $FS setnext 1000 1001
+	fattool $FS setnext 1001 1002
+	fattool $FS setnext 1002 1003
+	fattool $FS setnext 1003 EOF
+
+	# a chain ending in UNUSED
+	fattool $FS setnext 1004 1006
+	fattool $FS setnext 1006 1010
+	fattool $FS setnext 1010 1011
+	fattool $FS setnext 1011 UNUSED
+
+	# a chain ending in a wrong cluster
+	fattool $FS setnext 1022 1021
+	fattool $FS setnext 1021 1020
+	fattool $FS setnext 1020 100000
+
+	# a chain ending in a used cluster
+	[ $(fattool $FS getnext 100) != 'UNUSED' ] && USED=100 || USED=200
+	fattool $FS setnext 1030 1031
+	fattool $FS setnext 1031 $USED
+done
+
