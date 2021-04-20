@@ -688,7 +688,11 @@ int _directoryclean(fat *f,
 		return 0;
 
 	target = fatreferencegettarget(f, directory, index, previous);
-	if (target < FAT_FIRST || target == fatgetrootbegin(f))
+	if (target == fatgetrootbegin(f)) {
+		printf("directory cluster %d used (first of root)\n", target);
+		return FAT_REFERENCE_COND(s->recur);
+	}
+	if (target < FAT_FIRST)
 		return FAT_REFERENCE_COND(s->recur);
 
 	cluster = fatclusterread(f, target);
