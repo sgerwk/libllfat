@@ -712,7 +712,8 @@ int _directoryclean(fat *f,
 
 	printf("directory cluster %d unused:\n\t", target);
 	fatreferenceprint(directory, index, previous);
-	printf("->%d->%d\n\t\tbecomes\n\t", target, next);
+	printf("->%d->%d\n\t\t", target, next);
+	printf("%s\n\t", s->testonly ? "would became" : "becomes");
 	fatreferenceprint(directory, index, previous);
 	printf("->%d\n", next);
 
@@ -725,12 +726,14 @@ int _directoryclean(fat *f,
 	return FAT_REFERENCE_COND(s->recur);
 }
 
-int directoryclean(fat *f, int testonly) {
+int directoryclean(fat *f, unit *directory, int index, uint32_t previous,
+		int recur, int testonly) {
 	struct _directorycleanstruct s;
-	s.recur = 1;
+	s.recur = recur;
 	s.changed = 0;
 	s.testonly = testonly;
-	fatreferenceexecute(f, NULL, 0, -1, _directoryclean, &s);
+	fatreferenceexecute(f, directory, index, previous,
+		_directoryclean, &s);
 	return s.changed;
 }
 
@@ -809,11 +812,12 @@ int _directorylast(fat *f,
 	return (s-> recur ? FAT_REFERENCE_RECUR : 0) | FAT_REFERENCE_DELETE;
 }
 
-void directorylast(fat *f, int testonly) {
+void directorylast(fat *f, unit *directory, int index, uint32_t previous,
+		int recur, int testonly) {
 	struct _directorylaststruct s;
-	s.recur = 1;
+	s.recur = recur;
 	s.testonly = testonly;
-	fatreferenceexecute(f, NULL, 0, -1, _directorylast, &s);
+	fatreferenceexecute(f, directory, index, previous, _directorylast, &s);
 }
 
 /*
@@ -2864,10 +2868,26 @@ int main(int argn, char *argv[]) {
 		fatentrysetattributes(cluster, 1, 0x10);
 	}
 	else if (! strcmp(operation, "directoryclean")) {
-		printf("cleaning unused directory clusters\n");
-		directoryclean(f, ! strcmp(option1, "test"));
-		printf("cleaning unused directory entries\n");
-		directorylast(f, ! strcmp(option1, "test"));
+		if (fileoptiontoreference(f,
+			option1[0] == '\0' ? "/" : option1,
+			&directory, &index, &previous, &target)) {
+			printf("file %s does not exists\n", option1);
+			exit(1);
+		}
+		if (! fatreferenceisdirectory(directory, index, previous)) {
+			printf("not a directory: %s\n", option1);
+			exit(1);
+		}
+		recur = ! strcmp(option2, "recur") ||
+			! strcmp(option3, "recur");
+		testonly = ! strcmp(option2, "test") ||
+			! strcmp(option3, "test");
+		printf("%s unused directory clusters\n",
+			testonly ? "finding" : "cleaning");
+		directoryclean(f, directory, index, previous, recur, testonly);
+		printf("%s unused directory entries\n",
+			testonly ? "finding" : "cleaning");
+		directorylast(f, directory, index, previous, recur, testonly);
 	}
 	else if (! strcmp(operation, "countclusters")) {
 		if (option1[0] == '\0') {

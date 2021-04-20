@@ -519,12 +519,13 @@ printed
 \fBmkdir\fP \fIdirectory\fP
 create a directory
 .TP
-\fBdirectoryclean\fP [\fItest\fP]
+\fBdirectoryclean\fP [\fIdirectory\fP [\fIrecur\fP] [\fItest\fP]]
 delete the directory clusters that only contain deleted entries; also zero all
 entries following the last that is actually used; this also clean directory
 entries that over an "end-of-directory" entry, which may cause problems to some
-implementations (e.g., msdos.ko); with option \fItest\fP, only print what would
-be done without actually changing anything
+implementations (e.g., msdos.ko); the default directory is the root; option
+\fIrecur\fP is for recursively checking subdirectories; option \fItest\fP is
+for only printing what would be done without actually changing anything
 .TP
 \fBcountclusters\fP \fIfile\fP [\fIrecur\fP]
 count the clusters a file takes; can be called on a directory, in which case it
