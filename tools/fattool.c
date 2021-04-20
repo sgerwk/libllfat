@@ -2845,8 +2845,8 @@ int main(int argn, char *argv[]) {
 		fatentrysetattributes(cluster, 1, 0x10);
 	}
 	else if (! strcmp(operation, "directoryclean")) {
-		directoryclean(f, strcmp(option1, "test"));
-		directorylast(f, strcmp(option1, "test"));
+		directoryclean(f, ! strcmp(option1, "test"));
+		directorylast(f, ! strcmp(option1, "test"));
 	}
 	else if (! strcmp(operation, "countclusters")) {
 		if (option1[0] == '\0') {
