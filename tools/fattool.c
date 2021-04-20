@@ -655,6 +655,7 @@ void dircount(fat *f, char *path, unit *directory, int index, void *user) {
  */
 
 struct _directorycleanstruct {
+	int recur;
 	int changed;
 	int testonly;
 };
@@ -674,6 +675,8 @@ int _directoryclean(fat *f,
 	int ind;
 	int used;
 
+	s = (struct _directorycleanstruct *) user;
+
 	if (fatreferenceisentry(directory, index, previous) &&
 			! fatreferenceisdirectory(directory, index, previous))
 		return FAT_REFERENCE_DELETE;
@@ -686,7 +689,7 @@ int _directoryclean(fat *f,
 
 	target = fatreferencegettarget(f, directory, index, previous);
 	if (target < FAT_FIRST || target == fatgetrootbegin(f))
-		return FAT_REFERENCE_NORMAL;
+		return FAT_REFERENCE_COND(s->recur);
 
 	cluster = fatclusterread(f, target);
 	if (cluster == NULL)
@@ -698,7 +701,7 @@ int _directoryclean(fat *f,
 			used = 1;
 	if (used) {
 		printf("directory cluster %d used\n", target);
-		return FAT_REFERENCE_NORMAL;
+		return FAT_REFERENCE_COND(s->recur);
 	}
 
 	next = fatgetnextcluster(f, target);
@@ -709,18 +712,18 @@ int _directoryclean(fat *f,
 	fatreferenceprint(directory, index, previous);
 	printf("->%d\n", next);
 
-	s = (struct _directorycleanstruct *) user;
 	if (! s->testonly) {
 		fatreferencesettarget(f, directory, index, previous, next);
 		fatsetnextcluster(f, target, FAT_UNUSED);
 		s->changed = 1;
 	}
 
-	return FAT_REFERENCE_NORMAL;
+	return FAT_REFERENCE_COND(s->recur);
 }
 
 int directoryclean(fat *f, int testonly) {
 	struct _directorycleanstruct s;
+	s.recur = 1;
 	s.changed = 0;
 	s.testonly = testonly;
 	fatreferenceexecute(f, NULL, 0, -1, _directoryclean, &s);
@@ -731,6 +734,11 @@ int directoryclean(fat *f, int testonly) {
  * clean up the last deleted entries in a directory cluster
  */
 
+struct _directorylaststruct {
+	int recur;
+	int testonly;
+};
+
 int _directorylast(fat *f,
 		unit *directory, int index, int32_t previous,
 		unit __attribute__((unused)) *startdirectory,
@@ -740,8 +748,11 @@ int _directorylast(fat *f,
 		int __attribute__((unused)) dirindex,
 		int32_t __attribute__((unused)) dirprevious,
 		int direction, void *user) {
+	struct _directorylaststruct *s;
 	unit *scandirectory, *lastdirectory;
 	int scanindex, lastindex;
+
+	s = (struct _directorylaststruct *) user;
 
 	if (direction != 0)
 		return 0;
@@ -752,7 +763,7 @@ int _directorylast(fat *f,
 		else if (fatreferenceisdotfile(directory, index, previous))
 			return FAT_REFERENCE_DELETE;
 		else
-			return FAT_REFERENCE_NORMAL;
+			return FAT_REFERENCE_COND(s->recur);
 	}
 
 	/* the reference is now guaranteed to be a cluster and not a directory
@@ -777,24 +788,28 @@ int _directorylast(fat *f,
 	}
 	
 	if (lastdirectory == NULL)
-		return FAT_REFERENCE_RECUR | FAT_REFERENCE_DELETE;
+		return (s-> recur ? FAT_REFERENCE_RECUR : 0) |
+			FAT_REFERENCE_DELETE;
 
 	printf("last entry: %d,%d\n", lastdirectory->n, lastindex);
-	printf("%s entries:", * (int *) user ? "cleaning" : "would clean");
+	printf("%s entries:", s->testonly ? "would clean" : "cleaning");
 	while (fatnextentry(f, &lastdirectory, &lastindex) >= 0) {
 		printf(" %d,%d", lastdirectory->n, lastindex);
-		if (* (int *) user)
+		if (! s->testonly)
 			fatentryzero(lastdirectory, lastindex);
 	}
 	printf("\n");
 
-	/* do not visit the chain, just recur */
+	/* do not visit the chain */
 
-	return FAT_REFERENCE_RECUR | FAT_REFERENCE_DELETE;
+	return (s-> recur ? FAT_REFERENCE_RECUR : 0) | FAT_REFERENCE_DELETE;
 }
 
 void directorylast(fat *f, int testonly) {
-	fatreferenceexecute(f, NULL, 0, -1, _directorylast, &testonly);
+	struct _directorylaststruct s;
+	s.recur = 1;
+	s.testonly = testonly;
+	fatreferenceexecute(f, NULL, 0, -1, _directorylast, &s);
 }
 
 /*
