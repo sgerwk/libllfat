@@ -2864,7 +2864,9 @@ int main(int argn, char *argv[]) {
 		fatentrysetattributes(cluster, 1, 0x10);
 	}
 	else if (! strcmp(operation, "directoryclean")) {
+		printf("cleaning unused directory clusters\n");
 		directoryclean(f, ! strcmp(option1, "test"));
+		printf("cleaning unused directory entries\n");
 		directorylast(f, ! strcmp(option1, "test"));
 	}
 	else if (! strcmp(operation, "countclusters")) {
