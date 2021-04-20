@@ -206,7 +206,7 @@ instead of the default form \fIfirst-last\fP
 remove a file or directory (see FILE NAMES, below) without reclaiming its
 clusters; useful if the file or directory is corrupted: its directory
 entry is marked deleted and nothing else is done; the clusters of files deleted
-this way can be later reclaimed by \fIfattool filesystem unused\fP or
+this way can be later reclaimed by \fIfattool filesystem unreachable fix \fP or
 reattached to some other file via \fIfattool filesystem setfirst ...\fP or
 \fIfattool filesystem setnext ...\fP
 .TP
@@ -430,7 +430,7 @@ if the additional string \fI"dir"\fP is also passed, the file is deleted even
 if it is a directory, provided that it is empty; if the string is instead
 \fI"force"\fP, the directory is deleted even if not empty; its files and
 subdirectories are not deallocated; they can be then deallocated with
-\fIfattool filesystem unused\fP
+\fIfattool filesystem unreachable fix\fP
 
 the optional third argument \fIerase\fP is for erasing the directory entries
 that contain the file name and attributes, rather than just marking them as no

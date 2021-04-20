@@ -1935,7 +1935,7 @@ int main(int argn, char *argv[]) {
 				printf("error while deleting long name\n");
 		fatentrydelete(directory, index);
 		printf("filesystem may be unclean, fix with:\n");
-		printf("fattool %s unused\n", name);
+		printf("fattool %s unreachable fix\n", name);
 	}
 	else if (! strcmp(operation, "link")) {
 		if (option1[0] == '\0')
