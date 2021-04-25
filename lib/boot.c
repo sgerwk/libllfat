@@ -825,7 +825,8 @@ int32_t fatinfogetlastallocatedcluster(unit *info) {
 void fatinfosetlastallocatedcluster(unit *info, int32_t last) {
 	if (info == NULL)
 		return;
-
+	if (last == (int32_t) le32toh(_unit32int(info, 0x1EC)))
+		return;
 	_unit32int(info, 0x1EC) = htole32(last);
 	info->dirty = 1;
 }
@@ -842,6 +843,8 @@ int32_t fatinfogetfreeclusters(unit *info) {
 
 void fatinfosetfreeclusters(unit *info, int32_t last) {
 	if (info == NULL)
+		return;
+	if (last == (int32_t) le32toh(_unit32int(info, 0x1E8)))
 		return;
 	_unit32int(info, 0x1E8) = htole32(last);
 	info->dirty = 1;
