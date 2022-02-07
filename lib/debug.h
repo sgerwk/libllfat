@@ -23,6 +23,7 @@
 extern int fatcomplexdebug;
 extern int fatinversedebug;
 extern int fatreferencedebug;
+extern int fatreferenceerror;
 extern int fatlongdebug;
 extern int fatdirectorydebug;
 extern int fatdebug;

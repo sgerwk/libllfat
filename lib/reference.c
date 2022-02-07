@@ -57,6 +57,9 @@
 int fatreferencedebug = 0;
 #define dprintf if (fatreferencedebug) printf
 
+int fatreferenceerror = 1;
+#define eprintf if (fatreferenceerror) printf
+
 /*
  * get and set the cluster that is the target of a reference
  */
@@ -429,6 +432,10 @@ int _fatreferenceexecute(fat *f,
 			/* call function on cluster reference */
 
 	next = fatreferencegettarget(f, directory, index, previous);
+	if (next > fatlastcluster(f)) {
+		eprintf("\ncluster %d out of range\n", next);
+		return -1;
+	}
 	res = act(f,
 		directory, index, previous,
 		startdirectory, startindex, startprevious,
