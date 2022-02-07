@@ -69,6 +69,9 @@ unit *fatunitcreate(int size) {
 unit *fatunitcopy(unit *u) {
 	unit *c;
 
+	if (u == NULL)
+		return NULL;
+
 	c = malloc(sizeof(unit));
 	if (c == NULL) {
 		printf("cannot allocate memory\n");
