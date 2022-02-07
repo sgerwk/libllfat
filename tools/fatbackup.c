@@ -294,7 +294,7 @@ int main(int argn, char *argv[]) {
 
 	size = fatgetbytespersector(src);
 	if (whole) {
-		res = ftruncate(dst->fd, size * fatgetnumsectors(src));
+		res = ftruncate(dst->fd, size * (long) fatgetnumsectors(src));
 		if (res == -1) {
 			perror(dstname);
 			exit(1);
