@@ -100,6 +100,8 @@ int copydirectoryclusters(fat *f,
 	if (cl < FAT_ROOT)
 		return FAT_REFERENCE_NORMAL;
 	cluster = fatclusterread(f, cl);
+	if (cluster == NULL)
+		return FAT_REFERENCE_NORMAL;
 
 			/* check if it coincides with destination cluster */
 
