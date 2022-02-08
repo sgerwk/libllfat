@@ -183,7 +183,7 @@ int fatcutbad(fat *f, int verbose);
 
 #define FATEXECUTEFIXDOT						\
 	if (directory != NULL && fatentryisdotfile(directory, index)) {	\
-		cl = fatentrycompareshortname(directory, index, ".") ?	\
+		cl = fatentrycompareshortname(directory, index, DOTFILE) ? \
 			fatreferencegettarget(f,			\
 				dirdirectory, dirindex, dirprevious) :	\
 			fatreferencegettarget(f,			\

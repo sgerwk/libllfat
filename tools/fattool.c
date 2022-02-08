@@ -2858,11 +2858,11 @@ int main(int argn, char *argv[]) {
 		for (index = 0; index < cluster->size / 32; index++)
 			fatentryzero(cluster, index);
 
-		fatentrysetshortname(cluster, 0, ".");
+		fatentrysetshortname(cluster, 0, DOTFILE);
 		fatentrysetfirstcluster(cluster, 0, fatbits(f), next);
 		fatentrysetattributes(cluster, 0, 0x10);
 
-		fatentrysetshortname(cluster, 1, "..");
+		fatentrysetshortname(cluster, 1, DOTDOTFILE);
 		fatentrysetfirstcluster(cluster, 1, fatbits(f),
 			directory->n == fatgetrootbegin(f) ? 0 : directory->n);
 		fatentrysetattributes(cluster, 1, 0x10);

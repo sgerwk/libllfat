@@ -149,8 +149,8 @@ int fatentrycompareshortname(unit *directory, int index, char shortname[13]) {
 }
 
 int fatentryisdotfile(unit *directory, int index) {
-	return	! fatentrycompareshortname(directory, index, ".") ||
-		! fatentrycompareshortname(directory, index, "..");
+	return	! fatentrycompareshortname(directory, index, DOTFILE) ||
+		! fatentrycompareshortname(directory, index, DOTDOTFILE);
 }
 
 void fatentryfirst(unit *directory, int index, char first) {

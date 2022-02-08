@@ -710,7 +710,7 @@ int main(int argn, char *argv[]) {
 		size = -1; // how many clusters; -1 = fill the filesystem
 
 		printf("creating file at root/%d\n", index);
-		fatentrysetshortname(root, index, "NEW");
+		fatentrysetshortname(root, index, "NEW\0        ");
 		fatentrysetattributes(root, index, 0x20);
 
 		printf("clusters:");

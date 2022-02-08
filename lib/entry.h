@@ -49,6 +49,9 @@
 #define FAT_ATTR_LONGNAME \
 	(FAT_ATTR_RO | FAT_ATTR_HIDDEN | FAT_ATTR_SYSTEM | FAT_ATTR_VOLUME)
 
+#define DOTFILE    ".\0           "
+#define DOTDOTFILE "..\0          "
+
 /*
  * is an entry actually a file? part of a long name? is the directory over?
  */

@@ -982,7 +982,7 @@ the array \fIshortname\fP, which will then contain the name in the usual
 "BASENAME.EXT" form.
 .TP
 .BI "int fatentrysetshortname(unit *" directory ", int " index ", \
-char *" shortname )
+char " shortname [13])
 Set \fIshortname\fP to be the name of the file in the directory entry
 \fIdirectory,index\fP. No check is done on the name except that it can be
 converted from the "BASENAME.EXT" form. In other words, this function allows
@@ -999,7 +999,8 @@ Compare the shortname of the file with the array.
 .TP
 .BI "int fatentryisdotfile(unit *" directory ", int " index )
 Checks whether the file is a dot or a dotdot file; this is just a comparison of
-the shortname with "." and with ".."
+the shortname with \fIDOTFILE\fP and with \fIDOTDOTFILE\fP, the arrays
+containing the names "." and ".."
 .TP
 .BI "int32_t fatentrygetfirstcluster(unit *" directory ", int " index ", \
 int " bits )
