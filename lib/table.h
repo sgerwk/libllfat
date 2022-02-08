@@ -73,6 +73,14 @@ int fatgetfatdirtybits(fat *f, int nfat);
 int fatsetfatdirtybits(fat *f, int nfat, uint32_t dirty);
 
 /*
+ * tell whether an entry in a fat is UNUSED, EOF or BAD; print it
+ */
+int fatisfatunused(fat *f, int32_t n);
+int fatisfateof(fat *f, int32_t n);
+int fatisfatbad(fat *f, int32_t n);
+void fatprintfat(fat *f, int32_t n);
+
+/*
  * get and set the next (or eof/unused) of a cluster
  */
 int32_t fatgetnextcluster(fat *f, int32_t cluster);

@@ -757,6 +757,19 @@ Read entry \fIn\fP in the file allocation table \fInfat\fP.
 .TP
 .BI "int fatsetfat(fat *" f ", int " nfat ", int32_t " n ", int32_t " next )
 Set entry \fIn\fP in the file allocation table \fInfat\fP to \fInext\fP.
+.TP
+.BI "int fatisfatunused(fat *" f ", int32_t " n )
+.PD 0
+.TP
+.BI "int fatisfateof(fat *" f ", int32_t " n)
+.TP
+.BI "int fatisfatbad(fat *" f ", int32_t " n )
+.TP
+.BI "void fatprintfat(fat *" f ", int32_t " n)
+.PD
+Tell whether entry \fIn\fP in a fat is UNUSED, EOF or BAD, or print it. Only to be
+used on the values returned by \fBfatgetfat()\fP or passed to
+\fBfatsetfat()\fP.
 .P
 Unless creating or checking the integrity of a filesystem, these functions are
 not called directly but via \fBfatgetnextcluster()\fP and

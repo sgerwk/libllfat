@@ -288,11 +288,65 @@ int fatsetfatdirtybits(fat *f, int nfat, uint32_t dirty) {
 }
 
 /*
+ * tell whether a fat entry is UNUSED, EOF or BAD
+ */
+
+int fatisfatunused(fat *f, int32_t n) {
+	(void) f;
+	return n == 0;
+}
+
+int fatisfateof(fat *f, int32_t n) {
+	uint32_t entry = (uint32_t) n;
+	switch (fatbits(f)) {
+	case 12:
+		return (entry & 0x0FF8) == 0x0FF8;
+	case 16:
+		return (entry & 0xFFF8) == 0xFFF8;
+	case 32:
+		return (entry & 0x0FFFFFF8) == 0x0FFFFFF8;
+	default:
+		return 0;
+	}
+}
+
+int fatisfatbad(fat *f, int32_t n) {
+	uint32_t entry = (uint32_t) n;
+	if (fatisfateof(f, n))
+		return 0;
+	switch (fatbits(f)) {
+	case 12:
+		return (entry & 0x0FF7) == 0x0FF7;
+	case 16:
+		return (entry & 0xFFF7) == 0xFFF7;
+	case 32:
+		return (entry & 0x0FFFFFF7) == 0x0FFFFFF7;
+	default:
+		return 0;
+	}
+}
+
+/*
+ * print a cluster entry
+ */
+void fatprintfat(fat *f, int32_t n) {
+	if (fatisfatunused(f, n))
+		printf("UNUSED");
+	else if (fatisfatbad(f, n))
+		printf("BAD");
+	else if (fatisfateof(f, n))
+		printf("EOF");
+	else if (n > fatlastcluster(f))
+		printf("OUT");
+	else
+		printf("%d", n);
+}
+
+/*
  * get the next of a cluster, according to a fat
  */
 
 int32_t fatgetnextcluster(fat *f, int32_t n) {
-	uint32_t entry;
 	int32_t next;
 	int ifat;
 
@@ -320,27 +374,12 @@ int32_t fatgetnextcluster(fat *f, int32_t n) {
 	if (next == FAT_ERR)
 		return FAT_ERR;
 
-	entry = (uint32_t) next;
-
-	switch (fatbits(f)) {
-	case 12:
-		next = (entry & 0x0FF7) == 0x0FF7 ? FAT_BAD : next;
-		next = (entry & 0x0FF8) == 0x0FF8 ? FAT_EOF : next;
-		break;
-	case 16:
-		next = (entry & 0xFFF7) == 0xFFF7 ? FAT_BAD : next;
-		next = (entry & 0xFFF8) == 0xFFF8 ? FAT_EOF : next;
-		break;
-	case 32:
-		next = (entry & 0x0FFFFFF7) == 0x0FFFFFF7 ? FAT_BAD : next;
-		next = (entry & 0x0FFFFFF8) == 0x0FFFFFF8 ? FAT_EOF: next;
-		break;
-	default:
-		next = FAT_ERR;
-	}
-
-	if (next > fatlastcluster(f)) {
-		eprintf("\nerror: next of cluster %d is %d, ", n, entry);
+	if (fatisfatbad(f, next))
+		return FAT_BAD;
+	else if (fatisfateof(f, next))
+		return FAT_EOF;
+	else if (next > fatlastcluster(f)) {
+		eprintf("\nerror: next of cluster %d is %u, ", n, next);
 		eprintf("does not exist\n");
 		eprintf("last cluster in the filesystem is ");
 		eprintf("%d\n", fatlastcluster(f));
