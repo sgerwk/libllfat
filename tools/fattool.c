@@ -1432,7 +1432,7 @@ int main(int argn, char *argv[]) {
 	unsigned long readserial;
 	int res, diff, finalres, recur, chain, all, chains;
 	int over, startdir, nchanges;
-	char dummy, pad, *buf, firstchar, attrib;
+	char dummy, pad, *buf, firstchar, attrib, *slash;
 	int nfat;
 	char *timeformat;
 	struct tm tm;
@@ -2863,8 +2863,16 @@ int main(int argn, char *argv[]) {
 		fatentrysetattributes(cluster, 0, 0x10);
 
 		fatentrysetshortname(cluster, 1, DOTDOTFILE);
-		fatentrysetfirstcluster(cluster, 1, fatbits(f),
-			directory->n == fatgetrootbegin(f) ? 0 : directory->n);
+		slash = strrchr(option1, '/');
+		if (! slash)
+			previous = 0;
+		else {
+			*slash = '\0';
+			previous = fatlookuppathfirstcluster(f, r, option1);
+			if (previous == fatgetrootbegin(f))
+				previous = 0;
+		}
+		fatentrysetfirstcluster(cluster, 1, fatbits(f), previous);
 		fatentrysetattributes(cluster, 1, 0x10);
 	}
 	else if (! strcmp(operation, "directoryclean")) {
