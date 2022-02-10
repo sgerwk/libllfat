@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# make fats differ to test the mergefats function of fattool
+
+testfs
+
+fattool -f 0 fat32 setnext 172 200       force
+fattool -f 0 fat32 setnext 173 934234234 force
+fattool -f 0 fat32 setnext 174 200       force
+
+fattool -f 1 fat32 setnext 241 100       force
+fattool -f 1 fat32 setnext 242 934234234 force
+fattool -f 1 fat32 setnext 243 100       force
+
+fattool -f 0 fat32 setnext 307 200       force
+fattool -f 0 fat32 setnext 308 934234234 force
+fattool -f 0 fat32 setnext 309 200       force
+
+echo
+echo "filesystem after fat corruption"
+fattool fat32 checkfats
+
+echo
+echo "fixing first region"
+echo y | fattool fat32 mergefats 101 200 1
+echo
+echo "fixing second region"
+echo y | fattool fat32 mergefats 201 300 0
+echo
+echo "fixing third region"
+echo y | fattool fat32 mergefats 301 400 1
+
+echo
+echo "filesystem after fat fixing"
+fattool fat32 checkfats
+

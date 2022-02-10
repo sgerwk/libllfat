@@ -1353,6 +1353,9 @@ void usage() {
 	printf("\t\tgetnext n\tfind the next of cluster n\n");
 	printf("\t\tsetnext n m [force]\n");
 	printf("\t\t\t\tset the next of cluster n to be m\n");
+	printf("\t\tcheckfats [start end [num]]\n");
+	printf("\t\tmergefats [start end [num]]\n");
+	printf("\t\t\t\tcheck or ensure the consistency of the two fats\n");
 	printf("\t\tsparse [noread]\tzero all unused clusters\n");
 	printf("\t\t\t\tnoread:\tdo not read and check clusters for \n");
 	printf("\t\t\t\t\tbeing already filled with zeros\n");
@@ -1423,7 +1426,7 @@ int main(int argn, char *argv[]) {
 	wchar_t *longname, *longpath, *legalized;
 	fat *f, *cross;
 	int fatnum, bootindex;
-	int32_t previous, target, r, cl, next, start;
+	int32_t previous, target, r, cl, next, other, start;
 	int32_t secondprevious, secondtarget, end, last, len;
 	unit *directory, *startdirectory, *longdirectory, *seconddirectory;
 	int index, startindex, longindex, secondindex;
@@ -2218,6 +2221,71 @@ int main(int argn, char *argv[]) {
 			}
 		}
 		fatsetnextcluster(f, cl, next);
+	}
+	else if (! strcmp(operation, "checkfats") ||
+		 ! strcmp(operation, "mergefats")) {
+		testonly = ! strcmp(operation, "checkfats");
+		if (fatgetnumfats(f) != 2) {
+			printf("this filesystem does not have two fats\n");
+			exit(EXIT_FAILURE);
+		}
+		start = option1[0] == '\0' ? FAT_FIRST : atoi(option1);
+		end = option2[0] == '\0' ? fatlastcluster(f) : atoi(option2);
+		nfat = option3[0] == '\0' ? -1 : atoi(option3);
+		printf("%s fats ", testonly ? "comparing" : "merging");
+		printf("on clusters %d - %d", start, end);
+		if (nfat != -1)
+			printf(", preferred fat %d", nfat);
+		printf("\n");
+		if (! testonly) {
+			printf("WARNING: this operation cannot be undone\n");
+			printf("WARNING: better first try checkfats\n");
+			check();
+			printf("\n");
+		}
+		diff = 0;
+		res = 1;
+		for (cl = start; cl <= end; cl++) {
+			next = fatgetfat(f, 0, cl);
+			other = fatgetfat(f, 1, cl);
+			if (next == other)
+				continue;
+			diff = 1;
+			printf("%d -> ", cl);
+			fatprintfat(f, next);
+			printf("/");
+			fatprintfat(f, other);
+
+			if (next > fatlastcluster(f) &&
+			         other <= fatlastcluster(f))
+				next = other;
+			else if (next <= fatlastcluster(f) &&
+			         other > fatlastcluster(f))
+				other = next;
+			else if (nfat == 0)
+				other = next;
+			else if (nfat == 1)
+				next = other;
+			else {
+				printf(" NOFIX\n");
+				res = 0;
+				continue;
+			}
+			printf(" -> ");
+			fatprintfat(f, next);
+			printf("\n");
+
+			if (! testonly) {
+				fatsetfat(f, 0, cl, next);
+				fatsetfat(f, 1, cl, next);
+			}
+		}
+		if (diff == 0)
+			printf("no difference in FATs\n");
+		else {
+			printf("%sall automatically ", res == 1 ? "" : "not ");
+			printf("%s\n", testonly ? "fixable" : "fixed");
+		}
 	}
 	else if (! strcmp(operation, "getfirst")) {
 		if (option1[0] == '\0') {

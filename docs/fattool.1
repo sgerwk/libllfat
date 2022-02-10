@@ -332,6 +332,27 @@ or BAD
 set the cluster that follows \fIn\fP to be \fIm\fP; other than a cluster
 number, \fIm\fP may be EOF, UNUSED, BAD; no operation is performed if \fIm\fP
 is not a valid cluster number unless the \fIforce\fP option is given
+.TD 0
+.TP
+\fBcheckfats [start end [num]]\fP
+.PD 0
+.TP
+\fBmergefats [start end [num]]\fP
+check or ensure the consistency of the two FATs;
+do it only in the region between clusters \fIstart\fP and \fIend\fP if these
+arguments are given;
+if \fInum\fP is also given, prefer the value stored in this FAT if valid
+
+the intended usage is to first check the coherence of the FATs with
+\fIcheckfats\fP; this shows every difference along with its automated fix if
+any; a difference is not automatically fixable if both FATs contain a valid
+value (a value is valid if it is not out of range); which one is correct can be
+often guessed by looking at automatically fixable differences in clusters in
+the vicinity; running \fIcheckfats\fP again with the appropriate \fIstart\fP,
+\fIend\fP and \fInum\fP arguments shows a proposed fix; this partial fix can be
+then realized by \fImergefats\fP with the same arguments
+
+.PD
 .TP
 \fBgetfirst\fP \fIfile\fP
 show the first cluster of a file
