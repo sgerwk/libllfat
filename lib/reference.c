@@ -432,7 +432,7 @@ int _fatreferenceexecute(fat *f,
 			/* call function on cluster reference */
 
 	next = fatreferencegettarget(f, directory, index, previous);
-	if (next > fatlastcluster(f)) {
+	if (previous > 0 && next > fatlastcluster(f)) {
 		eprintf("\ncluster %d out of range\n", next);
 		return -1;
 	}
