@@ -23,7 +23,8 @@ do
 		B=$(basename $FILE)
 		false && [ ${#B} -gt 8 ] && continue
 		echo -n "$FILE -> :: "
-		mcopy -i $FAT -D o $FILE ::
+		# mcopy -i $FAT -D o $FILE ::
+		cat $FILE | ./fattool $FAT writefile $B > /dev/null
 	done
 
 	mcopy -i $FAT -D o /dev/null ::asomewhatlongishfilename.andextension
@@ -31,9 +32,11 @@ do
 	mcopy -i $FAT -D o ../lib/debug.h ::SINGLE.txt
 	mcopy -i $FAT -D o ../lib/debug.h ::other.TXT
 
-	mmd -i $FAT ::aaa
+	# mmd -i $FAT ::aaa
+	fattool $FAT mkdir aaa > /dev/null
 
-	mmd -i $FAT ::aaa/bbb
+	# mmd -i $FAT ::aaa/bbb
+	fattool $FAT mkdir bbb
 	echo "Makefile -> ::aaa/bbb"
 	mcopy -i $FAT Makefile -D o ::aaa/bbb
 
@@ -54,19 +57,21 @@ do
 	then
 		for((I=0; I<50; I++))
 		do
-			echo $I > $I
+			# echo $I > $I
 			echo -n "$I "
-			mcopy -i $FAT -D o $I ::
-			rm $I
+			# mcopy -i $FAT -D o $I ::
+			echo "$I" | fattool $FAT writefile $I > /dev/null
+			rm -f $I
 		done
 		echo
 
 		for((I=50; I<100; I++))
 		do
-			echo $I > $I
+			# echo $I > $I
 			echo -n "$I "
-			mcopy -i $FAT -D o $I ::AAA
-			rm $I
+			# mcopy -i $FAT -D o $I ::AAA
+			echo "$I" | fattool $FAT writefile AAA/$I > /dev/null
+			rm -f $I
 		done
 		echo
 	fi
