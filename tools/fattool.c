@@ -1351,7 +1351,8 @@ void usage() {
 	printf("\t\t\t\tpart: allow writing less than a whole cluster\n");
 	printf("\t\t\t\tread: first read the original cluster\n");
 	printf("\t\tgetnext n\tfind the next of cluster n\n");
-	printf("\t\tsetnext n m\tset the next of cluster n to be m\n");
+	printf("\t\tsetnext n m [force]\n");
+	printf("\t\t\t\tset the next of cluster n to be m\n");
 	printf("\t\tsparse [noread]\tzero all unused clusters\n");
 	printf("\t\t\t\tnoread:\tdo not read and check clusters for \n");
 	printf("\t\t\t\t\tbeing already filled with zeros\n");
@@ -2206,8 +2207,16 @@ int main(int argn, char *argv[]) {
 			next = FAT_EOF;
 		else if (! strcmp(option2, "BAD"))
 			next = FAT_BAD;
-		else
+		else {
 			next = atol(option2);
+			dirty = ! strcmp(option3, "force");
+			last = fatlastcluster(f);
+			if ((next < FAT_FIRST || next > last) && ! dirty) {
+				printf("cluster %d out of range ", next);
+				printf("(max %d)\n", fatlastcluster(f));
+				exit(1);
+			}
+		}
 		fatsetnextcluster(f, cl, next);
 	}
 	else if (! strcmp(operation, "getfirst")) {

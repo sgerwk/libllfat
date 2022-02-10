@@ -328,9 +328,10 @@ coming from stdin
 print the number of the cluster that follows \fIn\fP; may also be EOF, UNUSED
 or BAD
 .TP
-\fBsetnext\fP \fIn m\fP
+\fBsetnext\fP \fIn m\fP [\fIforce\fP]
 set the cluster that follows \fIn\fP to be \fIm\fP; other than a cluster
-number, \fIm\fP may be EOF, UNUSED, BAD
+number, \fIm\fP may be EOF, UNUSED, BAD; no operation is performed if \fIm\fP
+is not a valid cluster number unless the \fIforce\fP option is given
 .TP
 \fBgetfirst\fP \fIfile\fP
 show the first cluster of a file
