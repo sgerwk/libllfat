@@ -624,9 +624,9 @@ experimenting undeletion from a damaged filesystem without touching it or
 making a complete copy of it; for example:
 
 .nf
-\fIfatbackup original copy\fP				# copy the filesystem
-\fIfattool copy undelete filename\fP		# undelete a file
-\fIfattool copy cross original filename\fP	# check file content
+\fIfatbackup originalfs copyfs\fP			# copy the filesystem
+\fIfattool copyfs undelete filename\fP		# undelete a file
+\fIfattool copyfs cross original filename\fP	# check file content
 .fi
 
 .TP
