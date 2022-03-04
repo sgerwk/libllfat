@@ -56,14 +56,17 @@ int fatlookupfile(fat *f, int32_t dir,
 int32_t fatlookupfirstcluster(fat *f, int32_t dir, const char *shortname);
 
 /*
- * cluster/index of file, given its path
+ * position of file, given its path
  */
+int fatlookuppathdir(fat *f, int32_t *dir,
+		const char *path, unit **directory, int *ind);
 int fatlookuppath(fat *f, int32_t dir,
 		const char *path, unit **directory, int *index);
 
 /*
  * first cluster of file, given its path
  */
+int32_t fatlookuppathfirstclusterdir(fat *f, int32_t *dir, const char *path);
 int32_t fatlookuppathfirstcluster(fat *f, int32_t dir, const char *path);
 
 /*
@@ -74,7 +77,9 @@ int fatfindfreeentry(fat *f, unit **directory, int *index);
 /*
  * find first free entry, given the path of the directory
  */
-int fatfindfreeentrypath(fat *f, int32_t dir, const char *path, \
+int fatfindfreeentrypathdir(fat *f, int32_t *dir, const char *path,
+		unit **directory, int *index);
+int fatfindfreeentrypath(fat *f, int32_t dir, const char *path,
 		unit **directory, int *index);
 
 /*
@@ -88,6 +93,8 @@ char *fatstoragepath(const char *name);
 /*
  * create a file given its path
  */
+int fatcreatefiledir(fat *f, int32_t *dir, char *path,
+		unit **directory, int *index);
 int fatcreatefile(fat *f, int32_t dir, char *path,
 		unit **directory, int *index);
 

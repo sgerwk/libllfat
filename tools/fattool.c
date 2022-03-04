@@ -233,7 +233,7 @@ int createfile(fat *f, int32_t dir, char *path, int dot,
 			printf("filesystem name: |%s|\n", converted);
 		}
 		if (fatlookuppath(f, dir, converted, directory, index))
-			res = fatcreatefile(f, dir, converted,
+			res = fatcreatefiledir(f, &dir, converted,
 				directory, index);
 		else {
 			printf("file exists: ");
@@ -268,14 +268,14 @@ int createfile(fat *f, int32_t dir, char *path, int dot,
 		convertedlong = fatstoragepathlong(pathlong);
 		printlongname("filesystem name: |", convertedlong, "|\n");
 	}
-	if (! fatlookuppathlong(f, dir, convertedlong, directory, index)) {
+	if (! fatlookuppathlongdir(f, &dir, convertedlong, directory, index)) {
 		printf("file exists: ");
 		printf("%d,%d\n", (*directory)->n, *index);
 		free(convertedlong);
 		return -1;
 	}
 	fatlongdebug = 1;
-	res = fatcreatefilelongpath(f, dir, convertedlong, directory, index);
+	res = fatcreatefilelong(f, dir, convertedlong, directory, index);
 	if (! nostoragepaths)
 		free(convertedlong);
 	return res;
@@ -2940,15 +2940,19 @@ int main(int argn, char *argv[]) {
 		fatentrysetattributes(cluster, 0, 0x10);
 
 		fatentrysetshortname(cluster, 1, DOTDOTFILE);
+		printf("option1: %s\n", option1);
 		slash = strrchr(option1, '/');
 		if (! slash)
 			previous = 0;
 		else {
 			*slash = '\0';
+			printf("option1: >>>%s<<<\n", option1);
+			printf("r: %d\n", r);
 			previous = fatlookuppathfirstcluster(f, r, option1);
 			if (previous == fatgetrootbegin(f))
 				previous = 0;
 		}
+		printf("previous: %d\n", previous);
 		fatentrysetfirstcluster(cluster, 1, fatbits(f), previous);
 		fatentrysetattributes(cluster, 1, 0x10);
 	}

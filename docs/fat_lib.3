@@ -228,7 +228,7 @@ int index;
 
 // convert path as described in FIND A FILE, above
 
-fatcreatefilelongpath(f, fatgetrootbegin(f),
+fatcreatefilepathlong(f, fatgetrootbegin(f),
 	converted, &directory, &index);
 
 // change file attributes via fatentryset___(directory, index, ___);

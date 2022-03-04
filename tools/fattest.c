@@ -983,7 +983,7 @@ int main(int argn, char *argv[]) {
 		else
 			printf("found: %d,%d\n", longdirectory->n, longindex);
 
-		if (fatfindfreelongpath(f, r, L"/aaa", 14, &directory, &index,
+		if (fatfindfreepathlong(f, r, L"/aaa", 14, &directory, &index,
 				&longdirectory, &longindex))
 			printf("not found\n");
 		else
@@ -1029,7 +1029,7 @@ int main(int argn, char *argv[]) {
 					L"alongdirectoryname/"
 					L"anotherfilestillquitesomehowlong"
 					"%d.txt", i);
-			if (fatcreatefilelongbothpath(f, r, longname,
+			if (fatcreatefilepathlongboth(f, r, longname,
 					&directory, &index,
 					&longdirectory, &longindex))
 				printf("cannot create file\n");

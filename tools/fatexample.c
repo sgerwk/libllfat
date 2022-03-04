@@ -159,7 +159,7 @@ int main() {
 	}
 	converted = fatstoragepathlong(wpath);
 
-	fatcreatefilelongpath(f, fatgetrootbegin(f),
+	fatcreatefilepathlong(f, fatgetrootbegin(f),
 		converted, &directory, &index);
 
 			/* fat_lib.3: SCAN A DIRECTORY */

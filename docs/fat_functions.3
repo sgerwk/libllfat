@@ -1175,20 +1175,33 @@ See comments in the description of \fIfatentrygetfirstcluster()\fP about
 \fIFAT_UNUSED\fP.
 See also \fIFILE NAMES\fP, below.
 .TP
+.BI "int fatlookuppathdir(fat *" f ", int32_t *" dir ", \
+const char *" path ", unit **" directory ", int *" index )
+.PD 0
+.TP
 .BI "int fatlookuppath(fat *" f ", int32_t " dir ", \
 const char *" path ", unit **" directory ", int *" index )
 Set \fIdirectory,index\fP to the directory entry of the file specified by the
 string \fIpath\fP. Search is rooted in the directory \fIdir\fP, unless the path
-begins with `/'. If the file is not found, -1 is returned, otherwise 0.
+begins with `/'.
+The first function changes \fIdir\fP to the first cluster of the directory that
+contains the file.
+If the file is not found, -1 is returned, otherwise 0.
 See also \fIFILE NAMES\fP, below.
+.PD
+.TP
+.BI "int32_t fatlookuppathfirstclusterdir(fat *" f ", int32_t *" dir ", \
+const char *" path )
+.PD 0
 .TP
 .BI "int32_t fatlookuppathfirstcluster(fat *" f ", int32_t " dir ", \
 const char *" path )
-Same as the previous function, but returns the first cluster of the file or
+Same as the previous functions, but return the first cluster of the file or
 \fIFAT_ERR\fP if the file does not exist.
 See comments in the description of \fIfatentrygetfirstcluster()\fP about
 \fIFAT_UNUSED\fP.
 See also \fIFILE NAMES\fP, below.
+.PD
 .P 
 Some functions search for a free directory entry and create a new file in it.
 The \fIint32_t dir\fP argument is the first cluster of the directory where to
@@ -1227,6 +1240,11 @@ for (index = -1;
 }
 .fi
 .TP
+.BI "int fatfindfreeentrypathdir(fat *" f ", \
+int32_t *" dir ", const char *" path ", \
+unit **" directory ", int *" index )
+.PD 0
+.TP
 .BI "int fatfindfreeentrypath(fat *" f ", \
 int32_t " dir ", const char *" path ", \
 unit **" directory ", int *" index )
@@ -1234,7 +1252,10 @@ Same as the previous function, but instead of starting from the directory entry
 given as the initial value of the parameters \fIdirectory,index\fP, search in
 the directory whose name is \fIpath\fP starting from the directory \fIdir\fP.
 If \fIpath\fP begins with '/', the root is used as the starting directory.
+The first function changes \fIdir\fP to the first cluster of the directory that
+contains the file.
 See also \fIFILE NAMES\fP, below.
+.PD
 .TP
 .BI "int fatinvalidname(const char *" name )
 Check if \fIname\fP is a valid file name. It is if it contains at most one dot,
@@ -1267,13 +1288,21 @@ is the same as calling \fIfatstoragename()\fP on each part of the path. Free
 the resulting string when done with it.
 See \fIFILE NAMES\fP, below.
 .TP
+.BI "int fatcreatefiledir(fat *" f ", int32_t *" dir ", char *" path ",  \
+unit **" directory ", int *" index )
+.PD 0
+.TP
 .BI "int fatcreatefile(fat *" f ", int32_t " dir ", char *" path ",  \
 unit **" directory ", int *" index )
 Create a file given its full path, starting from the directory whose first
-cluster is \fIdir\fP if \fIpath\fP does not begin with '/'. The resulting value
-of the pair \fIdirectory,index\fP is the directory index of the newly created
-file. It already has the specified name, size zero and no cluster. All other
-file data has still to be created: attributes, times and content (if any).
+cluster is \fIdir\fP if \fIpath\fP does not begin with '/'.
+
+The first function changes \fIdir\fP to the first cluster of the directory that
+contains the file. The resulting value of the pair \fIdirectory,index\fP is the
+directory index of the file.
+
+The file has the specified name, size zero and no cluster. All other file data
+has still to be created: attributes, times and content (if any).
 
 This function does not check whether a file with that name already exists, so
 it can create duplicate files. It neither verify the validity of the path,
@@ -1300,6 +1329,8 @@ else {
 	free(converted);
 }
 .fi
+.PD
+
 .
 .
 .
@@ -2232,16 +2263,28 @@ See comments in the description of \fIfatentrygetfirstcluster()\fP about
 \fIFAT_UNUSED\fP.
 See also \fIFILE NAMES\fP, below.
 .TP
+.BI "int fatlookuppathlongbothdir(fat *" f ", int32_t *" dir ", \
+wchar_t *" path ", unit ** " directory ", int *" index ", \
+unit **" longdirectory ", int *" longindex )
+.PD 0
+.TP
 .BI "int fatlookuppathlongboth(fat *" f ", int32_t " dir ", \
 wchar_t *" path ", unit ** " directory ", int *" index ", \
 unit **" longdirectory ", int *" longindex )
+.PD 0
+.TP
+.BI "int fatlookuppathlongdir(fat *" f ", int32_t *" dir ", \
+wchar_t *" path ", unit ** " directory ", int *" index )
 .PD 0
 .TP
 .BI "int fatlookuppathlong(fat *" f ", int32_t " dir ", wchar_t *" path ", \
 unit **" directory ", int *" index )
 Lookup a file from its full path starting from the directory whose first
 cluster is \fIdir\fP, or from the root if the path begins with '/'. Return 0 if
-found, -1 otherwise. The output-only arguments \fIdirectory,index\fP are the
+found, -1 otherwise.
+The first and third function change \fIdir\fP to the first cluster of the
+directory that contains the file.
+The output-only arguments \fIdirectory,index\fP are the
 directory entry containing the file data; \fIlongdirectory,longindex\fP is the
 directory entry where the long name begins.
 See also \fIFILE NAMES\fP, below.
@@ -2385,23 +2428,36 @@ In most cases, the program calls \fIfatinvalidnamelong()\fP and
 \fIfatstoragenamelong()\fP before this function
 (see \fIFILE NAMES\fP, below).
 .TP
-.BI "int fatcreatefilelongpathboth(fat *" f ", \
+.BI "int fatcreatefilepathlongbothdir(fat *" f ", \
+int32_t *" dir ", wchar_t *" path ", \
+unit **" directory ", int *" index ", \
+unit **" startdirectory ", int *" startindex )
+.PD 0
+.TP
+.BI "int fatcreatefilepathlongboth(fat *" f ", \
 int32_t " dir ", wchar_t *" path ", \
 unit **" directory ", int *" index ", \
 unit **" startdirectory ", int *" startindex )
 .PD 0
 .TP
+.BI "int fatcreatefilepathlongdir(fat *" f ", \
+int32_t " dir ", wchar_t *" path ", \
+unit **" directory ", int *" index )
+.PD 0
+.TP
 .PD
-.BI "int fatcreatefilelongpath(fat *" f ", \
+.BI "int fatcreatefilepathlong(fat *" f ", \
 int32_t " dir ", wchar_t *" path ", \
 unit **" directory ", int *" index )
 Create a new file from its path, starting from the directory of first cluster
 \fIdir\fP, or from the root if \fIpath\fP begins with '/'. Return -1 if
 unsuccessful and 0 otherwise. In the latter case, the newly created file takes
 the entries between \fIstartdirectory,startindex\fP and \fIdirectory,index\fP.
+The first and third functions change \fIdir\fP to the first cluster of the
+directory that contains the file.
 The shortname is derived from the longname, and can be read by
 \fIfatentrygetshortname(f, directory, index, shortname)\fP.
-In most cases, the program calls \fIfatinvalidpathlong()\fP and
+In most cases, programs call \fIfatinvalidpathlong()\fP and
 \fIfatstoragepathlong()\fP before this function
 (see \fIFILE NAMES\fP, below).
 .TP

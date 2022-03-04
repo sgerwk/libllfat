@@ -449,9 +449,9 @@ int32_t fatlookupfirstclusterlong(fat *f, int32_t dir, wchar_t *name) {
 }
 
 /*
- * look up a file given its path (long name)
+ * look up a file given its path (long name) from a given directory
  */
-int fatlookuppathlongboth(fat *f, int32_t dir, wchar_t *path,
+int fatlookuppathlongbothdir(fat *f, int32_t *dir, wchar_t *path,
 		unit **directory, int *index,
 		unit **longdirectory, int *longindex) {
 	wchar_t *end, *last, *copy;
@@ -462,40 +462,40 @@ int fatlookuppathlongboth(fat *f, int32_t dir, wchar_t *path,
 	end = wcschr(path, L'/');
 
 	if (end == NULL)
-		return fatlookupfilelongboth(f, dir, path,
+		return fatlookupfilelongboth(f, *dir, path,
 			directory, index, longdirectory, longindex);
 
 	if (end == path)
-		return fatlookuppathlongboth(f, dir, path + 1,
+		return fatlookuppathlongbothdir(f, dir, path + 1,
 			directory, index, longdirectory, longindex);
 
 	for (last = end; *last == L'/'; last++) {
 	}
 
-	if (last == WNULL) {
+	if (*last == WNULL) {
 		copy = wcsdup(path);
 		copy[end - path] = WNULL;
-		res = fatlookuppathlongboth(f, dir, copy,
+		res = fatlookupfilelongboth(f, *dir, copy,
 			directory, index, longdirectory, longindex);
 		free(copy);
 		return res;
 	}
 
 	copy = wcsdup(path);
-	copy[end - path] = '\0';
-	dir = fatlookupfirstclusterlong(f, dir, copy);
-	if (dir == 0)
-		dir = fatgetrootbegin(f);
-	if (dir == FAT_ERR) {
+	copy[end - path] = WNULL;
+	*dir = fatlookupfirstclusterlong(f, *dir, copy);
+	if (*dir == 0)
+		*dir = fatgetrootbegin(f);
+	if (*dir == FAT_ERR) {
 		dprintf("part of path not found: '%ls'\n", copy);
 		free(copy);
 		*directory = NULL;
 		return -1;
 	}
 
-	dprintf("name '%ls', directory: %d\n", copy, dir);
+	dprintf("name '%ls', directory: %d\n", copy, *dir);
 
-	res = fatlookuppathlongboth(f, dir, last,
+	res = fatlookuppathlongbothdir(f, dir, last,
 		directory, index, longdirectory, longindex);
 
 	if (! res) {
@@ -505,6 +505,22 @@ int fatlookuppathlongboth(fat *f, int32_t dir, wchar_t *path,
 
 	free(copy);
 	return res;
+}
+
+int fatlookuppathlongdir(fat *f, int32_t *dir, wchar_t *path,
+		unit **directory, int *index) {
+	unit *longdirectory;
+	int longindex;
+
+	return fatlookuppathlongbothdir(f, dir, path,
+		directory, index, &longdirectory, &longindex);
+}
+
+int fatlookuppathlongboth(fat *f, int32_t dir, wchar_t *path,
+		unit **directory, int *index,
+		unit **longdirectory, int *longindex) {
+	return fatlookuppathlongbothdir(f, &dir, path, directory, index,
+		longdirectory, longindex);
 }
 
 int fatlookuppathlong(fat *f, int32_t dir, wchar_t *path,
@@ -571,7 +587,7 @@ int fatfindfreelong(fat *f, int len, unit **directory, int *index,
 /*
  * find the first sequence of len free entries in a directory given by path
  */
-int fatfindfreelongpath(fat *f, int32_t dir, wchar_t *path, int len,
+int fatfindfreepathlong(fat *f, int32_t dir, wchar_t *path, int len,
 		unit **directory, int *index,
 		unit **startdirectory, int *startindex) {
 	int cl, r;
@@ -979,9 +995,9 @@ int fatcreatefilelong(fat *f, int32_t dir, wchar_t *name,
 }
 
 /*
- * create an empty file from its complete long path
+ * create an empty file from a long path, starting from directory dir
  */
-int fatcreatefilelongbothpath(fat *f, int32_t dir, wchar_t *path,
+int fatcreatefilepathlongbothdir(fat *f, int32_t *dir, wchar_t *path,
 		unit **directory, int *index,
 		unit **startdirectory, int *startindex) {
 	wchar_t *buf, *slash, *dirname, *file;
@@ -1005,25 +1021,40 @@ int fatcreatefilelongbothpath(fat *f, int32_t dir, wchar_t *path,
 
 	dprintf("path %ls, file %ls\n", dirname, file);
 
-	dir = fatlookuppathfirstclusterlong(f, dir, dirname);
-	if (dir == FAT_ERR) {
+	*dir = fatlookuppathfirstclusterlong(f, *dir, dirname);
+	if (*dir == FAT_ERR) {
 		free(buf);
 		return -1;
 	}
-	if (dir == 0)
-		dir = fatgetrootbegin(f);
+	if (*dir == 0)
+		*dir = fatgetrootbegin(f);
 
-	res = fatcreatefilelongboth(f, dir, file,
+	res = fatcreatefilelongboth(f, *dir, file,
 			directory, index, startdirectory, startindex);
 	free(buf);
 	return res;
 }
 
-int fatcreatefilelongpath(fat *f, int32_t dir, wchar_t *path,
+int fatcreatefilepathlongboth(fat *f, int32_t dir, wchar_t *path,
+		unit **directory, int *index,
+		unit **startdirectory, int *startindex) {
+	return fatcreatefilepathlongbothdir(f, &dir, path, directory, index,
+		startdirectory, startindex);
+}
+
+int fatcreatefilepathlongdir(fat *f, int32_t *dir, wchar_t *path,
 		unit **directory, int *index) {
 	unit *startdirectory;
 	int startindex;
-	return fatcreatefilelongbothpath(f, dir, path, directory, index,
+	return fatcreatefilepathlongbothdir(f, dir, path, directory, index,
+		&startdirectory, &startindex);
+}
+
+int fatcreatefilepathlong(fat *f, int32_t dir, wchar_t *path,
+		unit **directory, int *index) {
+	unit *startdirectory;
+	int startindex;
+	return fatcreatefilepathlongboth(f, dir, path, directory, index,
 		&startdirectory, &startindex);
 }
 

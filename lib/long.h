@@ -67,9 +67,14 @@ int32_t fatlookupfirstclusterlong(fat *f, int32_t dir, wchar_t *name);
 /*
  * path lookup
  */
+int fatlookuppathlongbothdir(fat *f, int32_t *dir, wchar_t *path,
+		unit **directory, int *index,
+		unit **longdirectory, int *longindex);
 int fatlookuppathlongboth(fat *f, int32_t dir, wchar_t *path,
 		unit **directory, int *index,
 		unit **longdirectory, int *longindex);
+int fatlookuppathlongdir(fat *f, int32_t *dir, wchar_t *path,
+		unit **directory, int *index);
 int fatlookuppathlong(fat *f, int32_t dir, wchar_t *path,
 		unit **directory, int *index);
 int32_t fatlookuppathfirstclusterlong(fat *f, int32_t dir, wchar_t *path);
@@ -79,7 +84,7 @@ int32_t fatlookuppathfirstclusterlong(fat *f, int32_t dir, wchar_t *path);
  */
 int fatfindfreelong(fat *f, int len, unit **directory, int *index,
 		unit **startdirectory, int *startindex);
-int fatfindfreelongpath(fat *f, int32_t dir, wchar_t *path, int len,
+int fatfindfreepathlong(fat *f, int32_t dir, wchar_t *path, int len,
 		unit **directory, int *index,
 		unit **startdirectory, int *startindex);
 
@@ -106,10 +111,15 @@ int fatcreatefilelongboth(fat *f, int32_t dir, wchar_t *longname,
 		unit **startdirectory, int *startindex);
 int fatcreatefilelong(fat *f, int32_t dir, wchar_t *longname,
 		unit **directory, int *index);
-int fatcreatefilelongbothpath(fat *f, int32_t dir, wchar_t *path,
+int fatcreatefilepathlongbothdir(fat *f, int32_t *dir, wchar_t *path,
 		unit **directory, int *index,
 		unit **startdirectory, int *startindex);
-int fatcreatefilelongpath(fat *f, int32_t dir, wchar_t *path,
+int fatcreatefilepathlongboth(fat *f, int32_t dir, wchar_t *path,
+		unit **directory, int *index,
+		unit **startdirectory, int *startindex);
+int fatcreatefilepathlongdir(fat *f, int32_t *dir, wchar_t *path,
+		unit **directory, int *index);
+int fatcreatefilepathlong(fat *f, int32_t dir, wchar_t *path,
 		unit **directory, int *index);
 
 /*

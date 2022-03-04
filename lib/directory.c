@@ -120,22 +120,22 @@ int32_t fatlookupfirstcluster(fat *f, int32_t dir, const char *shortname) {
 }
 
 /*
- * cluster/index of file, given its path
+ * position of file, given its path
  */
-int fatlookuppath(fat *f, int32_t dir,
+int fatlookuppathdir(fat *f, int32_t *dir,
 		const char *path, unit **directory, int *ind) {
 	char *end, *last, *copy;
 	int res;
 
-	dprintf("path=%s - dir=%d\n", path, dir);
+	dprintf("path=%s - dir=%d\n", path, *dir);
 
 	end = strchr(path, '/');
 
 	if (end == NULL)
-		return fatlookupfile(f, dir, path, directory, ind);
+		return fatlookupfile(f, *dir, path, directory, ind);
 
 	if (end == path)
-		return fatlookuppath(f, dir, path + 1, directory, ind);
+		return fatlookuppathdir(f, dir, path + 1, directory, ind);
 	
 	for (last = end; *last == L'/'; last++) {
 	}
@@ -143,26 +143,26 @@ int fatlookuppath(fat *f, int32_t dir,
 	if (*last == '\0') {
 		copy = strdup(path);
 		copy[end - path] = '\0';
-		res = fatlookuppath(f, dir, copy, directory, ind);
+		res = fatlookuppathdir(f, dir, copy, directory, ind);
 		free(copy);
 		return res;
 	}
 
 	copy = strdup(path);
 	copy[end - path] = '\0';
-	dir = fatlookupfirstcluster(f, dir, copy);
-	if (dir == 0)
-		dir = fatgetrootbegin(f);
-	if (dir == FAT_ERR) {
+	*dir = fatlookupfirstcluster(f, *dir, copy);
+	if (*dir == 0)
+		*dir = fatgetrootbegin(f);
+	if (*dir == FAT_ERR) {
 		dprintf("part of path not found: '%s'\n", copy);
 		free(copy);
 		*directory = NULL;
 		return -1;
 	}
 
-	dprintf("name '%s', directory: %d\n", copy, dir);
+	dprintf("name '%s', directory: %d\n", copy, *dir);
 
-	res = fatlookuppath(f, dir, last, directory, ind);
+	res = fatlookuppathdir(f, dir, last, directory, ind);
 
 	if (! res) {
 		dprintf("name '%s':", last);
@@ -174,9 +174,17 @@ int fatlookuppath(fat *f, int32_t dir,
 }
 
 /*
+ * cluster/index of file, given its path
+ */
+int fatlookuppath(fat *f, int32_t dir,
+		const char *path, unit **directory, int *ind) {
+	return fatlookuppathdir(f, &dir, path, directory, ind);
+}
+
+/*
  * first cluster of file, given its path
  */
-int32_t fatlookuppathfirstcluster(fat *f, int32_t dir, const char *path) {
+int32_t fatlookuppathfirstclusterdir(fat *f, int32_t *dir, const char *path) {
 	unit *directory;
 	int index;
 
@@ -184,12 +192,19 @@ int32_t fatlookuppathfirstcluster(fat *f, int32_t dir, const char *path) {
 		return fatgetrootbegin(f);
 
 	if (! strchr(path, '/'))
-		return fatlookupfirstcluster(f, dir, path);
+		return fatlookupfirstcluster(f, *dir, path);
 
-	if (fatlookuppath(f, dir, path, &directory, &index))
+	if (fatlookuppathdir(f, dir, path, &directory, &index))
 		return FAT_ERR;
 
 	return fatentrygetfirstcluster(directory, index, fatbits(f));
+}
+
+/*
+ * first cluster of file, given its path
+ */
+int32_t fatlookuppathfirstcluster(fat *f, int32_t dir, const char *path) {
+	return fatlookuppathfirstclusterdir(f, &dir, path);
 }
 
 /*
@@ -255,11 +270,10 @@ int fatfindfreeentry(fat *f, unit **directory, int *index) {
 	(*directory)->dirty = 1;
 	return 0;
 }
-
 /*
  * find first free entry, given the path of the directory
  */
-int fatfindfreeentrypath(fat *f, int32_t dir, const char *path,
+int fatfindfreeentrypathdir(fat *f, int32_t *dir, const char *path,
 		unit **directory, int *index) {
 	int32_t cl, r;
 
@@ -271,8 +285,8 @@ int fatfindfreeentrypath(fat *f, int32_t dir, const char *path,
 		cl = r;
 	else {
 		if (path[0] == '/')
-			dir = r;
-		cl = fatlookuppathfirstcluster(f, dir, path);
+			*dir = r;
+		cl = fatlookuppathfirstclusterdir(f, dir, path);
 		if (cl == FAT_ERR)
 			return FAT_ERR;
 		if (cl == 0)
@@ -286,6 +300,15 @@ int fatfindfreeentrypath(fat *f, int32_t dir, const char *path,
 		return -1;
 	*index = -1;
 	return fatfindfreeentry(f, directory, index);
+}
+
+
+/*
+ * find first free entry, given the path of the directory
+ */
+int fatfindfreeentrypath(fat *f, int32_t dir, const char *path,
+		unit **directory, int *index) {
+	return fatfindfreeentrypathdir(f, &dir, path, directory, index);
 }
 
 /*
@@ -414,9 +437,9 @@ char *fatstoragepath(const char *path) {
 }
 
 /*
- * create a file given its path (return its directory,index pair)
+ * create a file given its path (return its position)
  */
-int fatcreatefile(fat *f, int32_t dir, char *path,
+int fatcreatefiledir(fat *f, int32_t *dir, char *path,
 		unit **directory, int *index) {
 	char *buf, *slash, *scan, *dirname, *file;
 
@@ -448,7 +471,7 @@ int fatcreatefile(fat *f, int32_t dir, char *path,
 	if (*file == '\0')
 		return -1;
 
-	if (fatfindfreeentrypath(f, dir, dirname, directory, index)) {
+	if (fatfindfreeentrypathdir(f, dir, dirname, directory, index)) {
 		dprintf("no free entry for file\n");
 		free(buf);
 		return -1;
@@ -464,5 +487,13 @@ int fatcreatefile(fat *f, int32_t dir, char *path,
 
 	free(buf);
 	return 0;
+}
+
+/*
+ * create a file given its path (return its directory,index pair)
+ */
+int fatcreatefile(fat *f, int32_t dir, char *path,
+		unit **directory, int *index) {
+	return fatcreatefiledir(f, &dir, path, directory, index);
 }
 
