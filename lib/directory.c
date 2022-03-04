@@ -127,17 +127,15 @@ int fatlookuppath(fat *f, int32_t dir,
 	char *end, *copy;
 	int res;
 
-	dprintf("path=%s\n", path);
+	dprintf("path=%s - dir=%d\n", path, dir);
 
 	end = strchr(path, '/');
 
 	if (end == NULL)
 		return fatlookupfile(f, dir, path, directory, ind);
 
-	if (end == path) {
-		return fatlookuppath(f, fatgetrootbegin(f),
-			path + 1, directory, ind);
-	}
+	if (end == path)
+		return fatlookuppath(f, dir, path + 1, directory, ind);
 	
 	if (end[1] == '\0') {
 		copy = strdup(path);
