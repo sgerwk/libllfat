@@ -352,7 +352,7 @@ int fatinvalidpath(const char *path) {
 	}
 
 	free(copy);
-	return *scan == '\0' ? res : -1;
+	return res;
 }
 
 /*
