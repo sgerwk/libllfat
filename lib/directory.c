@@ -345,7 +345,7 @@ int fatinvalidpath(const char *path) {
 			*sl = '\0';
 		if (scan == copy && ! scan[0])
 			continue;
-		printf("part: |%s|\n", scan);
+		dprintf("part: |%s|\n", scan);
 		res = fatinvalidname(scan);
 	}
 
@@ -441,7 +441,7 @@ int fatcreatefile(fat *f, int32_t dir, char *path,
 		file = slash + 1;
 	}
 
-	printf("path %s\tfile %s\n", dirname, file);
+	dprintf("path %s\tfile %s\n", dirname, file);
 
 	if (*file == '\0')
 		return -1;
