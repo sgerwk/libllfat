@@ -124,7 +124,7 @@ int32_t fatlookupfirstcluster(fat *f, int32_t dir, const char *shortname) {
  */
 int fatlookuppath(fat *f, int32_t dir,
 		const char *path, unit **directory, int *ind) {
-	char *end, *copy;
+	char *end, *last, *copy;
 	int res;
 
 	dprintf("path=%s - dir=%d\n", path, dir);
@@ -137,7 +137,10 @@ int fatlookuppath(fat *f, int32_t dir,
 	if (end == path)
 		return fatlookuppath(f, dir, path + 1, directory, ind);
 	
-	if (end[1] == '\0') {
+	for (last = end; *last == L'/'; last++) {
+	}
+
+	if (*last == '\0') {
 		copy = strdup(path);
 		copy[end - path] = '\0';
 		res = fatlookuppath(f, dir, copy, directory, ind);
@@ -159,11 +162,10 @@ int fatlookuppath(fat *f, int32_t dir,
 
 	dprintf("name '%s', directory: %d\n", copy, dir);
 
-	res = fatlookuppath(f, dir, copy + (end - path + 1),
-		directory, ind);
+	res = fatlookuppath(f, dir, last, directory, ind);
 
 	if (! res) {
-		dprintf("name '%s':", copy + (end - path + 1));
+		dprintf("name '%s':", last);
 		dprintf(" %d,%d\n", (*directory)->n, *ind);
 	}
 

@@ -454,7 +454,7 @@ int32_t fatlookupfirstclusterlong(fat *f, int32_t dir, wchar_t *name) {
 int fatlookuppathlongboth(fat *f, int32_t dir, wchar_t *path,
 		unit **directory, int *index,
 		unit **longdirectory, int *longindex) {
-	wchar_t *end, *copy;
+	wchar_t *end, *last, *copy;
 	int res;
 
 	dprintf("%ls\n", path);
@@ -469,7 +469,10 @@ int fatlookuppathlongboth(fat *f, int32_t dir, wchar_t *path,
 		return fatlookuppathlongboth(f, dir, path + 1,
 			directory, index, longdirectory, longindex);
 
-	if (end[1] == WNULL) {
+	for (last = end; *last == L'/'; last++) {
+	}
+
+	if (last == WNULL) {
 		copy = wcsdup(path);
 		copy[end - path] = WNULL;
 		res = fatlookuppathlongboth(f, dir, copy,
@@ -492,11 +495,11 @@ int fatlookuppathlongboth(fat *f, int32_t dir, wchar_t *path,
 
 	dprintf("name '%ls', directory: %d\n", copy, dir);
 
-	res = fatlookuppathlongboth(f, dir, copy + (end - path + 1),
+	res = fatlookuppathlongboth(f, dir, last,
 		directory, index, longdirectory, longindex);
 
 	if (! res) {
-		dprintf("name '%ls':", copy + (end - path + 1));
+		dprintf("name '%ls':", last);
 		dprintf(" %d,%d\n", (*directory)->n, *index);
 	}
 
