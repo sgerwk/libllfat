@@ -213,7 +213,7 @@ int fileoptiontoreference(fat *f, char *option,
 /*
  * create a file
  */
-int createfile(fat *f, int32_t dir, char *path, int dot,
+int createfile(fat *f, int32_t *dir, char *path, int dot,
 		unit **directory, int *index) {
 	size_t len;
 	wchar_t *pathlong, *legalized, *convertedlong;
@@ -232,8 +232,8 @@ int createfile(fat *f, int32_t dir, char *path, int dot,
 			converted = fatstoragepath(path);
 			printf("filesystem name: |%s|\n", converted);
 		}
-		if (fatlookuppath(f, dir, converted, directory, index))
-			res = fatcreatefiledir(f, &dir, converted,
+		if (fatlookuppath(f, *dir, converted, directory, index))
+			res = fatcreatefiledir(f, dir, converted,
 				directory, index);
 		else {
 			printf("file exists: ");
@@ -268,14 +268,14 @@ int createfile(fat *f, int32_t dir, char *path, int dot,
 		convertedlong = fatstoragepathlong(pathlong);
 		printlongname("filesystem name: |", convertedlong, "|\n");
 	}
-	if (! fatlookuppathlongdir(f, &dir, convertedlong, directory, index)) {
+	if (! fatlookuppathlong(f, *dir, convertedlong, directory, index)) {
 		printf("file exists: ");
 		printf("%d,%d\n", (*directory)->n, *index);
 		free(convertedlong);
 		return -1;
 	}
 	fatlongdebug = 1;
-	res = fatcreatefilelong(f, dir, convertedlong, directory, index);
+	res = fatcreatefilepathlongdir(f, dir, convertedlong, directory, index);
 	if (! nostoragepaths)
 		free(convertedlong);
 	return res;
@@ -389,6 +389,7 @@ int fatlink(fat *f, char *target, char *new, int ncluster, uint32_t size) {
 	unit *targetdir, *newdir;
 	int targetind, newind;
 	int32_t targetprev, targetcluster;
+	int32_t dir;
 	uint8_t attributes;
 	int i;
 
@@ -413,7 +414,8 @@ int fatlink(fat *f, char *target, char *new, int ncluster, uint32_t size) {
 		return -1;
 	}
 
-	if (createfile(f, fatgetrootbegin(f), new, 1, &newdir, &newind)) {
+	dir = fatgetrootbegin(f);
+	if (createfile(f, &dir, new, 1, &newdir, &newind)) {
 		printf("cannot create destination file\n");
 		return -1;
 	}
@@ -1426,7 +1428,7 @@ int main(int argn, char *argv[]) {
 	wchar_t *longname, *longpath, *legalized;
 	fat *f, *cross;
 	int fatnum, bootindex;
-	int32_t previous, target, r, cl, next, other, start;
+	int32_t previous, target, r, dir, cl, next, other, start;
 	int32_t secondprevious, secondtarget, end, last, len;
 	unit *directory, *startdirectory, *longdirectory, *seconddirectory;
 	int index, startindex, longindex, secondindex;
@@ -1436,7 +1438,7 @@ int main(int argn, char *argv[]) {
 	unsigned long readserial;
 	int res, diff, finalres, recur, chain, all, chains;
 	int over, startdir, nchanges;
-	char dummy, pad, *buf, firstchar, attrib, *slash;
+	char dummy, pad, *buf, firstchar, attrib;
 	int nfat;
 	char *timeformat;
 	struct tm tm;
@@ -2524,7 +2526,8 @@ int main(int argn, char *argv[]) {
 			exit(1);
 		}
 
-		if (createfile(f, r, option1, 0, &directory, &index)) {
+		dir = r;
+		if (createfile(f, &dir, option1, 0, &directory, &index)) {
 			printf("cannot create file %s\n", option1);
 			exit(1);
 		}
@@ -2757,7 +2760,8 @@ int main(int argn, char *argv[]) {
 			exit(1);
 		}
 
-		if (createfile(f, r, option1, 0, &directory, &index)) {
+		dir = r;
+		if (createfile(f, &dir, option1, 0, &directory, &index)) {
 			printf("cannot create file %s\n", option1);
 			exit(1);
 		}
@@ -2918,7 +2922,8 @@ int main(int argn, char *argv[]) {
 			exit(1);
 		}
 
-		if (createfile(f, r, option1, 0, &directory, &index)) {
+		dir = r;
+		if (createfile(f, &dir, option1, 0, &directory, &index)) {
 			printf("cannot create directory %s\n", option1);
 			exit(1);
 		}
@@ -2940,20 +2945,8 @@ int main(int argn, char *argv[]) {
 		fatentrysetattributes(cluster, 0, 0x10);
 
 		fatentrysetshortname(cluster, 1, DOTDOTFILE);
-		printf("option1: %s\n", option1);
-		slash = strrchr(option1, '/');
-		if (! slash)
-			previous = 0;
-		else {
-			*slash = '\0';
-			printf("option1: >>>%s<<<\n", option1);
-			printf("r: %d\n", r);
-			previous = fatlookuppathfirstcluster(f, r, option1);
-			if (previous == fatgetrootbegin(f))
-				previous = 0;
-		}
-		printf("previous: %d\n", previous);
-		fatentrysetfirstcluster(cluster, 1, fatbits(f), previous);
+		fatentrysetfirstcluster(cluster, 1, fatbits(f),
+			dir == r ? 0 : dir);
 		fatentrysetattributes(cluster, 1, 0x10);
 	}
 	else if (! strcmp(operation, "directoryclean")) {
