@@ -27,10 +27,14 @@ do
 		cat $FILE | ./fattool $FAT writefile $B > /dev/null
 	done
 
-	mcopy -i $FAT -D o /dev/null ::asomewhatlongishfilename.andextension
-	mcopy -i $FAT -D o /dev/null ::NULL
-	mcopy -i $FAT -D o ../lib/debug.h ::SINGLE.txt
-	mcopy -i $FAT -D o ../lib/debug.h ::other.TXT
+	# mcopy -i $FAT -D o /dev/null ::asomewhatlongishfilename.andextension
+	./fattool $FAT writefile asomewhatlongishfilename.andextension 0
+	# mcopy -i $FAT -D o /dev/null ::NULL
+	./fattool $FAT writefile NULL 0
+	# mcopy -i $FAT -D o ../lib/debug.h ::SINGLE.txt
+	cat ../lib/debug.h | ./fattool $FAT writefile SINGLE.txt
+	# mcopy -i $FAT -D o ../lib/debug.h ::other.TXT
+	cat ../lib/debug.h | ./fattool $FAT writefile other.TXT
 
 	# mmd -i $FAT ::aaa
 	fattool $FAT mkdir aaa > /dev/null
@@ -38,20 +42,28 @@ do
 	# mmd -i $FAT ::aaa/bbb
 	fattool $FAT mkdir bbb
 	echo "Makefile -> ::aaa/bbb"
-	mcopy -i $FAT Makefile -D o ::aaa/bbb
+	# mcopy -i $FAT Makefile -D o ::aaa/bbb
+	cat Makefile | ./fattool $FAT writefile aaa/bbb
 
-	mmd -i $FAT ::aaa/ccc
+	# mmd -i $FAT ::aaa/ccc
+	fattool $FAT mkdir aaa/ccc > /dev/null
 
 	echo "testfs -> ::aaa"
-	mcopy -i $FAT testfs -D o ::aaa
+	# mcopy -i $FAT testfs -D o ::aaa
+	cat testfs | ./fattool $FAT writefile aaa/testfs
 
-	mmd -i $FAT ::alongdirectoryname
-	mmd -i $FAT ::alongdirectoryname/oneinsideit
-	mcopy -i $FAT -D o ../lib/debug.h \
-		::alongdirectoryname/oneinsideit/alongfilename.text
+	# mmd -i $FAT ::alongdirectoryname
+	fattool $FAT mkdir alongdirectoryname
+	# mmd -i $FAT ::alongdirectoryname/oneinsideit
+	fattool $FAT mkdir alongdirectoryname/oneinsideit
+	# mcopy -i $FAT -D o ../lib/debug.h \
+	#	::alongdirectoryname/oneinsideit/alongfilename.text
+	cat ../lib/debug.h | ./fattool $FAT \
+		writefile alongdirectoryname/oneinsideit/alongfilename.text
 
 	echo "libllfat.txt -> ::"
-	mcopy -i $FAT ../docs/libllfat.txt -D o ::
+	# mcopy -i $FAT ../docs/libllfat.txt -D o ::
+	cat ../docs/libllfat.txt | ./fattool $FAT writefile libllfat.txt
 
 	if [ $FAT == fat32long ]
 	then
@@ -81,7 +93,8 @@ do
 		B=$(basename $FILE)
 		false && [ ${#B} -gt 8 ] && continue
 		echo -n "-$B "
-		mdel -i $FAT ::$B
+		# mdel -i $FAT ::$B
+		fattool $FAT deletefile $B
 	done
 
 	echo
