@@ -130,16 +130,13 @@ int fileoptiontoreferenceboth(fat *f, char *option,
 	*index = 0;
 	*previous = 0;
 
+	while (option[0] == '/')
+		option++;
+
 	if (option[0] == '\0') {
 		*previous = -1;
 		*target = fatreferencegettarget(f,
 				*directory, *index, *previous);
-		return 0;
-	}
-
-	if (! strcmp(option, "/")) {
-		*previous = -1;
-		*target = fatgetrootbegin(f);
 		return 0;
 	}
 
