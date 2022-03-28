@@ -963,7 +963,7 @@ int mbr(char *file, int num, uint32_t *start, uint32_t *length) {
 	unsigned char active, label;
 	uint32_t *record;
 
-	fd = open(file, O_RDWR);
+	fd = open(file, O_RDONLY);
 	if (fd == -1)
 		return -2;
 
