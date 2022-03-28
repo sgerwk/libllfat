@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include "fs.h"
@@ -96,6 +97,11 @@ fat *fatopenonly(char *filename, off_t offset, int boot) {
 	f->devicename = filename;
 
 	f->fd = open(filename, O_RDWR | O_DIRECT);
+	if (f->fd == -1 && errno == EACCES) {
+		f->fd = open(filename, O_RDONLY | O_DIRECT);
+		if (f->fd != -1)
+			printf("WARNING: %s opened read-only\n", filename);
+	}
 	if (f->fd == -1) {
 		perror(filename);
 		free(f);
