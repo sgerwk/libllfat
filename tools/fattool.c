@@ -39,6 +39,7 @@
 #include <malloc.h>
 #include <linux/fs.h>
 #include <llfat.h>
+#include <debug.h>
 
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 
@@ -1278,7 +1279,7 @@ int parserange(char *option, int32_t *first, int32_t *last) {
 void usage() {
 	printf("usage:\n\tfattool [-f num] [-l] [-s] [-t] [-n] ");
 	printf("[-m] [-c] [-o offset] [-p num]\n");
-	printf("\t\t[-a first-last] [-e simerr.txt] ");
+	printf("\t\t[-a first-last] [-v level] [-e simerr.txt] ");
 	printf("device operation [arg...]\n");
 	printf("\t\t-f num\t\tuse the specified file allocation table\n");
 	printf("\t\t-l\t\tload the first FAT in cache immediately\n");
@@ -1291,6 +1292,7 @@ void usage() {
 	printf("\t\t-d\t\tdetermine number of bits from signature\n");
 	printf("\t\t-b num\t\tuse n-th sector as the boot sector\n");
 	printf("\t\t-a first-last\trange of allocable clusters\n");
+	printf("\t\t-v level\tverbose output\n");
 	printf("\t\t-e simerr.txt\tread simulated errors from file\n");
 	printf("\n\toperations:\n");
 	printf("\t\tsummary\t\tbasic characteristics of the filesystem\n");
@@ -1420,7 +1422,7 @@ int main(int argn, char *argv[]) {
 	uint32_t begin, length, fsize;
 	int32_t afirst, alast;
 	off_t offset;
-	int signature;
+	int signature, debug;
 	size_t wlen;
 	wchar_t *longname, *longpath, *legalized;
 	fat *f, *cross;
@@ -1464,6 +1466,7 @@ int main(int argn, char *argv[]) {
 	alast = -1;
 	memcheck = 0;
 	clusterdump = 0;
+	debug = 0;
 	simerrfile = NULL;
 	while (argn - 1 >= 1 && argv[1][0] == '-') {
 		switch(argv[1][1]) {
@@ -1546,6 +1549,25 @@ int main(int argn, char *argv[]) {
 			break;
 		case 'c':
 			clusterdump = 1;
+			break;
+		case 'v':
+			if (argv[1][2] != '\0')
+				debug = atoi(argv[1] + 1);
+			else {
+				debug = atoi(argv[2]);
+				argn--;
+				argv++;
+			}
+			fatdebug =		debug & 0x0001;
+			fatunitdebug =		debug & 0x0002;
+			fattabledebug =		debug & 0x0004;
+			fattableerror =		debug & 0x0008;
+			fatdirectorydebug =	debug & 0x0010;
+			fatreferencedebug =	debug & 0x0020;
+			fatreferenceerror =	debug & 0x0040;
+			fatinversedebug =	debug & 0x0080;
+			fatlongdebug =		debug & 0x0100;
+			fatcomplexdebug =	debug & 0x0200;
 			break;
 		case 'h':
 			usage();

@@ -8,7 +8,8 @@ fattool \- several operations on a FAT12/16/32 filesystem
 [\fI-i\fP] [\fI-s\fP] [\fI-t\fP] [\fI-n\fP]
 [\fI-m\fP] [\fI-c\fP]
 .br
-[\fI-o offset\fP] [\fI-p num\fP] [\fI-a first-last\fP] [\fI-e simerr.txt\fP]
+[\fI-o offset\fP] [\fI-p num\fP] [\fI-a first-last\fP]
+[\fI-v level\fP] [\fI-e simerr.txt\fP]
 .br
 \fIfilesystem command\fP [\fIarg...\fP]
 .SH DESCRIPTION
@@ -88,6 +89,22 @@ specification, but is sometimes necessary on media formatted incorrectly
 .BI -a " first-last
 only allocate clusters between \fIfirst\fP and \fIlast\fP; this option only
 affects operations that allocate clusters, such as file creation
+.TP
+.BI -v " level
+verbose output; depends on the bits in the \fIlevel\fP argument:
+
+.nf
+0x0001 filesystem and boot sector
+0x0002 sectors and clusters
+0x0004 file allocation table
+0x0008 file allocation table errors
+0x0010 directory
+0x0020 cluster reference
+0x0040 cluster reference errors
+0x0080 inverse fat
+0x0100 long names
+0x0200 complex operations
+.fi
 .TP
 \fB-e\fP \fIsimerr.txt\fP
 read simulated errors from file; see \fISIMULATED ERRORS\fP, below
